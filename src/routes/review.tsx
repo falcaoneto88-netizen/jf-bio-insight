@@ -139,6 +139,9 @@ function ReviewPage() {
               </CardContent>
             </Card>
 
+            <DietPlanCard diet={diet} />
+
+
             <Section title="Arquivo enviado" editTo="/upload">
               {file ? (
                 <div className="flex items-center gap-3">
