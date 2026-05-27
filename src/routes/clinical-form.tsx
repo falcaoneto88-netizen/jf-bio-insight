@@ -345,7 +345,7 @@ function ClinicalFormPage() {
             </Button>
             <Button type="submit" size="lg" className="bg-gold text-gold-foreground hover:bg-gold/90">
               <Sparkles />
-              Continuar para análise
+              Continuar para revisão
               <ArrowRight />
             </Button>
           </div>
