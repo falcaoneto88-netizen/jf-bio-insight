@@ -349,6 +349,15 @@ function Empty({ label }: { label: string }) {
   return <p className="text-sm text-muted-foreground italic">{label}</p>;
 }
 
+function NarrativeBlock({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="border-l-2 border-gold/60 pl-3">
+      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gold">{title}</p>
+      <p className="mt-1 text-sm leading-relaxed text-foreground">{text}</p>
+    </div>
+  );
+}
+
 function HistoryList({
   label,
   rows,
