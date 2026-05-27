@@ -1,7 +1,15 @@
-import { UtensilsCrossed, Droplets } from "lucide-react";
+import {
+  UtensilsCrossed,
+  Droplets,
+  Pill,
+  Info,
+  AlertTriangle,
+  AlertOctagon,
+  Stethoscope,
+} from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AdjustedDiet } from "@/lib/diet-adjuster";
+import type { AdjustedDiet, DietAlert } from "@/lib/diet-adjuster";
 
 function pickLabel(pick: "one" | "all" | "free"): string {
   if (pick === "one") return "escolher 1";
@@ -84,6 +92,56 @@ export function DietPlanCard({ diet }: { diet: AdjustedDiet }) {
           </ul>
         </div>
 
+        {/* Suplementação */}
+        {diet.supplementation.length > 0 && (
+          <div className="border-t border-border/60 pt-4">
+            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <Pill className="h-3 w-3 text-gold" />
+              Suplementação
+            </p>
+            <ul className="mt-2 space-y-1.5 text-sm">
+              {diet.supplementation.map((s) => (
+                <li key={s.name} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium text-foreground">{s.name}</span>
+                  <span className="text-foreground">— {s.dose}</span>
+                  {s.mandatory && (
+                    <span className="rounded-sm border border-gold bg-gold/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-gold">
+                      Obrigatório
+                    </span>
+                  )}
+                  <span className="block w-full text-xs text-muted-foreground">
+                    {s.reason}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Alertas clínicos */}
+        {diet.alerts.length > 0 && (
+          <div className="space-y-2">
+            {diet.alerts.map((a, i) => (
+              <AlertBox key={i} alert={a} />
+            ))}
+          </div>
+        )}
+
+        {/* Observações digestivas */}
+        {diet.digestiveNotes.length > 0 && (
+          <div className="border-t border-border/60 pt-4">
+            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <Stethoscope className="h-3 w-3 text-gold" />
+              Observações clínicas
+            </p>
+            <ul className="mt-2 space-y-1 text-sm text-foreground">
+              {diet.digestiveNotes.map((n, i) => (
+                <li key={i}>— {n}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Rationale do ajuste */}
         {diet.targets.rationale.length > 0 && (
           <div className="rounded-sm border border-dashed border-border/80 bg-muted/30 px-3 py-2">
@@ -108,5 +166,30 @@ function Chip({ label, icon }: { label: string; icon?: React.ReactNode }) {
       {icon}
       {label}
     </span>
+  );
+}
+
+function AlertBox({ alert }: { alert: DietAlert }) {
+  const styles = {
+    info: {
+      icon: <Info className="h-4 w-4 text-muted-foreground" />,
+      cls: "border-border bg-muted/30",
+    },
+    warning: {
+      icon: <AlertTriangle className="h-4 w-4 text-gold" />,
+      cls: "border-gold/40 bg-gold/5",
+    },
+    risk: {
+      icon: <AlertOctagon className="h-4 w-4 text-gold" />,
+      cls: "border-gold bg-gold/10",
+    },
+  }[alert.severity];
+  return (
+    <div
+      className={`flex items-start gap-2 rounded-sm border px-3 py-2 ${styles.cls}`}
+    >
+      {styles.icon}
+      <p className="text-sm leading-relaxed text-foreground">{alert.message}</p>
+    </div>
   );
 }
