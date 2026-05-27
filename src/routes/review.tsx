@@ -6,7 +6,16 @@ import { BrandHeader } from "@/components/BrandHeader";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useReportStore, type BodyCompositionData, type ClinicalData } from "@/store/report-store";
+import {
+  useReportStore,
+  type BodyCompositionData,
+  type ClinicalData,
+  type MainGoal,
+  type Sex,
+  type TrainingType,
+  type YesNo,
+  type YesNoNA,
+} from "@/store/report-store";
 
 export const Route = createFileRoute("/review")({
   head: () => ({
@@ -18,18 +27,27 @@ export const Route = createFileRoute("/review")({
   component: ReviewPage,
 });
 
-const GOAL_LABELS: Record<NonNullable<ClinicalData["mainGoal"]>, string> = {
+const GOAL_LABELS: Record<MainGoal, string> = {
   emagrecimento: "Emagrecimento",
   recomposicao: "Recomposição corporal",
-  ganho_massa: "Ganho de massa",
+  ganho_massa: "Ganho de massa muscular",
   manutencao: "Manutenção",
   alta_performance: "Alta performance",
   "": "—",
 };
 
-const SEX_LABELS: Record<BodyCompositionData["sex"], string> = {
+const SEX_LABELS: Record<Sex, string> = {
   feminino: "Feminino",
   masculino: "Masculino",
+  "": "—",
+};
+
+const TRAINING_TYPE_LABELS: Record<TrainingType, string> = {
+  musculacao: "Musculação",
+  cardio: "Cardio",
+  funcional: "Funcional",
+  personal: "Personal trainer",
+  outro: "Outro",
   "": "—",
 };
 
@@ -79,6 +97,23 @@ function ReviewPage() {
               )}
             </Section>
 
+            <Section title="Dados do paciente" editTo="/clinical-form">
+              {cd ? (
+                <DataGrid
+                  items={[
+                    ["Nome", cd.patientName || "—"],
+                    ["Sexo", SEX_LABELS[cd.sex]],
+                    ["Idade", fmt(cd.age, "anos")],
+                    ["Altura", fmt(cd.height, "cm")],
+                    ["Peso", fmt(cd.weight, "kg")],
+                    ["Objetivo", GOAL_LABELS[cd.mainGoal]],
+                  ]}
+                />
+              ) : (
+                <Empty label="Dados do paciente ainda não preenchidos." />
+              )}
+            </Section>
+
             <Section title="Dados da bioimpedância" editTo="/body-composition">
               {bc ? (
                 <DataGrid
@@ -105,35 +140,13 @@ function ReviewPage() {
               )}
             </Section>
 
-            <Section title="Dados clínicos" editTo="/clinical-form">
-              {cd ? (
-                <DataGrid
-                  items={[
-                    ["Menopausa", yn(cd.menopause)],
-                    ["Vesícula retirada", yn(cd.gallbladderRemoved)],
-                    ["Diabetes", yn(cd.diabetes)],
-                    ["Hipertensão", yn(cd.hypertension)],
-                    ["Intestino preso", yn(cd.constipation)],
-                    ["Compulsão alimentar", yn(cd.bingeEating)],
-                    ["Fome noturna", yn(cd.nightHunger)],
-                    ["Refeições por dia", cd.mealsPerDay || "—"],
-                    ["Alimentos que não consome", cd.avoidedFoods || "—"],
-                  ]}
-                />
-              ) : (
-                <Empty label="Dados clínicos ainda não preenchidos." />
-              )}
-            </Section>
-
-            <Section title="Rotina e treino" editTo="/clinical-form">
+            <Section title="Rotina e trabalho" editTo="/clinical-form">
               {cd ? (
                 <DataGrid
                   items={[
                     ["Horário que acorda", cd.wakeTime || "—"],
                     ["Horário que dorme", cd.sleepTime || "—"],
-                    ["Horário do treino", cd.trainingTime || "—"],
-                    ["Frequência semanal", fmt(cd.weeklyTrainingFrequency, "x/sem")],
-                    ["Tipo de treino", cd.trainingType || "—"],
+                    ["Horário de trabalho", cd.workSchedule || "—"],
                   ]}
                 />
               ) : (
@@ -141,11 +154,59 @@ function ReviewPage() {
               )}
             </Section>
 
-            <Section title="Objetivo" editTo="/clinical-form">
+            <Section title="Treino" editTo="/clinical-form">
               {cd ? (
-                <p className="text-base text-foreground">{GOAL_LABELS[cd.mainGoal]}</p>
+                <DataGrid
+                  items={[
+                    ["Treina atualmente", yn(cd.currentlyTraining)],
+                    ["Frequência semanal", fmt(cd.weeklyTrainingFrequency, "x/sem")],
+                    ["Horário do treino", cd.trainingTime || "—"],
+                    [
+                      "Tipo de treino",
+                      cd.trainingType === "outro" && cd.trainingTypeOther
+                        ? `Outro: ${cd.trainingTypeOther}`
+                        : TRAINING_TYPE_LABELS[cd.trainingType],
+                    ],
+                  ]}
+                />
               ) : (
-                <Empty label="Objetivo não definido." />
+                <Empty label="Treino ainda não preenchido." />
+              )}
+            </Section>
+
+            <Section title="Saúde" editTo="/clinical-form">
+              {cd ? (
+                <DataGrid
+                  items={[
+                    ["Doenças prévias", cd.previousDiseases || "—"],
+                    ["Medicamentos", cd.medications || "—"],
+                    ["Cirurgias prévias", cd.previousSurgeries || "—"],
+                    ["Alergias/intolerâncias", cd.allergiesIntolerances || "—"],
+                    ["Vesícula retirada", yn(cd.gallbladderRemoved)],
+                    ["Menopausa", ynna(cd.menopause)],
+                    ["Diabetes", yn(cd.diabetes)],
+                    ["Hipertensão", yn(cd.hypertension)],
+                    ["Intestino preso", yn(cd.constipation)],
+                    ["Compulsão alimentar", yn(cd.bingeEating)],
+                    ["Fome noturna", yn(cd.nightHunger)],
+                  ]}
+                />
+              ) : (
+                <Empty label="Dados clínicos ainda não preenchidos." />
+              )}
+            </Section>
+
+            <Section title="Preferência alimentar" editTo="/clinical-form">
+              {cd ? (
+                <DataGrid
+                  items={[
+                    ["Refeições por dia", cd.mealsPerDay || "—"],
+                    ["Alimentos que não consome", cd.avoidedFoods || "—"],
+                    ["Observações", cd.additionalNotes || "—"],
+                  ]}
+                />
+              ) : (
+                <Empty label="Preferências alimentares não preenchidas." />
               )}
             </Section>
           </div>
@@ -235,8 +296,15 @@ function fmt(v: string, suffix: string) {
   return `${v} ${suffix}`;
 }
 
-function yn(v: "sim" | "nao" | "") {
+function yn(v: YesNo) {
   if (v === "sim") return "Sim";
   if (v === "nao") return "Não";
+  return "—";
+}
+
+function ynna(v: YesNoNA) {
+  if (v === "sim") return "Sim";
+  if (v === "nao") return "Não";
+  if (v === "na") return "Não se aplica";
   return "—";
 }

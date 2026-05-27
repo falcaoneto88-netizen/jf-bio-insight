@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 const STEPS = [
   { id: 1, label: "Upload" },
   { id: 2, label: "Bioimpedância" },
-  { id: 3, label: "Dados clínicos" },
+  { id: 3, label: "Dados complementares" },
   { id: 4, label: "Revisão" },
 ] as const;
 

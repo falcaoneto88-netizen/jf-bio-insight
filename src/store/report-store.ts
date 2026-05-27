@@ -6,10 +6,12 @@ export type UploadedFile = {
   type: string;
 };
 
+export type Sex = "feminino" | "masculino" | "";
+
 export type BodyCompositionData = {
   patientName: string;
   examDateTime: string;
-  sex: "feminino" | "masculino" | "";
+  sex: Sex;
   age: string;
   height: string;
   weight: string;
@@ -43,40 +45,82 @@ export const emptyBodyComposition: BodyCompositionData = {
 };
 
 export type YesNo = "sim" | "nao" | "";
+export type YesNoNA = "sim" | "nao" | "na" | "";
+
+export type MainGoal =
+  | "emagrecimento"
+  | "recomposicao"
+  | "ganho_massa"
+  | "manutencao"
+  | "alta_performance"
+  | "";
+
+export type TrainingType =
+  | "musculacao"
+  | "cardio"
+  | "funcional"
+  | "personal"
+  | "outro"
+  | "";
 
 export type ClinicalData = {
-  mainGoal:
-    | "emagrecimento"
-    | "recomposicao"
-    | "ganho_massa"
-    | "manutencao"
-    | "alta_performance"
-    | "";
+  // Paciente
+  patientName: string;
+  sex: Sex;
+  age: string;
+  height: string;
+  weight: string;
+  // Objetivo
+  mainGoal: MainGoal;
+  // Rotina
   wakeTime: string;
   sleepTime: string;
-  trainingTime: string;
+  workSchedule: string;
+  // Treino
+  currentlyTraining: YesNo;
   weeklyTrainingFrequency: string;
-  trainingType: string;
-  menopause: YesNo;
+  trainingTime: string;
+  trainingType: TrainingType;
+  trainingTypeOther: string;
+  // Saúde
+  previousDiseases: string;
+  medications: string;
+  previousSurgeries: string;
+  allergiesIntolerances: string;
   gallbladderRemoved: YesNo;
+  menopause: YesNoNA;
   diabetes: YesNo;
   hypertension: YesNo;
   constipation: YesNo;
   bingeEating: YesNo;
   nightHunger: YesNo;
+  // Alimentação
   mealsPerDay: string;
   avoidedFoods: string;
+  additionalNotes: string;
 };
 
 export const emptyClinicalData: ClinicalData = {
+  patientName: "",
+  sex: "",
+  age: "",
+  height: "",
+  weight: "",
   mainGoal: "",
   wakeTime: "",
   sleepTime: "",
-  trainingTime: "",
+  workSchedule: "",
+  currentlyTraining: "",
   weeklyTrainingFrequency: "",
+  trainingTime: "",
   trainingType: "",
-  menopause: "",
+  trainingTypeOther: "",
+  previousDiseases: "",
+  medications: "",
+  previousSurgeries: "",
+  allergiesIntolerances: "",
   gallbladderRemoved: "",
+  menopause: "",
   diabetes: "",
   hypertension: "",
   constipation: "",
@@ -84,6 +128,7 @@ export const emptyClinicalData: ClinicalData = {
   nightHunger: "",
   mealsPerDay: "",
   avoidedFoods: "",
+  additionalNotes: "",
 };
 
 type ReportState = {
