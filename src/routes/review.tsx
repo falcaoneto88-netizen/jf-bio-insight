@@ -308,6 +308,32 @@ function Empty({ label }: { label: string }) {
   return <p className="text-sm text-muted-foreground italic">{label}</p>;
 }
 
+function HistoryList({
+  label,
+  rows,
+}: {
+  label: string;
+  rows: { date: string; value: string }[];
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-foreground">{label}</p>
+      <ul className="mt-1 grid gap-1 sm:grid-cols-2">
+        {rows.map((r, i) => (
+          <li
+            key={i}
+            className="flex justify-between gap-3 border-b border-dashed border-border/60 py-1 text-xs"
+          >
+            <span className="text-muted-foreground">{r.date || "—"}</span>
+            <span className="font-medium text-foreground">{r.value || "—"}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function fmt(v: string, suffix: string) {
   if (!v) return "—";
   return `${v} ${suffix}`;
