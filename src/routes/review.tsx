@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
+import { PrescriptionCard } from "@/components/PrescriptionCard";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -161,6 +162,10 @@ function ReviewPage() {
             </Card>
 
             <DietPlanCard diet={diet} />
+
+            <PrescriptionCard />
+
+
 
 
             <Section title="Arquivo enviado" editTo="/upload">
