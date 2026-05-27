@@ -78,8 +78,29 @@ function ReviewPage() {
         weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
         profile: analysis?.primaryProfile ?? null,
         mainGoal: cd?.mainGoal ?? "",
+        clinical: cd
+          ? {
+              gallbladderRemoved: cd.gallbladderRemoved,
+              menopause: cd.menopause,
+              currentlyTraining: cd.currentlyTraining,
+              trainingTime: cd.trainingTime,
+              diabetes: cd.diabetes,
+              hypertension: cd.hypertension,
+            }
+          : null,
       }),
-    [bc?.weight, cd?.weight, cd?.mainGoal, analysis?.primaryProfile],
+    [
+      bc?.weight,
+      cd?.weight,
+      cd?.mainGoal,
+      cd?.gallbladderRemoved,
+      cd?.menopause,
+      cd?.currentlyTraining,
+      cd?.trainingTime,
+      cd?.diabetes,
+      cd?.hypertension,
+      analysis?.primaryProfile,
+    ],
   );
 
   const handleGenerate = () => {
