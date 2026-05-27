@@ -1,126 +1,55 @@
-# JF BioReport — v1 (revisada)
+# Dados Clínicos Complementares
 
-Ajuste do fluxo para preparar o app à futura leitura automática da bioimpedância e geração do relatório. Sem IA e sem PDF real ainda — apenas estrutura, formulários e estado.
+Expandir a etapa 3 do fluxo (`/clinical-form`) para se tornar **"Dados Clínicos Complementares"**, com mais campos organizados em 6 cards. A etapa 2 (`/body-composition`) permanece intacta — os campos de paciente (nome, sexo, idade, altura, peso) aparecem aqui também como editáveis manualmente, preparados para preenchimento automático futuro a partir da bioimpedância.
 
-## Fluxo atualizado
+## Fluxo final
 
 ```
-/                    Tela inicial premium
-/upload              Upload do exame (PDF/PNG/JPG)
-/body-composition    Dados da Bioimpedância (novo)
-/clinical-form       Dados clínicos
-/review              Revisão + botão "Gerar relatório"
+/  →  /upload  →  /body-composition  →  /clinical-form  →  /review
+                  (Bioimpedância)      (Dados Clínicos
+                                        Complementares)
 ```
 
-Stepper presente nas etapas 2–5:
-`1 Upload · 2 Bioimpedância · 3 Dados clínicos · 4 Revisão`
+## Mudanças
 
-## Identidade visual (mantida)
+### 1. `src/store/report-store.ts`
+Expandir `ClinicalData` com novos campos (mantendo os existentes):
 
-- Paleta branco / preto / dourado (#C9A24B), via tokens oklch em `src/styles.css`.
-- Tipografia: Playfair Display (títulos) + Inter (corpo).
-- Cards com borda fina, sombras discretas, detalhes dourados sutis.
-- Responsivo mobile-first.
+- **Paciente:** `patientName`, `sex` ("feminino"|"masculino"|""), `age`, `height`, `weight`
+- **Treino:** `currentlyTraining: YesNo` (novo); manter `weeklyTrainingFrequency`, `trainingTime`
+- **Tipo de treino** → mudar `trainingType` para union `"musculacao"|"cardio"|"funcional"|"personal"|"outro"|""` + novo campo `trainingTypeOther: string`
+- **Saúde:** novos campos texto `previousDiseases`, `medications`, `previousSurgeries`, `allergiesIntolerances`; alterar `menopause` para `"sim"|"nao"|"na"|""` (novo tipo `YesNoNA`)
+- **Alimentação:** novo `additionalNotes: string`
+- **Rotina:** novo `workSchedule: string` (horário de trabalho)
 
-## Nova tela: `/body-composition` — Dados da Bioimpedância
+Atualizar `emptyClinicalData` correspondentemente. Sem campos removidos — apenas adições e o ajuste do `menopause`.
 
-Card único, formulário em grid 1 col (mobile) / 2 cols (desktop), todos os campos **editáveis**:
+### 2. `src/routes/clinical-form.tsx`
+Reorganizar em **6 cards**:
 
-- Nome do paciente (text)
-- Data e hora do exame (datetime-local)
-- Sexo (select: feminino / masculino)
-- Idade (number, anos)
-- Altura (number, cm)
-- Peso (number, kg)
-- IMC (number, kg/m²) — campo editável, com botão "Calcular" a partir de altura/peso
-- Massa muscular esquelética (number, kg)
-- Percentual de gordura corporal (number, %)
-- Massa de gordura corporal (number, kg)
-- Gordura visceral (number, nível)
-- Taxa metabólica basal (number, kcal)
-- Relação cintura-quadril (number)
-- Água corporal total (number, L)
-- Massa livre de gordura (number, kg)
+1. **Dados do paciente** — nome (text), sexo (select), idade (number), altura (cm), peso (kg). Nota discreta: "Em breve estes campos serão preenchidos automaticamente pela leitura da bioimpedância."
+2. **Objetivo** — select com 5 opções (já existe).
+3. **Rotina** — acorda, dorme, horário de trabalho (text livre, ex.: "9h às 18h").
+4. **Treino** — "Treina atualmente?" (Sim/Não); se Sim, mostrar frequência semanal, horário, tipo (radio: Musculação/Cardio/Funcional/Personal/Outro); se "Outro", input para descrever.
+5. **Saúde** — textareas: doenças prévias, medicamentos, cirurgias, alergias/intolerâncias. Toggles: Vesícula (Sim/Não), Menopausa (Sim/Não/NA), Diabetes, Hipertensão, Intestino preso, Compulsão alimentar, Fome noturna.
+6. **Preferência alimentar** — refeições/dia (number), alimentos que não consome (textarea), observações adicionais (textarea).
 
-Campos numéricos com `step` apropriado. Validação leve (apenas tipos e ranges plausíveis) — todos opcionais nesta v1 para não travar testes; obrigatórios apenas: nome, sexo, idade, altura, peso.
+**Validação obrigatória:** nome, sexo, idade, altura, peso, objetivo principal. Erros inline; submit bloqueado se faltar algum.
 
-Botões: "Voltar" (→ /upload) · "Continuar" (→ /clinical-form).
+**Botões:** "Voltar" → `/body-composition` · "Continuar para análise" → `/review`.
 
-Observação no topo do card: "Em breve estes campos serão preenchidos automaticamente a partir do exame enviado." — sinaliza ao usuário e ancora a próxima fase.
+Atualizar título do card principal e meta tags para "Dados Clínicos Complementares".
 
-## Formulário clínico atualizado (`/clinical-form`)
+### 3. `src/components/Stepper.tsx`
+Renomear etapa 3 de `"Dados clínicos"` → `"Dados complementares"` (mais curto para caber).
 
-Card com seções:
+### 4. `src/routes/review.tsx`
+Adicionar novo card **"Dados do paciente"** no topo (antes de Bioimpedância) usando os novos campos do `clinicalData`. Expandir o card "Dados clínicos" com os novos campos de saúde (doenças, medicamentos, cirurgias, alergias) e atualizar `menopause` para suportar "Não se aplica". Expandir "Rotina e treino" com `currentlyTraining`, `workSchedule`, e a label correta do `trainingType`. Adicionar "Observações" no resumo alimentar.
 
-**Objetivo**
-- Objetivo principal (select): Emagrecimento · Recomposição corporal · Ganho de massa · Manutenção · Alta performance
+## Design
 
-**Rotina**
-- Horário que acorda (time)
-- Horário que dorme (time)
-- Horário do treino (time)
-- Frequência de treino semanal (number, 0–7)
-- Tipo de treino (text)
+Mantém o sistema atual: cards com `border-border/80`, headers serif, dourado nos CTAs principais, layout responsivo `sm:grid-cols-2` dentro de cada section. Sem novas dependências.
 
-**Histórico de saúde** (toggles sim/não com RadioGroup)
-- Menopausa
-- Vesícula retirada
-- Diabetes
-- Hipertensão
-- Intestino preso
-- Compulsão alimentar
-- Fome noturna
+## Fora do escopo
 
-**Alimentação**
-- Quantas refeições deseja fazer por dia (number, 1–8)
-- Alimentos que não consome (textarea)
-
-Validação com react-hook-form + zod. Obrigatórios: objetivo principal, frequência de treino, refeições por dia. Restante opcional.
-
-Botões: "Voltar" (→ /body-composition) · "Continuar" (→ /review).
-
-## Tela de revisão (`/review`) reagrupada
-
-Seções (cards), cada uma com link "Editar" para a etapa correspondente:
-
-1. **Arquivo enviado** — nome, tamanho, tipo do arquivo do upload.
-2. **Dados da bioimpedância** — todos os 15 campos da etapa 2.
-3. **Dados clínicos** — histórico de saúde (lista de sim/não) e alimentação (refeições/dia, alimentos evitados).
-4. **Rotina e treino** — horários (acordar, dormir, treino), frequência semanal, tipo de treino.
-5. **Objetivo** — objetivo principal.
-
-Botão final dourado **"Gerar relatório"** → toast "Relatório em preparação" (placeholder; sem PDF nesta versão).
-
-## Estado e persistência
-
-Store Zustand (`src/store/report-store.ts`) ampliada:
-
-```ts
-type ReportState = {
-  file: { name: string; size: number; type: string } | null;
-  bodyComposition: BodyCompositionData | null;   // novo
-  clinicalData: ClinicalData | null;             // schema atualizado
-  setFile / setBodyComposition / setClinicalData / reset
-}
-```
-
-Persistência em `sessionStorage`. O store de bioimpedância já fica desenhado para receber, no futuro, dados extraídos automaticamente pela IA — basta um `setBodyComposition(parsed)` antes de navegar.
-
-## Arquivos a criar / alterar
-
-Criar:
-- `src/routes/body-composition.tsx`
-- `src/components/forms/BodyCompositionForm.tsx`
-- (atualizar) `src/components/Stepper.tsx` para 4 passos
-- (atualizar) `src/components/forms/ClinicalForm.tsx` com os novos campos
-- (atualizar) `src/routes/review.tsx` com os 5 grupos
-- (atualizar) `src/store/report-store.ts` com `bodyComposition`
-- (atualizar) `src/routes/upload.tsx` para navegar a `/body-composition`
-
-Sem novas dependências além das já planejadas (`zustand`, `react-hook-form`, `@hookform/resolvers`, `zod`).
-
-## Fora de escopo (continua)
-
-- Extração automática de dados do exame por IA.
-- Geração e download do PDF.
-- Autenticação, banco de dados, histórico.
+IA, extração automática real, persistência no banco, geração de PDF.
