@@ -1,55 +1,71 @@
-# Dados Clínicos Complementares
+# Extração automática da bioimpedância
 
-Expandir a etapa 3 do fluxo (`/clinical-form`) para se tornar **"Dados Clínicos Complementares"**, com mais campos organizados em 6 cards. A etapa 2 (`/body-composition`) permanece intacta — os campos de paciente (nome, sexo, idade, altura, peso) aparecem aqui também como editáveis manualmente, preparados para preenchimento automático futuro a partir da bioimpedância.
+Conectar o upload à IA da Lovable (Gemini multimodal) para ler PDF/PNG/JPG, extrair os campos da bioimpedância e enviá-los pré-preenchidos para a tela de revisão, onde tudo continua editável.
 
-## Fluxo final
+## Fluxo
 
 ```
-/  →  /upload  →  /body-composition  →  /clinical-form  →  /review
-                  (Bioimpedância)      (Dados Clínicos
-                                        Complementares)
+/upload  →  [extração com IA, loading]  →  /body-composition (pré-preenchido + editável)
+            ↓ erro
+            permanece em /upload com mensagem amigável
 ```
 
 ## Mudanças
 
 ### 1. `src/store/report-store.ts`
-Expandir `ClinicalData` com novos campos (mantendo os existentes):
+Adicionar histórico opcional em `BodyCompositionData`:
 
-- **Paciente:** `patientName`, `sex` ("feminino"|"masculino"|""), `age`, `height`, `weight`
-- **Treino:** `currentlyTraining: YesNo` (novo); manter `weeklyTrainingFrequency`, `trainingTime`
-- **Tipo de treino** → mudar `trainingType` para union `"musculacao"|"cardio"|"funcional"|"personal"|"outro"|""` + novo campo `trainingTypeOther: string`
-- **Saúde:** novos campos texto `previousDiseases`, `medications`, `previousSurgeries`, `allergiesIntolerances`; alterar `menopause` para `"sim"|"nao"|"na"|""` (novo tipo `YesNoNA`)
-- **Alimentação:** novo `additionalNotes: string`
-- **Rotina:** novo `workSchedule: string` (horário de trabalho)
+```ts
+type HistoryPoint = { date: string; value: string };
+// novos campos:
+weightHistory: HistoryPoint[];
+skeletalMuscleHistory: HistoryPoint[];
+bodyFatHistory: HistoryPoint[];
+```
 
-Atualizar `emptyClinicalData` correspondentemente. Sem campos removidos — apenas adições e o ajuste do `menopause`.
+`emptyBodyComposition` inicializa os três como `[]`.
 
-### 2. `src/routes/clinical-form.tsx`
-Reorganizar em **6 cards**:
+### 2. Server function — `src/lib/bioimpedance.functions.ts` (novo)
+- `createServerFn({ method: "POST" })` com `inputValidator` Zod: `{ fileBase64: string, mimeType: "application/pdf" | "image/png" | "image/jpeg", fileName: string }`. Valida tamanho (≤ 10 MB após decodificar).
+- Chama Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`) com `google/gemini-2.5-flash`, header `Authorization: Bearer ${process.env.LOVABLE_API_KEY}`.
+- Mensagem `user` com duas partes: `{ type: "text", text: <prompt-pt-BR> }` e `{ type: "image_url", image_url: { url: "data:<mime>;base64,..." } }` (Gemini aceita PDF via mesmo formato data-URL no gateway).
+- Usa **tool calling** com schema estrito (`tool_choice: required`) para garantir JSON estruturado: campos string/null para cada métrica + arrays de histórico. Todos os campos opcionais (modelo retorna `null` quando ausente).
+- Tratamento de erro: 429 → "Limite de uso atingido, tente novamente em instantes"; 402 → "Créditos da IA esgotados, adicione mais em Settings → Workspace → Usage"; outros → mensagem genérica. Retorna `{ data: BodyCompositionData | null, error: string | null }` (DTO seguro).
+- Mapeia o JSON da IA para o shape de `BodyCompositionData` (strings vazias para nulos, normaliza datetime ISO local quando possível, normaliza sexo para `"feminino"|"masculino"`).
 
-1. **Dados do paciente** — nome (text), sexo (select), idade (number), altura (cm), peso (kg). Nota discreta: "Em breve estes campos serão preenchidos automaticamente pela leitura da bioimpedância."
-2. **Objetivo** — select com 5 opções (já existe).
-3. **Rotina** — acorda, dorme, horário de trabalho (text livre, ex.: "9h às 18h").
-4. **Treino** — "Treina atualmente?" (Sim/Não); se Sim, mostrar frequência semanal, horário, tipo (radio: Musculação/Cardio/Funcional/Personal/Outro); se "Outro", input para descrever.
-5. **Saúde** — textareas: doenças prévias, medicamentos, cirurgias, alergias/intolerâncias. Toggles: Vesícula (Sim/Não), Menopausa (Sim/Não/NA), Diabetes, Hipertensão, Intestino preso, Compulsão alimentar, Fome noturna.
-6. **Preferência alimentar** — refeições/dia (number), alimentos que não consome (textarea), observações adicionais (textarea).
+Registrar `attachSupabaseAuth` **não é necessário** (função pública, sem auth). Mas precisa registrar nada novo em `src/start.ts`.
 
-**Validação obrigatória:** nome, sexo, idade, altura, peso, objetivo principal. Erros inline; submit bloqueado se faltar algum.
+### 3. `src/routes/upload.tsx`
+- Ao selecionar/arrastar arquivo: armazena `file` no store (como hoje) e dispara `extract` automaticamente.
+- Estado local: `status: "idle" | "extracting" | "done" | "error"`, `errorMessage`.
+- Durante `extracting`: substitui o card de arquivo por um card com spinner dourado + texto "Analisando o exame com IA…" e desabilita o botão Continuar.
+- `done`: badge verde "Dados extraídos" + botão "Continuar" habilitado (navega para `/body-composition`).
+- `error`: mostra alerta com mensagem da IA + botão "Tentar novamente"; usuário ainda pode clicar "Continuar mesmo assim" para preencher manualmente.
+- Conversão para base64: `FileReader.readAsDataURL` no client, envia só o payload base64 (remove o prefixo `data:...;base64,`).
+- Salva resultado via `setBodyComposition(extracted)` antes de navegar.
 
-**Botões:** "Voltar" → `/body-composition` · "Continuar para análise" → `/review`.
+### 4. `src/routes/body-composition.tsx`
+- Renomear CTA principal para **"Confirmar dados"** (mantém ícone de seta).
+- Banner superior: se `bodyComposition` veio da IA, mostrar caixa verde-clara "Dados extraídos automaticamente. Revise e ajuste se necessário."; caso contrário, manter aviso dourado atual.
+- Adicionar nova seção **"Histórico da composição corporal"** (renderiza apenas se houver pelo menos 1 ponto em qualquer das 3 listas):
+  - Tabela responsiva com colunas: Data · Peso (kg) · Massa muscular (kg) · % gordura
+  - Linhas editáveis (inputs inline) + botão "Adicionar linha" + ícone remover por linha
+  - Estado gerenciado pelo mesmo `data` do form
+- Mantém validação atual; ao submeter, salva o histórico junto.
 
-Atualizar título do card principal e meta tags para "Dados Clínicos Complementares".
+### 5. `src/routes/review.tsx`
+- Acrescentar bloco de histórico no card "Dados da bioimpedância" (lista compacta data → valores) quando houver.
 
-### 3. `src/components/Stepper.tsx`
-Renomear etapa 3 de `"Dados clínicos"` → `"Dados complementares"` (mais curto para caber).
+## Detalhes técnicos
 
-### 4. `src/routes/review.tsx`
-Adicionar novo card **"Dados do paciente"** no topo (antes de Bioimpedância) usando os novos campos do `clinicalData`. Expandir o card "Dados clínicos" com os novos campos de saúde (doenças, medicamentos, cirurgias, alergias) e atualizar `menopause` para suportar "Não se aplica". Expandir "Rotina e treino" com `currentlyTraining`, `workSchedule`, e a label correta do `trainingType`. Adicionar "Observações" no resumo alimentar.
-
-## Design
-
-Mantém o sistema atual: cards com `border-border/80`, headers serif, dourado nos CTAs principais, layout responsivo `sm:grid-cols-2` dentro de cada section. Sem novas dependências.
+- **Modelo:** `google/gemini-2.5-flash` (multimodal, suporta PDF/imagem, rápido e gratuito durante a janela promocional do Lovable AI).
+- **Prompt (resumo):** "Você é um extrator de exames de bioimpedância em português. Retorne APENAS via tool call. Para cada campo, devolva o valor numérico em string ou null. Inclua arrays de histórico se o exame contiver tabela/gráfico de evolução."
+- **Tool schema** (parâmetros do tool `extract_bioimpedance`): todos os 15 campos do `BodyCompositionData` + `history: { weight: HistoryPoint[], skeletalMuscle: HistoryPoint[], bodyFat: HistoryPoint[] }`.
+- **Segurança:** `LOVABLE_API_KEY` lida via `process.env` dentro do `.handler()`. Arquivo nunca persiste — fica em memória do request.
+- **Sem novas dependências.** Já temos `zod`, `zustand`, fetch nativo.
 
 ## Fora do escopo
 
-IA, extração automática real, persistência no banco, geração de PDF.
+- Persistir arquivo/relatório no banco
+- OCR fallback (Gemini já cobre PDFs escaneados)
+- Geração de PDF final

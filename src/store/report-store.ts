@@ -8,6 +8,8 @@ export type UploadedFile = {
 
 export type Sex = "feminino" | "masculino" | "";
 
+export type HistoryPoint = { date: string; value: string };
+
 export type BodyCompositionData = {
   patientName: string;
   examDateTime: string;
@@ -24,6 +26,9 @@ export type BodyCompositionData = {
   waistHipRatio: string;
   totalBodyWater: string;
   fatFreeMass: string;
+  weightHistory: HistoryPoint[];
+  skeletalMuscleHistory: HistoryPoint[];
+  bodyFatHistory: HistoryPoint[];
 };
 
 export const emptyBodyComposition: BodyCompositionData = {
@@ -42,6 +47,9 @@ export const emptyBodyComposition: BodyCompositionData = {
   waistHipRatio: "",
   totalBodyWater: "",
   fatFreeMass: "",
+  weightHistory: [],
+  skeletalMuscleHistory: [],
+  bodyFatHistory: [],
 };
 
 export type YesNo = "sim" | "nao" | "";

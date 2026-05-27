@@ -116,25 +116,42 @@ function ReviewPage() {
 
             <Section title="Dados da bioimpedância" editTo="/body-composition">
               {bc ? (
-                <DataGrid
-                  items={[
-                    ["Nome", bc.patientName],
-                    ["Data do exame", bc.examDateTime],
-                    ["Sexo", SEX_LABELS[bc.sex]],
-                    ["Idade", fmt(bc.age, "anos")],
-                    ["Altura", fmt(bc.height, "cm")],
-                    ["Peso", fmt(bc.weight, "kg")],
-                    ["IMC", fmt(bc.bmi, "kg/m²")],
-                    ["Massa muscular esquelética", fmt(bc.skeletalMuscleMass, "kg")],
-                    ["% gordura corporal", fmt(bc.bodyFatPercentage, "%")],
-                    ["Massa de gordura corporal", fmt(bc.bodyFatMass, "kg")],
-                    ["Gordura visceral", bc.visceralFat || "—"],
-                    ["Taxa metabólica basal", fmt(bc.basalMetabolicRate, "kcal")],
-                    ["Relação cintura-quadril", bc.waistHipRatio || "—"],
-                    ["Água corporal total", fmt(bc.totalBodyWater, "L")],
-                    ["Massa livre de gordura", fmt(bc.fatFreeMass, "kg")],
-                  ]}
-                />
+                <div className="space-y-4">
+                  <DataGrid
+                    items={[
+                      ["Nome", bc.patientName],
+                      ["Data do exame", bc.examDateTime],
+                      ["Sexo", SEX_LABELS[bc.sex]],
+                      ["Idade", fmt(bc.age, "anos")],
+                      ["Altura", fmt(bc.height, "cm")],
+                      ["Peso", fmt(bc.weight, "kg")],
+                      ["IMC", fmt(bc.bmi, "kg/m²")],
+                      ["Massa muscular esquelética", fmt(bc.skeletalMuscleMass, "kg")],
+                      ["% gordura corporal", fmt(bc.bodyFatPercentage, "%")],
+                      ["Massa de gordura corporal", fmt(bc.bodyFatMass, "kg")],
+                      ["Gordura visceral", bc.visceralFat || "—"],
+                      ["Taxa metabólica basal", fmt(bc.basalMetabolicRate, "kcal")],
+                      ["Relação cintura-quadril", bc.waistHipRatio || "—"],
+                      ["Água corporal total", fmt(bc.totalBodyWater, "L")],
+                      ["Massa livre de gordura", fmt(bc.fatFreeMass, "kg")],
+                    ]}
+                  />
+                  {(bc.weightHistory.length > 0 ||
+                    bc.skeletalMuscleHistory.length > 0 ||
+                    bc.bodyFatHistory.length > 0) && (
+                    <div className="space-y-2 border-t border-border/60 pt-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        Histórico
+                      </p>
+                      <HistoryList label="Peso (kg)" rows={bc.weightHistory} />
+                      <HistoryList
+                        label="Massa muscular esquelética (kg)"
+                        rows={bc.skeletalMuscleHistory}
+                      />
+                      <HistoryList label="% gordura corporal" rows={bc.bodyFatHistory} />
+                    </div>
+                  )}
+                </div>
               ) : (
                 <Empty label="Bioimpedância ainda não preenchida." />
               )}
@@ -289,6 +306,32 @@ function DataGrid({ items }: { items: [string, string][] }) {
 
 function Empty({ label }: { label: string }) {
   return <p className="text-sm text-muted-foreground italic">{label}</p>;
+}
+
+function HistoryList({
+  label,
+  rows,
+}: {
+  label: string;
+  rows: { date: string; value: string }[];
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-foreground">{label}</p>
+      <ul className="mt-1 grid gap-1 sm:grid-cols-2">
+        {rows.map((r, i) => (
+          <li
+            key={i}
+            className="flex justify-between gap-3 border-b border-dashed border-border/60 py-1 text-xs"
+          >
+            <span className="text-muted-foreground">{r.date || "—"}</span>
+            <span className="font-medium text-foreground">{r.value || "—"}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function fmt(v: string, suffix: string) {
