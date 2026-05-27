@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as SuccessRouteImport } from './routes/success'
 import { Route as ReviewRouteImport } from './routes/review'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as ClinicalFormRouteImport } from './routes/clinical-form'
 import { Route as BodyCompositionRouteImport } from './routes/body-composition'
 import { Route as IndexRouteImport } from './routes/index'
@@ -20,9 +22,19 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SuccessRoute = SuccessRouteImport.update({
+  id: '/success',
+  path: '/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReviewRoute = ReviewRouteImport.update({
   id: '/review',
   path: '/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClinicalFormRoute = ClinicalFormRouteImport.update({
@@ -45,14 +57,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
+  '/history': typeof HistoryRoute
   '/review': typeof ReviewRoute
+  '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
+  '/history': typeof HistoryRoute
   '/review': typeof ReviewRoute
+  '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesById {
@@ -60,7 +76,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
+  '/history': typeof HistoryRoute
   '/review': typeof ReviewRoute
+  '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRouteTypes {
@@ -69,16 +87,27 @@ export interface FileRouteTypes {
     | '/'
     | '/body-composition'
     | '/clinical-form'
+    | '/history'
     | '/review'
+    | '/success'
     | '/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/body-composition' | '/clinical-form' | '/review' | '/upload'
+  to:
+    | '/'
+    | '/body-composition'
+    | '/clinical-form'
+    | '/history'
+    | '/review'
+    | '/success'
+    | '/upload'
   id:
     | '__root__'
     | '/'
     | '/body-composition'
     | '/clinical-form'
+    | '/history'
     | '/review'
+    | '/success'
     | '/upload'
   fileRoutesById: FileRoutesById
 }
@@ -86,7 +115,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BodyCompositionRoute: typeof BodyCompositionRoute
   ClinicalFormRoute: typeof ClinicalFormRoute
+  HistoryRoute: typeof HistoryRoute
   ReviewRoute: typeof ReviewRoute
+  SuccessRoute: typeof SuccessRoute
   UploadRoute: typeof UploadRoute
 }
 
@@ -99,11 +130,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/success': {
+      id: '/success'
+      path: '/success'
+      fullPath: '/success'
+      preLoaderRoute: typeof SuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/review': {
       id: '/review'
       path: '/review'
       fullPath: '/review'
       preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clinical-form': {
@@ -134,7 +179,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BodyCompositionRoute: BodyCompositionRoute,
   ClinicalFormRoute: ClinicalFormRoute,
+  HistoryRoute: HistoryRoute,
   ReviewRoute: ReviewRoute,
+  SuccessRoute: SuccessRoute,
   UploadRoute: UploadRoute,
 }
 export const routeTree = rootRouteImport

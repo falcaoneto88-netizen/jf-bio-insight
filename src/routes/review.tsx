@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
 import { DIETA_BASE_DR_JOAO } from "@/lib/diet-base";
 import { adjustDiet } from "@/lib/diet-adjuster";
+import { addReportToHistory } from "@/lib/report-history";
 import {
   useReportStore,
   type MainGoal,
@@ -134,16 +135,30 @@ function ReviewPage() {
         .replace(/[^a-zA-Z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
         .toLowerCase() || "paciente";
+      const fileName = `relatorio-${slug}-${stamp}.pdf`;
       const a = document.createElement("a");
       a.href = url;
-      a.download = `relatorio-${slug}-${stamp}.pdf`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+      addReportToHistory({
+        patientName: bc?.patientName || cd?.patientName || "Paciente",
+        examDate: bc?.examDateTime || "",
+        generatedAt: new Date().toISOString(),
+        mainGoal: cd?.mainGoal ? GOAL_LABELS[cd.mainGoal] : "—",
+        bodyClassification: analysis
+          ? PROFILE_LABELS[analysis.primaryProfile]
+          : "—",
+        pdfFileName: fileName,
+      });
+
       toast.success("Relatório gerado", {
         description: "O download do PDF foi iniciado.",
       });
+      navigate({ to: "/success" });
     } catch (err) {
       console.error(err);
       toast.error("Falha ao gerar o PDF", {
