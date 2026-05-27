@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type UploadedFile = {
   name: string;
@@ -149,12 +150,25 @@ type ReportState = {
   reset: () => void;
 };
 
-export const useReportStore = create<ReportState>((set) => ({
-  file: null,
-  bodyComposition: null,
-  clinicalData: null,
-  setFile: (file) => set({ file }),
-  setBodyComposition: (data) => set({ bodyComposition: data }),
-  setClinicalData: (data) => set({ clinicalData: data }),
-  reset: () => set({ file: null, bodyComposition: null, clinicalData: null }),
-}));
+export const useReportStore = create<ReportState>()(
+  persist(
+    (set) => ({
+      file: null,
+      bodyComposition: null,
+      clinicalData: null,
+      setFile: (file) => set({ file }),
+      setBodyComposition: (data) => set({ bodyComposition: data }),
+      setClinicalData: (data) => set({ clinicalData: data }),
+      reset: () => set({ file: null, bodyComposition: null, clinicalData: null }),
+    }),
+    {
+      name: "jf-bioreport-draft",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        file: state.file,
+        bodyComposition: state.bodyComposition,
+        clinicalData: state.clinicalData,
+      }),
+    },
+  ),
+);

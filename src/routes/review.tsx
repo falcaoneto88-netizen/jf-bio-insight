@@ -381,7 +381,15 @@ function ReviewPage() {
             </Section>
           </div>
 
-          <div className="mt-10 flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div className="mt-10 flex items-start gap-3 rounded-md border border-gold/40 bg-gold-soft/20 px-4 py-3 text-sm text-foreground">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+            <p>
+              Conduta sugerida — este relatório deve ser revisado e validado por um
+              profissional antes de ser enviado ao paciente.
+            </p>
+          </div>
+
+          <div className="mt-6 flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
             <Button asChild variant="ghost" type="button">
               <Link to="/clinical-form">
                 <ArrowLeft />
