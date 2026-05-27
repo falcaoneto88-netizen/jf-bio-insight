@@ -1,15 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, FileText, Pencil, Sparkles } from "lucide-react";
+import { ArrowLeft, FileText, Pencil, Sparkles, Activity } from "lucide-react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { BrandHeader } from "@/components/BrandHeader";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
 import {
   useReportStore,
-  type BodyCompositionData,
-  type ClinicalData,
   type MainGoal,
   type Sex,
   type TrainingType,
