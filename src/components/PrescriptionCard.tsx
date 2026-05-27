@@ -28,7 +28,7 @@ export function PrescriptionCard({
           <span>Protocolo avançado</span>
           <Switch
             checked={advanced}
-            onCheckedChange={setAdvanced}
+            onCheckedChange={onAdvancedChange}
             aria-label="Incluir protocolo avançado"
           />
         </label>
