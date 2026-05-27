@@ -1,44 +1,37 @@
-## Patch de segurança e consistência visual — JF BioReport
+## Patch mínimo — corrigir erro na geração do PDF
 
-Aplicar as 5 alterações já discutidas, sem refator e sem tocar em lógica de IA/PDF/diet-adjuster/prescription.
+Escopo cirúrgico, sem refator, sem alterar IA/dieta/prescrição/rotas/upload.
 
-### 1. Tokens semânticos de sucesso — `src/styles.css`
-- Em `@theme inline`: adicionar `--color-success`, `--color-success-foreground`, `--color-success-soft`.
-- Em `:root`: adicionar `--success`, `--success-foreground`, `--success-soft` em `oklch` (verde-clínico dessaturado, alinhado ao tema).
-- Em `.dark`: equivalentes para tema escuro.
+### 1. `src/lib/pdf/ReportDocument.tsx`
+- Remover os dois blocos `Font.register` (Inter e PlayfairDisplay) e o `import { Font }`.
+- Substituir `fontFamily: "Inter"` → `fontFamily: "Helvetica"` no estilo `page`.
+- Substituir `fontFamily: "PlayfairDisplay"` → `fontFamily: "Helvetica-Bold"` em todos os estilos que usam (`brandName`, `pageTitle`, `sectionTitle`, `mealTitle`, `guidelineTitle`).
+- Trocar `"kg/m²"` por `"kg/m2"` no DataRow do IMC (linha 506) — Helvetica não tem o glyph `²`.
+- Preservar todo o restante: paleta, espaçamentos, hierarquia, bordas, layout das 5 páginas, disclaimer da página 5.
 
-### 2. Substituir `emerald-*` hardcoded
-- `src/routes/upload.tsx` (linhas 215-216): trocar `border-emerald-500/40 bg-emerald-500/10` por `border-success/40 bg-success/10`; `text-emerald-600` → `text-success`.
-- `src/routes/body-composition.tsx` (linhas 111-112): mesma substituição.
+### 2. `src/store/report-store.ts`
+- Adicionar `version: 1` à config do `persist`.
+- Adicionar `migrate: (persistedState, version) => version < 1 ? { file: null, bodyComposition: null, clinicalData: null } : persistedState` para descartar drafts antigos incompatíveis.
+- Normalizar `partialize` para garantir que arrays históricos nunca sejam `undefined` ao reidratar (defensivo).
 
-### 3. Disclaimer em `/review`
-Em `src/routes/review.tsx`, inserir um bloco visual logo antes do `<div>` que contém o botão "Gerar relatório" (linha 384), com texto:
-> "Conduta sugerida — este relatório deve ser revisado e validado por um profissional antes de ser enviado ao paciente."
+### 3. Fallbacks defensivos mínimos
+- Em `src/routes/review.tsx` linhas 292-294: trocar `bc.weightHistory.length` etc. por `(bc.weightHistory ?? []).length` (guarda contra drafts legados antes do migrate rodar).
+- No PDF, a função `fmt()` já trata `null/undefined` retornando `"—"`. Mantida.
 
-Estilo: caixa com borda `gold/40`, fundo `gold-soft/20`, ícone discreto, copy em `text-foreground`.
+### 4. Não tocar
+- `handleGenerate` em `review.tsx` (mantém try/catch atual).
+- `diet-adjuster.ts`, `prescription-data.ts`, `diet-base.ts`, `body-classifier.ts`.
+- `bioimpedance.functions.ts`, `report-history.ts`.
+- Rotas, BrandHeader, Stepper, tokens em `styles.css`.
+- Estrutura das 5 páginas do PDF.
 
-### 4. Disclaimer no PDF (página 5)
-Em `src/lib/pdf/ReportDocument.tsx`, adicionar um `<View>` + `<Text>` após o `.map` de `FINAL_GUIDELINES` (antes de `</Page>` da página 5), usando `styles.paragraphMuted` reduzido, com texto:
-> "Relatório gerado como apoio à conduta clínica. As orientações devem ser revisadas e validadas por profissional habilitado antes da entrega ao paciente."
+### Arquivos alterados (final)
+1. `src/lib/pdf/ReportDocument.tsx`
+2. `src/store/report-store.ts`
+3. `src/routes/review.tsx` (apenas 3 linhas defensivas)
 
-Sem nova fonte, sem novo estilo, sem alterar `PageChrome`, contrato `ReportInput` ou paleta.
+### Observação visual
+Com Helvetica, os títulos perdem o serif do Playfair — o PDF fica "clínico limpo" em vez de "editorial premium". Patch focado em destravar a geração; se quiser recuperar o serif depois, abrimos segundo patch empacotando `.ttf` local em `src/assets/fonts/`.
 
-### 5. Persistência do Zustand
-Em `src/store/report-store.ts`, envolver o `create<ReportState>` com o middleware `persist` de `zustand/middleware`:
-- chave: `jf-bioreport-draft`
-- storage: `localStorage`
-- persistir apenas `file`, `bodyComposition`, `clinicalData`
-- `reset()` continua a limpar (o `persist` reescreve automaticamente).
-
-Sem nova dependência — `zustand` já está instalado.
-
-### Arquivos alterados
-1. `src/styles.css`
-2. `src/routes/upload.tsx`
-3. `src/routes/body-composition.tsx`
-4. `src/routes/review.tsx`
-5. `src/lib/pdf/ReportDocument.tsx`
-6. `src/store/report-store.ts`
-
-### Fora do escopo
-Nada além disso: sem mexer em rotas, sem Supabase, sem auth, sem refator, sem alterar `bioimpedance.functions.ts`, `diet-adjuster.ts`, `prescription-data.ts`, `body-classifier.ts`, `report-history.ts`.
+### Após aplicar
+Limpar `localStorage.removeItem('jf-bioreport-draft')` no navegador uma vez para descartar qualquer draft persistido antes do migrate.
