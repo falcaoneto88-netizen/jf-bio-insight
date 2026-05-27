@@ -58,6 +58,11 @@ function ReviewPage() {
   const bc = bodyComposition;
   const cd = clinicalData;
 
+  const analysis = useMemo(
+    () => classifyBody(bodyComposition, clinicalData),
+    [bodyComposition, clinicalData],
+  );
+
   const handleGenerate = () => {
     toast.success("Relatório em preparação", {
       description: "A geração final do PDF será adicionada na próxima fase.",
