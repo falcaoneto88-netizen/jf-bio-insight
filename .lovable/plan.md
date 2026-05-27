@@ -1,71 +1,123 @@
-# Extração automática da bioimpedância
+# Motor de classificação corporal
 
-Conectar o upload à IA da Lovable (Gemini multimodal) para ler PDF/PNG/JPG, extrair os campos da bioimpedância e enviá-los pré-preenchidos para a tela de revisão, onde tudo continua editável.
+Adicionar uma camada de análise pura (sem IA, determinística) que recebe `BodyCompositionData` + `ClinicalData` e devolve um perfil clínico + narrativa curta. Exibir na tela de revisão antes da geração do relatório.
 
 ## Fluxo
 
 ```
-/upload  →  [extração com IA, loading]  →  /body-composition (pré-preenchido + editável)
-            ↓ erro
-            permanece em /upload com mensagem amigável
+/review  →  bloco "Análise preliminar" (gerado em tempo real a partir do store)
+            ↓
+            usado depois na geração do PDF final
 ```
 
-## Mudanças
+## Arquivos
 
-### 1. `src/store/report-store.ts`
-Adicionar histórico opcional em `BodyCompositionData`:
+### 1. `src/lib/body-classifier.ts` (novo, puro TS, sem deps)
+
+Tipos:
 
 ```ts
-type HistoryPoint = { date: string; value: string };
-// novos campos:
-weightHistory: HistoryPoint[];
-skeletalMuscleHistory: HistoryPoint[];
-bodyFatHistory: HistoryPoint[];
+export type ProfileTag =
+  | "emagrecimento"
+  | "emagrecimento_metabolico_prioritario"
+  | "recomposicao"
+  | "ganho_massa"
+  | "baixa_massa_muscular"
+  | "gordura_visceral_elevada"
+  | "metabolismo_reduzido"
+  | "perfil_atletico"
+  | "risco_metabolico_aumentado";
+
+export type ClassificationResult = {
+  primaryProfile: ProfileTag;
+  secondaryProfiles: ProfileTag[];
+  flags: {
+    highBodyFat: boolean;
+    lowMuscle: boolean;
+    highVisceralFat: boolean;
+    lowBMR: boolean;
+    adequateFat: boolean;
+    metabolicRisk: boolean;
+  };
+  narrative: {
+    diagnosis: string;     // diagnóstico corporal (1–2 frases)
+    strength: string;      // ponto forte
+    attention: string;     // ponto de atenção
+    strategy: string;      // estratégia principal
+  };
+};
+
+export function classifyBody(
+  body: BodyCompositionData,
+  clinical: ClinicalData | null,
+): ClassificationResult | null; // null se dados insuficientes (sem sexo/idade/peso/%gordura)
 ```
 
-`emptyBodyComposition` inicializa os três como `[]`.
+Tabelas de referência embutidas (faixas clássicas usadas em bioimpedância — ACE/InBody, simplificadas):
 
-### 2. Server function — `src/lib/bioimpedance.functions.ts` (novo)
-- `createServerFn({ method: "POST" })` com `inputValidator` Zod: `{ fileBase64: string, mimeType: "application/pdf" | "image/png" | "image/jpeg", fileName: string }`. Valida tamanho (≤ 10 MB após decodificar).
-- Chama Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`) com `google/gemini-2.5-flash`, header `Authorization: Bearer ${process.env.LOVABLE_API_KEY}`.
-- Mensagem `user` com duas partes: `{ type: "text", text: <prompt-pt-BR> }` e `{ type: "image_url", image_url: { url: "data:<mime>;base64,..." } }` (Gemini aceita PDF via mesmo formato data-URL no gateway).
-- Usa **tool calling** com schema estrito (`tool_choice: required`) para garantir JSON estruturado: campos string/null para cada métrica + arrays de histórico. Todos os campos opcionais (modelo retorna `null` quando ausente).
-- Tratamento de erro: 429 → "Limite de uso atingido, tente novamente em instantes"; 402 → "Créditos da IA esgotados, adicione mais em Settings → Workspace → Usage"; outros → mensagem genérica. Retorna `{ data: BodyCompositionData | null, error: string | null }` (DTO seguro).
-- Mapeia o JSON da IA para o shape de `BodyCompositionData` (strings vazias para nulos, normaliza datetime ISO local quando possível, normaliza sexo para `"feminino"|"masculino"`).
+- **% gordura corporal por sexo/idade**: faixas (atlético / saudável / aceitável / elevado).
+  - Feminino 20–39: atl <21, saud 21–32, elev >33; 40–59: atl <23, saud 23–33, elev >34; 60+: atl <24, saud 24–35, elev >36.
+  - Masculino 20–39: atl <8, saud 8–19, elev >20; 40–59: atl <11, saud 11–21, elev >22; 60+: atl <13, saud 13–24, elev >25.
+- **Massa muscular esquelética (SMM) baixa**: SMM/peso × 100 < 33% (feminino) ou < 37% (masculino). Aproxima o índice usado pelo InBody.
+- **Gordura visceral**: >9 = elevada (regra do enunciado), >14 = muito elevada.
+- **TMB baixa**: TMB observada < 0,92 × TMB estimada por Mifflin-St Jeor (sexo/idade/peso/altura). Margem de 8% considera variação aceitável.
+- **Risco metabólico aumentado**: ≥2 entre {%gordura elevado, visceral >9, RCQ acima do limite (F>0,85 / M>0,90)}.
 
-Registrar `attachSupabaseAuth` **não é necessário** (função pública, sem auth). Mas precisa registrar nada novo em `src/start.ts`.
+Lógica de priorização (uma classificação primária + tags secundárias):
 
-### 3. `src/routes/upload.tsx`
-- Ao selecionar/arrastar arquivo: armazena `file` no store (como hoje) e dispara `extract` automaticamente.
-- Estado local: `status: "idle" | "extracting" | "done" | "error"`, `errorMessage`.
-- Durante `extracting`: substitui o card de arquivo por um card com spinner dourado + texto "Analisando o exame com IA…" e desabilita o botão Continuar.
-- `done`: badge verde "Dados extraídos" + botão "Continuar" habilitado (navega para `/body-composition`).
-- `error`: mostra alerta com mensagem da IA + botão "Tentar novamente"; usuário ainda pode clicar "Continuar mesmo assim" para preencher manualmente.
-- Conversão para base64: `FileReader.readAsDataURL` no client, envia só o payload base64 (remove o prefixo `data:...;base64,`).
-- Salva resultado via `setBodyComposition(extracted)` antes de navegar.
+```text
+if highBodyFat && highVisceralFat && weight excedente (IMC ≥ 27 OU bodyFatPercentage muito alto):
+  primary = emagrecimento_metabolico_prioritario
+else if highVisceralFat:
+  primary = gordura_visceral_elevada
+else if highBodyFat:
+  primary = emagrecimento
+else if adequateFat && lowMuscle:
+  primary = recomposicao
+else if lowMuscle:
+  primary = baixa_massa_muscular
+else if bodyFatPercentage baixo && SMM adequada:
+  primary = perfil_atletico
+else if mainGoal == "ganho_massa":
+  primary = ganho_massa
+else:
+  primary = recomposicao (default seguro)
 
-### 4. `src/routes/body-composition.tsx`
-- Renomear CTA principal para **"Confirmar dados"** (mantém ícone de seta).
-- Banner superior: se `bodyComposition` veio da IA, mostrar caixa verde-clara "Dados extraídos automaticamente. Revise e ajuste se necessário."; caso contrário, manter aviso dourado atual.
-- Adicionar nova seção **"Histórico da composição corporal"** (renderiza apenas se houver pelo menos 1 ponto em qualquer das 3 listas):
-  - Tabela responsiva com colunas: Data · Peso (kg) · Massa muscular (kg) · % gordura
-  - Linhas editáveis (inputs inline) + botão "Adicionar linha" + ícone remover por linha
-  - Estado gerenciado pelo mesmo `data` do form
-- Mantém validação atual; ao submeter, salva o histórico junto.
+if lowBMR -> add metabolismo_reduzido
+if metabolicRisk -> add risco_metabolico_aumentado
+```
 
-### 5. `src/routes/review.tsx`
-- Acrescentar bloco de histórico no card "Dados da bioimpedância" (lista compacta data → valores) quando houver.
+Narrativa: templates determinísticos por `primaryProfile`, interpolando `patientName`, valores arredondados e `mainGoal`. Sem IA, sem alucinação. Curto (2 a 3 linhas por campo).
 
-## Detalhes técnicos
+Helpers internos:
+- `parseNumber(str)` tolerante a vírgula/ponto.
+- `estimateBMR_MifflinStJeor(sex, age, weightKg, heightCm)`.
+- `getFatRange(sex, ageYears)` retorna `{ athletic, healthyMax, elevatedMin }`.
 
-- **Modelo:** `google/gemini-2.5-flash` (multimodal, suporta PDF/imagem, rápido e gratuito durante a janela promocional do Lovable AI).
-- **Prompt (resumo):** "Você é um extrator de exames de bioimpedância em português. Retorne APENAS via tool call. Para cada campo, devolva o valor numérico em string ou null. Inclua arrays de histórico se o exame contiver tabela/gráfico de evolução."
-- **Tool schema** (parâmetros do tool `extract_bioimpedance`): todos os 15 campos do `BodyCompositionData` + `history: { weight: HistoryPoint[], skeletalMuscle: HistoryPoint[], bodyFat: HistoryPoint[] }`.
-- **Segurança:** `LOVABLE_API_KEY` lida via `process.env` dentro do `.handler()`. Arquivo nunca persiste — fica em memória do request.
-- **Sem novas dependências.** Já temos `zod`, `zustand`, fetch nativo.
+### 2. `src/store/report-store.ts`
+Sem mudanças de estrutura. A classificação é derivada (cálculo puro), não persiste no store — recomputada quando preciso.
+
+### 3. `src/routes/review.tsx`
+- Importar `classifyBody`.
+- Calcular `const analysis = useMemo(() => classifyBody(body, clinical), [body, clinical])`.
+- Acrescentar **novo card no topo** (acima do card "Arquivo"): **"Análise preliminar"** com:
+  - Linha 1: badge dourado com o rótulo do `primaryProfile` (label PT-BR amigável) + badges discretos das `secondaryProfiles`.
+  - Bloco 2×2: **Diagnóstico corporal**, **Ponto forte**, **Ponto de atenção**, **Estratégia principal** — cada um em mini-card com título sublinhado em dourado.
+  - Se `analysis === null`, mostrar aviso discreto: "Preencha sexo, idade, peso, altura e % de gordura para gerar a análise.".
+- Manter estética (branco, preto, dourado, bordas finas, tipografia atual).
+
+### 4. (Opcional, sem custo) `src/lib/body-classifier.labels.ts`
+Mapa `ProfileTag → { label, color }` para reutilizar no review e, depois, no relatório.
+
+## Detalhes
+
+- **Sem IA**: regras puras → reproduzível, auditável, sem custo de API.
+- **Sem nova dependência.**
+- **Internacionalização**: textos em pt-BR fixos nos templates.
+- **Testabilidade**: `classifyBody` é função pura — fácil de cobrir com testes manuais futuros.
 
 ## Fora do escopo
 
-- Persistir arquivo/relatório no banco
-- OCR fallback (Gemini já cobre PDFs escaneados)
-- Geração de PDF final
+- Renderizar a análise no PDF final (será reaproveitada quando o gerador for criado).
+- Calibrar faixas por etnia / atletas profissionais.
+- Considerar histórico longitudinal (`weightHistory` etc.) — fica para próxima etapa.

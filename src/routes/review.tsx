@@ -1,15 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, FileText, Pencil, Sparkles } from "lucide-react";
+import { ArrowLeft, FileText, Pencil, Sparkles, Activity } from "lucide-react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { BrandHeader } from "@/components/BrandHeader";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
 import {
   useReportStore,
-  type BodyCompositionData,
-  type ClinicalData,
   type MainGoal,
   type Sex,
   type TrainingType,
@@ -58,6 +58,11 @@ function ReviewPage() {
   const bc = bodyComposition;
   const cd = clinicalData;
 
+  const analysis = useMemo(
+    () => classifyBody(bodyComposition, clinicalData),
+    [bodyComposition, clinicalData],
+  );
+
   const handleGenerate = () => {
     toast.success("Relatório em preparação", {
       description: "A geração final do PDF será adicionada na próxima fase.",
@@ -79,6 +84,42 @@ function ReviewPage() {
           </div>
 
           <div className="space-y-4">
+            <Card className="border-gold/40">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="flex items-center gap-2 font-serif text-lg">
+                  <Activity className="h-4 w-4 text-gold" />
+                  Análise preliminar
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analysis ? (
+                  <div className="space-y-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-sm border border-gold bg-gold/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-gold">
+                        {PROFILE_LABELS[analysis.primaryProfile]}
+                      </span>
+                      {analysis.secondaryProfiles.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-sm border border-border px-2.5 py-1 text-xs text-muted-foreground"
+                        >
+                          {PROFILE_LABELS[tag]}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <NarrativeBlock title="Diagnóstico corporal" text={analysis.narrative.diagnosis} />
+                      <NarrativeBlock title="Ponto forte" text={analysis.narrative.strength} />
+                      <NarrativeBlock title="Ponto de atenção" text={analysis.narrative.attention} />
+                      <NarrativeBlock title="Estratégia principal" text={analysis.narrative.strategy} />
+                    </div>
+                  </div>
+                ) : (
+                  <Empty label="Preencha sexo, idade, peso, altura e % de gordura para gerar a análise." />
+                )}
+              </CardContent>
+            </Card>
+
             <Section title="Arquivo enviado" editTo="/upload">
               {file ? (
                 <div className="flex items-center gap-3">
@@ -306,6 +347,15 @@ function DataGrid({ items }: { items: [string, string][] }) {
 
 function Empty({ label }: { label: string }) {
   return <p className="text-sm text-muted-foreground italic">{label}</p>;
+}
+
+function NarrativeBlock({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="border-l-2 border-gold/60 pl-3">
+      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gold">{title}</p>
+      <p className="mt-1 text-sm leading-relaxed text-foreground">{text}</p>
+    </div>
+  );
 }
 
 function HistoryList({
