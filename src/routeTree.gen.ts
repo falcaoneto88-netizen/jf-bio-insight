@@ -9,8 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UploadRouteImport } from './routes/upload'
+import { Route as ReviewRouteImport } from './routes/review'
+import { Route as ClinicalFormRouteImport } from './routes/clinical-form'
+import { Route as BodyCompositionRouteImport } from './routes/body-composition'
 import { Route as IndexRouteImport } from './routes/index'
 
+const UploadRoute = UploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewRoute = ReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClinicalFormRoute = ClinicalFormRouteImport.update({
+  id: '/clinical-form',
+  path: '/clinical-form',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BodyCompositionRoute = BodyCompositionRouteImport.update({
+  id: '/body-composition',
+  path: '/body-composition',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +43,83 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/body-composition': typeof BodyCompositionRoute
+  '/clinical-form': typeof ClinicalFormRoute
+  '/review': typeof ReviewRoute
+  '/upload': typeof UploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/body-composition': typeof BodyCompositionRoute
+  '/clinical-form': typeof ClinicalFormRoute
+  '/review': typeof ReviewRoute
+  '/upload': typeof UploadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/body-composition': typeof BodyCompositionRoute
+  '/clinical-form': typeof ClinicalFormRoute
+  '/review': typeof ReviewRoute
+  '/upload': typeof UploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/body-composition'
+    | '/clinical-form'
+    | '/review'
+    | '/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/body-composition' | '/clinical-form' | '/review' | '/upload'
+  id:
+    | '__root__'
+    | '/'
+    | '/body-composition'
+    | '/clinical-form'
+    | '/review'
+    | '/upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BodyCompositionRoute: typeof BodyCompositionRoute
+  ClinicalFormRoute: typeof ClinicalFormRoute
+  ReviewRoute: typeof ReviewRoute
+  UploadRoute: typeof UploadRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/upload': {
+      id: '/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof UploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review': {
+      id: '/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clinical-form': {
+      id: '/clinical-form'
+      path: '/clinical-form'
+      fullPath: '/clinical-form'
+      preLoaderRoute: typeof ClinicalFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/body-composition': {
+      id: '/body-composition'
+      path: '/body-composition'
+      fullPath: '/body-composition'
+      preLoaderRoute: typeof BodyCompositionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +132,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BodyCompositionRoute: BodyCompositionRoute,
+  ClinicalFormRoute: ClinicalFormRoute,
+  ReviewRoute: ReviewRoute,
+  UploadRoute: UploadRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
