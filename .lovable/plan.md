@@ -1,123 +1,140 @@
-# Motor de classificação corporal
+# Base do plano alimentar — "Dieta Base Dr. João"
 
-Adicionar uma camada de análise pura (sem IA, determinística) que recebe `BodyCompositionData` + `ClinicalData` e devolve um perfil clínico + narrativa curta. Exibir na tela de revisão antes da geração do relatório.
-
-## Fluxo
-
-```
-/review  →  bloco "Análise preliminar" (gerado em tempo real a partir do store)
-            ↓
-            usado depois na geração do PDF final
-```
+Criar a estrutura de dados + motor de ajuste do plano alimentar padrão, e mostrar uma prévia na tela de revisão. Sem IA: regras determinísticas, auditáveis.
 
 ## Arquivos
 
-### 1. `src/lib/body-classifier.ts` (novo, puro TS, sem deps)
+### 1. `src/lib/diet-base.ts` (novo)
 
-Tipos:
+Define a dieta-base como dado estruturado (não texto solto) para que o motor consiga reescalonar quantidades.
 
 ```ts
-export type ProfileTag =
-  | "emagrecimento"
-  | "emagrecimento_metabolico_prioritario"
-  | "recomposicao"
-  | "ganho_massa"
-  | "baixa_massa_muscular"
-  | "gordura_visceral_elevada"
-  | "metabolismo_reduzido"
-  | "perfil_atletico"
-  | "risco_metabolico_aumentado";
-
-export type ClassificationResult = {
-  primaryProfile: ProfileTag;
-  secondaryProfiles: ProfileTag[];
-  flags: {
-    highBodyFat: boolean;
-    lowMuscle: boolean;
-    highVisceralFat: boolean;
-    lowBMR: boolean;
-    adequateFat: boolean;
-    metabolicRisk: boolean;
-  };
-  narrative: {
-    diagnosis: string;     // diagnóstico corporal (1–2 frases)
-    strength: string;      // ponto forte
-    attention: string;     // ponto de atenção
-    strategy: string;      // estratégia principal
-  };
+export type FoodOption = {
+  label: string;          // "Frango grelhado"
+  baseGrams: number;      // 160
+  unit: "g" | "ml" | "scoop" | "un";
+  display: (g: number) => string; // formata "160 g de frango grelhado"
+  scalable: boolean;      // false p/ folhas verdes, azeite, oleaginosas (qtd. fixa/livre)
+  category: "protein" | "carb" | "veg" | "liquid" | "fat" | "free";
 };
 
-export function classifyBody(
-  body: BodyCompositionData,
-  clinical: ClinicalData | null,
-): ClassificationResult | null; // null se dados insuficientes (sem sexo/idade/peso/%gordura)
+export type MealBlock = {
+  title: string;          // "Proteína", "Carboidrato"...
+  required: boolean;
+  pick: "one" | "all" | "free"; // "escolher 1" / livre
+  options: FoodOption[];
+};
+
+export type Meal = {
+  id: "m1" | "m2" | "m3";
+  name: string;           // "1ª Refeição"
+  time: string;           // "12:00"
+  required: true;
+  blocks: MealBlock[];
+};
+
+export type DietBase = {
+  name: "Dieta Base Dr. João";
+  meals: Meal[];
+  generalRules: string[]; // salada livre, suco de limão, água ≥ 2,5L, etc.
+};
+
+export const DIETA_BASE_DR_JOAO: DietBase = { ...definição completa... };
 ```
 
-Tabelas de referência embutidas (faixas clássicas usadas em bioimpedância — ACE/InBody, simplificadas):
+Conteúdo das refeições idêntico ao enunciado:
+- M1 12:00 → Proteína (4 opções), Carboidrato (3 opções), Vegetais (brócolis + folhas livres), Líquida (whey/aveia/banana/morango).
+- M2 15:00 → apenas Líquida (mesmas 4 opções).
+- M3 19:00 → Proteína, Carboidrato, Vegetais + Gorduras boas (castanha-do-pará, abacate, azeite, nozes, avelãs, amêndoas).
+- generalRules: salada verde livre, suco só de limão, zero com moderação, 2,5L água/dia.
 
-- **% gordura corporal por sexo/idade**: faixas (atlético / saudável / aceitável / elevado).
-  - Feminino 20–39: atl <21, saud 21–32, elev >33; 40–59: atl <23, saud 23–33, elev >34; 60+: atl <24, saud 24–35, elev >36.
-  - Masculino 20–39: atl <8, saud 8–19, elev >20; 40–59: atl <11, saud 11–21, elev >22; 60+: atl <13, saud 13–24, elev >25.
-- **Massa muscular esquelética (SMM) baixa**: SMM/peso × 100 < 33% (feminino) ou < 37% (masculino). Aproxima o índice usado pelo InBody.
-- **Gordura visceral**: >9 = elevada (regra do enunciado), >14 = muito elevada.
-- **TMB baixa**: TMB observada < 0,92 × TMB estimada por Mifflin-St Jeor (sexo/idade/peso/altura). Margem de 8% considera variação aceitável.
-- **Risco metabólico aumentado**: ≥2 entre {%gordura elevado, visceral >9, RCQ acima do limite (F>0,85 / M>0,90)}.
+### 2. `src/lib/diet-adjuster.ts` (novo)
 
-Lógica de priorização (uma classificação primária + tags secundárias):
+Motor puro que ajusta as quantidades da dieta-base com base em peso, perfil clínico (`ProfileTag` do classifier) e objetivo (`MainGoal`).
 
-```text
-if highBodyFat && highVisceralFat && weight excedente (IMC ≥ 27 OU bodyFatPercentage muito alto):
-  primary = emagrecimento_metabolico_prioritario
-else if highVisceralFat:
-  primary = gordura_visceral_elevada
-else if highBodyFat:
-  primary = emagrecimento
-else if adequateFat && lowMuscle:
-  primary = recomposicao
-else if lowMuscle:
-  primary = baixa_massa_muscular
-else if bodyFatPercentage baixo && SMM adequada:
-  primary = perfil_atletico
-else if mainGoal == "ganho_massa":
-  primary = ganho_massa
-else:
-  primary = recomposicao (default seguro)
+```ts
+export type DietTargets = {
+  proteinGPerKg: number;    // 1.6 – 2.4
+  carbMultiplier: number;   // 0.6 – 1.4 sobre a base
+  fatMultiplier: number;    // 0.7 – 1.3
+  waterLitersPerDay: number;
+  rationale: string[];      // ex.: "Emagrecimento: -20% carbo na M3"
+};
 
-if lowBMR -> add metabolismo_reduzido
-if metabolicRisk -> add risco_metabolico_aumentado
+export type AdjustedFoodOption = FoodOption & {
+  adjustedGrams: number;
+  adjustedDisplay: string;
+};
+
+export type AdjustedMeal = { ...Meal, blocks: AdjustedBlock[] };
+export type AdjustedDiet = {
+  base: DietBase;
+  targets: DietTargets;
+  meals: AdjustedMeal[];
+  generalRules: string[];
+};
+
+export function adjustDiet(
+  base: DietBase,
+  ctx: {
+    weightKg: number | null;
+    profile: ProfileTag | null;
+    mainGoal: MainGoal;
+  },
+): AdjustedDiet;
 ```
 
-Narrativa: templates determinísticos por `primaryProfile`, interpolando `patientName`, valores arredondados e `mainGoal`. Sem IA, sem alucinação. Curto (2 a 3 linhas por campo).
+Lógica de targets por perfil (resumo):
 
-Helpers internos:
-- `parseNumber(str)` tolerante a vírgula/ponto.
-- `estimateBMR_MifflinStJeor(sex, age, weightKg, heightCm)`.
-- `getFatRange(sex, ageYears)` retorna `{ athletic, healthyMax, elevatedMin }`.
+| Perfil primário | proteinG/kg | carbMult | fatMult | rationale |
+|---|---|---|---|---|
+| emagrecimento_metabolico_prioritario | 2.2 | 0.7 | 0.8 | déficit + proteção muscular |
+| emagrecimento | 2.0 | 0.8 | 0.9 | déficit moderado |
+| gordura_visceral_elevada | 2.0 | 0.8 | 0.9 | reduz carbo refinado/fat saturada |
+| recomposicao | 2.0 | 1.0 | 1.0 | manutenção |
+| baixa_massa_muscular | 2.2 | 1.1 | 1.0 | leve superávit |
+| ganho_massa | 1.9 | 1.3 | 1.1 | superávit |
+| perfil_atletico | 1.8 | 1.2 | 1.0 | performance |
+| (sem perfil) | 1.8 | 1.0 | 1.0 | padrão |
 
-### 2. `src/store/report-store.ts`
-Sem mudanças de estrutura. A classificação é derivada (cálculo puro), não persiste no store — recomputada quando preciso.
+Override por `mainGoal` quando perfil não estiver disponível (mesma matriz, key alternativa).
 
-### 3. `src/routes/review.tsx`
-- Importar `classifyBody`.
-- Calcular `const analysis = useMemo(() => classifyBody(body, clinical), [body, clinical])`.
-- Acrescentar **novo card no topo** (acima do card "Arquivo"): **"Análise preliminar"** com:
-  - Linha 1: badge dourado com o rótulo do `primaryProfile` (label PT-BR amigável) + badges discretos das `secondaryProfiles`.
-  - Bloco 2×2: **Diagnóstico corporal**, **Ponto forte**, **Ponto de atenção**, **Estratégia principal** — cada um em mini-card com título sublinhado em dourado.
-  - Se `analysis === null`, mostrar aviso discreto: "Preencha sexo, idade, peso, altura e % de gordura para gerar a análise.".
-- Manter estética (branco, preto, dourado, bordas finas, tipografia atual).
+Cálculo por refeição:
+- **Proteína**: alvo diário = `weightKg × proteinGPerKg`. Distribui entre M1 e M3 (60/40 se objetivo = emagrecimento; 50/50 demais). M2 contribui via whey (~24 g proteína por scoop). Para cada opção de proteína da refeição, calcula gramas necessárias para entregar a cota da refeição usando densidade proteica típica:
+  - ovos: 13 g prot / 100 g; frango: 31; tilápia: 22; carne magra: 26.
+  - Arredonda para múltiplo de 10 g e respeita pisos/tetos (mín 100 g, máx 250 g).
+- **Carboidrato**: gramas base × `carbMultiplier`, arredonda múltiplo de 10 g, piso 60 g / teto 180 g.
+- **Gorduras boas (M3)**: 1 porção fixa indicada (ex.: "1 castanha-do-pará OU 30 g de abacate OU 1 colher de azeite"), apenas `fatMultiplier` ajusta porção do abacate/azeite (10–20 g azeite, 20–40 g abacate).
+- **Vegetais / folhas / salada / limão**: não escalam.
+- **Líquida M2**: whey fixo 1 scoop; aveia 20–40 g conforme `carbMultiplier`; banana/morango idem.
+- **Água**: `max(2.5, weightKg × 0.035)` L/dia.
 
-### 4. (Opcional, sem custo) `src/lib/body-classifier.labels.ts`
-Mapa `ProfileTag → { label, color }` para reutilizar no review e, depois, no relatório.
+Se `weightKg` for `null`, devolve a base sem reescalonar e marca `targets.rationale = ["Peso não informado — exibindo quantidades-base."]`.
 
-## Detalhes
+### 3. `src/components/DietPlanCard.tsx` (novo)
 
-- **Sem IA**: regras puras → reproduzível, auditável, sem custo de API.
-- **Sem nova dependência.**
-- **Internacionalização**: textos em pt-BR fixos nos templates.
-- **Testabilidade**: `classifyBody` é função pura — fácil de cobrir com testes manuais futuros.
+Card visual exibindo a dieta ajustada, mantendo estética branco/preto/dourado:
+- Título "Dieta Base Dr. João" + chips com `proteinGPerKg`, `kcalAprox` (opcional, não pedido — pular), `águaL`.
+- Cada refeição: cabeçalho "1ª Refeição – 12:00", blocos com label dourado e lista de opções. Cada opção com `adjustedDisplay`. Marcador "(escolher 1)" / "(livre)".
+- Bloco final "Regras gerais" listando `generalRules` + linha de rationale do ajuste (pequena, cinza).
+
+### 4. `src/routes/review.tsx`
+
+- Importar `DIETA_BASE_DR_JOAO`, `adjustDiet`, `DietPlanCard`.
+- Calcular `const diet = useMemo(() => adjustDiet(DIETA_BASE_DR_JOAO, { weightKg: parseNumber(bc?.weight ?? cd?.weight), profile: analysis?.primaryProfile ?? null, mainGoal: cd?.mainGoal ?? "" }), [bc, cd, analysis])`.
+- Inserir `<DietPlanCard diet={diet} />` logo abaixo do card "Análise preliminar".
+
+Helper `parseNumber` é privado em `body-classifier.ts` — exportar de lá ou duplicar simples (`Number(v.replace(",", "."))`). Duplicar inline é mais simples; ok.
 
 ## Fora do escopo
 
-- Renderizar a análise no PDF final (será reaproveitada quando o gerador for criado).
-- Calibrar faixas por etnia / atletas profissionais.
-- Considerar histórico longitudinal (`weightHistory` etc.) — fica para próxima etapa.
+- Cálculo de kcal totais por refeição (não foi pedido).
+- Substituição automática de itens por alergias/intolerâncias (vem em fase futura, embora `cd.allergiesIntolerances` já exista).
+- Render no PDF final (fase futura).
+- Edição manual do plano pelo usuário (fase futura).
+
+## Detalhes
+
+- **100% determinístico**, sem IA, sem nova dependência.
+- Estrutura `DietBase` é reutilizável: futuro suporte a múltiplas dietas-base (low carb, vegetariana etc.) só adiciona objetos novos.
+- Ajuste sempre derivado em tempo real — não persiste no store.
