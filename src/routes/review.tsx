@@ -1,0 +1,242 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, FileText, Pencil, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+
+import { BrandHeader } from "@/components/BrandHeader";
+import { Stepper } from "@/components/Stepper";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useReportStore, type BodyCompositionData, type ClinicalData } from "@/store/report-store";
+
+export const Route = createFileRoute("/review")({
+  head: () => ({
+    meta: [
+      { title: "Revisão — JF BioReport" },
+      { name: "description", content: "Revise os dados antes de gerar o relatório clínico." },
+    ],
+  }),
+  component: ReviewPage,
+});
+
+const GOAL_LABELS: Record<NonNullable<ClinicalData["mainGoal"]>, string> = {
+  emagrecimento: "Emagrecimento",
+  recomposicao: "Recomposição corporal",
+  ganho_massa: "Ganho de massa",
+  manutencao: "Manutenção",
+  alta_performance: "Alta performance",
+  "": "—",
+};
+
+const SEX_LABELS: Record<BodyCompositionData["sex"], string> = {
+  feminino: "Feminino",
+  masculino: "Masculino",
+  "": "—",
+};
+
+function ReviewPage() {
+  const navigate = useNavigate();
+  const { file, bodyComposition, clinicalData } = useReportStore();
+
+  const bc = bodyComposition;
+  const cd = clinicalData;
+
+  const handleGenerate = () => {
+    toast.success("Relatório em preparação", {
+      description: "A geração final do PDF será adicionada na próxima fase.",
+    });
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <BrandHeader />
+      <main className="flex-1 px-6 py-10">
+        <div className="mx-auto max-w-4xl">
+          <Stepper current={4} />
+
+          <div className="mt-10 mb-6 text-center">
+            <h1 className="font-serif text-3xl text-foreground sm:text-4xl">Revisão final</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Confirme os dados antes de gerar o relatório clínico.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <Section title="Arquivo enviado" editTo="/upload">
+              {file ? (
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-content-center rounded-sm border border-gold/40 text-gold">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(file.size / 1024).toFixed(1)} KB · {file.type}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <Empty label="Nenhum arquivo enviado." />
+              )}
+            </Section>
+
+            <Section title="Dados da bioimpedância" editTo="/body-composition">
+              {bc ? (
+                <DataGrid
+                  items={[
+                    ["Nome", bc.patientName],
+                    ["Data do exame", bc.examDateTime],
+                    ["Sexo", SEX_LABELS[bc.sex]],
+                    ["Idade", fmt(bc.age, "anos")],
+                    ["Altura", fmt(bc.height, "cm")],
+                    ["Peso", fmt(bc.weight, "kg")],
+                    ["IMC", fmt(bc.bmi, "kg/m²")],
+                    ["Massa muscular esquelética", fmt(bc.skeletalMuscleMass, "kg")],
+                    ["% gordura corporal", fmt(bc.bodyFatPercentage, "%")],
+                    ["Massa de gordura corporal", fmt(bc.bodyFatMass, "kg")],
+                    ["Gordura visceral", bc.visceralFat || "—"],
+                    ["Taxa metabólica basal", fmt(bc.basalMetabolicRate, "kcal")],
+                    ["Relação cintura-quadril", bc.waistHipRatio || "—"],
+                    ["Água corporal total", fmt(bc.totalBodyWater, "L")],
+                    ["Massa livre de gordura", fmt(bc.fatFreeMass, "kg")],
+                  ]}
+                />
+              ) : (
+                <Empty label="Bioimpedância ainda não preenchida." />
+              )}
+            </Section>
+
+            <Section title="Dados clínicos" editTo="/clinical-form">
+              {cd ? (
+                <DataGrid
+                  items={[
+                    ["Menopausa", yn(cd.menopause)],
+                    ["Vesícula retirada", yn(cd.gallbladderRemoved)],
+                    ["Diabetes", yn(cd.diabetes)],
+                    ["Hipertensão", yn(cd.hypertension)],
+                    ["Intestino preso", yn(cd.constipation)],
+                    ["Compulsão alimentar", yn(cd.bingeEating)],
+                    ["Fome noturna", yn(cd.nightHunger)],
+                    ["Refeições por dia", cd.mealsPerDay || "—"],
+                    ["Alimentos que não consome", cd.avoidedFoods || "—"],
+                  ]}
+                />
+              ) : (
+                <Empty label="Dados clínicos ainda não preenchidos." />
+              )}
+            </Section>
+
+            <Section title="Rotina e treino" editTo="/clinical-form">
+              {cd ? (
+                <DataGrid
+                  items={[
+                    ["Horário que acorda", cd.wakeTime || "—"],
+                    ["Horário que dorme", cd.sleepTime || "—"],
+                    ["Horário do treino", cd.trainingTime || "—"],
+                    ["Frequência semanal", fmt(cd.weeklyTrainingFrequency, "x/sem")],
+                    ["Tipo de treino", cd.trainingType || "—"],
+                  ]}
+                />
+              ) : (
+                <Empty label="Rotina ainda não preenchida." />
+              )}
+            </Section>
+
+            <Section title="Objetivo" editTo="/clinical-form">
+              {cd ? (
+                <p className="text-base text-foreground">{GOAL_LABELS[cd.mainGoal]}</p>
+              ) : (
+                <Empty label="Objetivo não definido." />
+              )}
+            </Section>
+          </div>
+
+          <div className="mt-10 flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+            <Button asChild variant="ghost" type="button">
+              <Link to="/clinical-form">
+                <ArrowLeft />
+                Voltar
+              </Link>
+            </Button>
+            <Button
+              size="lg"
+              onClick={handleGenerate}
+              className="bg-gold text-gold-foreground hover:bg-gold/90"
+            >
+              <Sparkles />
+              Gerar relatório
+            </Button>
+          </div>
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            A geração final do PDF clínico será habilitada na próxima fase.
+          </p>
+
+          <div className="mt-2 text-center">
+            <button
+              onClick={() => {
+                useReportStore.getState().reset();
+                navigate({ to: "/" });
+              }}
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              Começar novo relatório
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  editTo,
+  children,
+}: {
+  title: string;
+  editTo: "/upload" | "/body-composition" | "/clinical-form";
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="border-border/80">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="font-serif text-lg">{title}</CardTitle>
+        <Button asChild variant="ghost" size="sm">
+          <Link to={editTo}>
+            <Pencil className="h-3.5 w-3.5" />
+            Editar
+          </Link>
+        </Button>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
+function DataGrid({ items }: { items: [string, string][] }) {
+  return (
+    <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+      {items.map(([k, v]) => (
+        <div key={k} className="flex justify-between gap-4 border-b border-dashed border-border/60 py-1.5">
+          <dt className="text-sm text-muted-foreground">{k}</dt>
+          <dd className="text-sm font-medium text-foreground text-right">{v || "—"}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Empty({ label }: { label: string }) {
+  return <p className="text-sm text-muted-foreground italic">{label}</p>;
+}
+
+function fmt(v: string, suffix: string) {
+  if (!v) return "—";
+  return `${v} ${suffix}`;
+}
+
+function yn(v: "sim" | "nao" | "") {
+  if (v === "sim") return "Sim";
+  if (v === "nao") return "Não";
+  return "—";
+}
