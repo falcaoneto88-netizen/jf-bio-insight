@@ -1,78 +1,21 @@
-import { useState } from "react";
 import { Pill, Info, ExternalLink, ShieldCheck, FlaskConical } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import {
+  ADVANCED_PROTOCOL_ITEMS,
+  MANDATORY_SUPPLEMENTS,
+  TRUSTED_SHOPS,
+} from "@/lib/prescription-data";
 
-type SupplementItem = {
-  name: string;
-  dose: string;
-  note?: string;
-};
+export function PrescriptionCard({
+  advanced,
+  onAdvancedChange,
+}: {
+  advanced: boolean;
+  onAdvancedChange: (v: boolean) => void;
+}) {
 
-const MANDATORY_SUPPLEMENTS: SupplementItem[] = [
-  {
-    name: "Creatina monohidratada",
-    dose: "5 g junto com uma refeição",
-  },
-  {
-    name: "Ômega-3 (EPA/DHA)",
-    dose: "2 g na 1ª refeição + 2 g na 3ª refeição",
-  },
-  {
-    name: "Whey Protein",
-    dose: "Sempre que indicado no plano alimentar",
-  },
-  {
-    name: "Vitamina D3 + K2 MK7",
-    dose: "6.000 UI de D3 + 200 mcg de K2",
-  },
-  {
-    name: "Electrolyte Powder",
-    dose: "8 g às 09:00",
-    note: "Optimum Nutrition",
-  },
-  {
-    name: "Magnésio bisglicinato",
-    dose: "300 a 400 mg à noite",
-  },
-];
-
-const TRUSTED_SHOPS: { label: string; url: string }[] = [
-  { label: "prozis.com/be/fr", url: "https://www.prozis.com/be/fr" },
-  { label: "optimumnutrition.com", url: "https://www.optimumnutrition.com" },
-];
-
-const ADVANCED_PROTOCOL_ITEMS: SupplementItem[] = [
-  {
-    name: "Berberina",
-    dose: "500 mg antes das refeições principais",
-    note: "Suporte glicêmico — avaliar interação com medicamentos.",
-  },
-  {
-    name: "Inositol (Myo + D-Chiro)",
-    dose: "2 g pela manhã",
-    note: "Sensibilidade à insulina e equilíbrio hormonal.",
-  },
-  {
-    name: "Coenzima Q10 (ubiquinol)",
-    dose: "100 mg/dia com refeição",
-    note: "Função mitocondrial e energia.",
-  },
-  {
-    name: "Colágeno hidrolisado + Vitamina C",
-    dose: "10 g + 500 mg/dia",
-    note: "Pele, articulações e tecido conjuntivo.",
-  },
-  {
-    name: "Probiótico multicepa",
-    dose: "10–20 bilhões UFC/dia",
-    note: "Eixo intestino-metabolismo.",
-  },
-];
-
-export function PrescriptionCard() {
-  const [advanced, setAdvanced] = useState(false);
 
   return (
     <Card className="border-gold/40">
