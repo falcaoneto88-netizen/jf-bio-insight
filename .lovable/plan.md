@@ -1,135 +1,43 @@
-# Regras automáticas avançadas do plano alimentar
+# Prescrição e Suplementação — Seção fixa na revisão
 
-Estender o motor `adjustDiet` para aplicar 7 grupos de regras clínicas (perfil corporal + condições de saúde), produzindo: quantidades ajustadas, lista de suplementação, alertas clínicos e observações. Render no `DietPlanCard`. Sem novas dependências.
+Criar uma nova seção no review.tsx chamada "Prescrição e Suplementação", posicionada logo após o card do plano alimentar.
 
-## Arquivos
+## 1. Componente `src/components/PrescriptionCard.tsx` (novo)
 
-### 1. `src/lib/diet-adjuster.ts` (editar)
+Card com borda dourada fina, estilo consistente com o `DietPlanCard`.
 
-**Novos tipos:**
+**Conteúdo fixo — Suplementos Obrigatórios:**
+- Título com ícone Pill + "Prescrição e Suplementação"
+- Lista com 6 suplementos em linhas claras:
+  1. Creatina monohidratada — 5 g junto com uma refeição
+  2. Ômega-3 (EPA/DHA) — 2 g na 1ª refeição + 2 g na 3ª refeição
+  3. Whey Protein — conforme indicado no plano alimentar
+  4. Vitamina D3 + K2 MK7 — 6.000 UI + 200 mcg
+  5. Electrolyte Powder — 8 g às 09:00 (Optimum Nutrition)
+  6. Magnésio bisglicinato — 300–400 mg à noite
+- Cada item com badge "Obrigatório" dourado.
 
-```ts
-export type Supplement = {
-  name: string;       // "Whey isolado"
-  dose: string;       // "30 g/dia"
-  reason: string;     // "Reforço proteico"
-  mandatory: boolean; // true p/ creatina em recomposição
-};
+**Atenção de compra:**
+- Bloco destacado com ícone Info: "Estes suplementos devem ser adquiridos exclusivamente em lojas especializadas."
+- Links clicáveis (abrem em nova aba):
+  - https://www.prozis.com/be/fr
+  - https://www.optimumnutrition.com
 
-export type DietAlert = {
-  severity: "info" | "warning" | "risk";
-  message: string;
-};
+**Prescrição clínica avançada (condicional):**
+- Switch/checkbox "Incluir protocolo avançado" no header do card.
+- Ao ativar, exibe bloco adicional com sugestões clínicas genéricas (placeholder para futuro: "Protocolo avançado será personalizado conforme exames laboratoriais e acompanhamento.").
 
-export type AdjustedDiet = {
-  base: DietBase;
-  targets: DietTargets;
-  meals: AdjustedMeal[];
-  generalRules: string[];      // base + regras adicionadas pelo motor
-  supplementation: Supplement[];
-  alerts: DietAlert[];
-  digestiveNotes: string[];    // observações para o relatório (ex.: vesícula)
-};
-```
+## 2. Integração em `src/routes/review.tsx` (editar)
 
-**Mudança de assinatura:**
-
-```ts
-adjustDiet(base, {
-  weightKg,
-  profile: ProfileTag | null,
-  mainGoal: MainGoal,
-  clinical: { gallbladderRemoved: YesNo; menopause: YesNoNA;
-              currentlyTraining: YesNo; trainingTime: string;
-              diabetes: YesNo; hypertension: YesNo } | null,
-})
-```
-
-**Matriz de perfis — ajustes (aplicados sobre a base atual):**
-
-| Perfil | Δ proteína | Δ carbo | Δ gordura | Observação |
-|---|---|---|---|---|
-| emagrecimento | +0 (mantém alta 2,0 g/kg) | **−20%** | −10% | mantém vegetais livres + 2,5 L água |
-| recomposicao | 2,0 g/kg | **moderado** ×1,0 | ×1,0 | carbo concentrado próximo ao treino + **creatina obrigatória** |
-| baixa_massa_muscular | **+15%** sobre baseline | manter (não reduzir agressivo) | ×1,0 | reforço whey + creatina, sem déficit extremo |
-| gordura_visceral_elevada | 2,0 g/kg | sem carbo extra fora das principais | ×0,9 | **alerta de risco metabólico** + reforço vegetais |
-| metabolismo_reduzido | 2,0 g/kg | ×0,9 (não restritivo) | ×0,95 | sugere reavaliação em 30 dias |
-| ganho_massa / atlético / manutenção / risco / emag_metabólico | mantém matriz atual | — | — | — |
-
-A matriz existente vira o ponto de partida; os ajustes acima refinam.
-
-**Regras de carboidrato por refeição (novo — `mealCarbWeights`):**
-
-- Padrão: M1 1.0, M3 1.0.
-- Se `currentlyTraining === "sim"` e `trainingTime` existe, comparar `trainingTime` com horários das refeições (12:00 / 19:00) e reforçar +20% na refeição mais próxima do treino (perfil recomposição/ganho/atlético). Reduzir 10% na mais distante para manter calorias.
-- Se perfil = `gordura_visceral_elevada`: nas opções de líquida M2 zera carbo escalável (`aveia → 0g`, banana opcional), forçando carbo só nas principais.
-
-**Regras de gordura por refeição:**
-
-- Se `gallbladderRemoved === "sim"`: na M3, dividir o `fatMultiplier` final por 2 e adicionar bloco repetido "Gordura boa adicional (½ porção)" — implementado mais simples: aplicar `fatMultiplier *= 0.6` somente em M3, marcar `digestiveNotes` com "Vesícula retirada: distribuir gorduras em pequenas quantidades ao longo do dia; evitar refeições muito gordurosas.".
-
-**Suplementação derivada:**
-
-| Condição | Suplemento adicionado |
-|---|---|
-| sempre (base) | Whey isolado 30 g/dia |
-| profile = recomposicao ou baixa_massa | **Creatina 3–5 g/dia (obrigatória)** |
-| profile = baixa_massa | Whey reforçado 2× (manhã e pós-treino) |
-| menopause = sim | Magnésio 300 mg, Ômega-3 2 g, Vit. D3 4000 UI + K2 100 mcg |
-| gallbladderRemoved = sim | Enzimas digestivas / lipase (observação) |
-| profile = gordura_visceral_elevada | Ômega-3 2 g, fibras 5–10 g |
-
-**Alertas:**
-
-- `gordura_visceral_elevada` ou `emagrecimento_metabolico_prioritario` → alerta `risk`: "Risco metabólico aumentado — gordura visceral elevada."
-- `metabolismo_reduzido` → alerta `info`: "Reavaliar composição corporal em 30 dias."
-- `gallbladderRemoved === "sim"` → alerta `info`: "Vesícula retirada — atenção à distribuição de gorduras."
-- `menopause === "sim"` → alerta `info`: "Período de menopausa — foco em massa muscular e controle de gordura visceral."
-
-**Regras gerais adicionais (concatenadas a `generalRules`):**
-
-- `emagrecimento`: "Reduzir carboidratos em 20% — manter proteína alta e vegetais livres."
-- `recomposicao`: "Concentrar carboidratos próximos ao horário do treino."
-- `gordura_visceral_elevada`: "Evitar carboidratos refinados; consumir carboidratos apenas nas refeições principais."
-- `menopause === "sim"`: "Reduzir álcool e açúcar; priorizar proteína e treino de força."
-- `metabolismo_reduzido`: "Evitar restrição calórica agressiva; priorizar treino de força e constância."
-
-### 2. `src/components/DietPlanCard.tsx` (editar)
-
-Acrescentar 3 seções abaixo de "Regras gerais":
-
-- **Suplementação** — lista `supplementation` com nome em destaque, dose ao lado, motivo em cinza, badge "obrigatório" dourado quando `mandatory: true`.
-- **Alertas clínicos** — só renderiza se houver. Cada alerta com ícone por severidade (`info` = `Info` cinza, `warning` = `AlertTriangle` âmbar, `risk` = `AlertOctagon` dourado/vermelho-claro). Bordas/cores via tokens existentes (gold/border/muted).
-- **Observações digestivas** — só renderiza se houver. Lista simples.
-
-### 3. `src/routes/review.tsx` (editar)
-
-Atualizar chamada `adjustDiet` para incluir `clinical`:
-
-```ts
-clinical: cd
-  ? {
-      gallbladderRemoved: cd.gallbladderRemoved,
-      menopause: cd.menopause,
-      currentlyTraining: cd.currentlyTraining,
-      trainingTime: cd.trainingTime,
-      diabetes: cd.diabetes,
-      hypertension: cd.hypertension,
-    }
-  : null,
-```
-
-Dependências de `useMemo`: incluir os campos clínicos relevantes.
+- Importar `PrescriptionCard`.
+- Adicionar `<PrescriptionCard />` entre o `<DietPlanCard />` e a seção "Arquivo enviado".
+- Estado local `showAdvancedProtocol` com `useState(false)` passado via prop ao card.
 
 ## Fora do escopo
+- Sem persistência no store (estado local apenas).
+- Sem novas dependências (usa ícones e componentes UI existentes).
 
-- Substituição de alimentos por alergias/intolerâncias (próxima fase).
-- Edição manual do plano gerado.
-- Render em PDF.
-- Reorganizar ordem das refeições conforme `trainingTime` (apenas peso de carbo é ajustado).
-
-## Detalhes
-
-- 100% determinístico, sem IA.
-- Estilo visual mantém branco/preto/dourado, cards com borda fina e tipografia atual.
-- Tudo derivado em tempo real; nada persiste no store.
+## Estilo
+- Mantém identidade visual médica premium: branco, preto, dourado como acento.
+- Tipografia serif nos títulos, sans-serif no corpo.
+- Bordas finas, espaçamento generoso.
