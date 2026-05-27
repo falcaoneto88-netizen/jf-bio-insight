@@ -691,6 +691,12 @@ export function ReportDocument({
             <Text style={styles.guidelineText}>{g.text}</Text>
           </View>
         ))}
+
+        <View style={{ marginTop: 24, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: "#C9A84C" }}>
+          <Text style={[styles.paragraphMuted, { fontSize: 8, textAlign: "center" }]}>
+            Relatório gerado como apoio à conduta clínica. As orientações devem ser revisadas e validadas por profissional habilitado antes da entrega ao paciente.
+          </Text>
+        </View>
       </Page>
     </Document>
   );
