@@ -376,10 +376,20 @@ function ReviewPage() {
             <Button
               size="lg"
               onClick={handleGenerate}
+              disabled={isGenerating}
               className="bg-gold text-gold-foreground hover:bg-gold/90"
             >
-              <Sparkles />
-              Gerar relatório
+              {isGenerating ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Gerando…
+                </>
+              ) : (
+                <>
+                  <Sparkles />
+                  Gerar relatório
+                </>
+              )}
             </Button>
           </div>
 
