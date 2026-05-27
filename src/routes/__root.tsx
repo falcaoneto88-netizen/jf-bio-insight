@@ -77,12 +77,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "JF BioReport gera relatórios clínicos premium a partir de exames de bioimpedância.",
       },
-      { property: "og:title", content: "JF BioReport" },
+      { property: "og:title", content: "JF BioReport — Relatórios clínicos premium de bioimpedância" },
       {
         property: "og:description",
         content: "Relatórios clínicos premium de bioimpedância.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "JF BioReport — Relatórios clínicos premium de bioimpedância" },
+      { name: "description", content: "BioReport Studio generates premium clinical reports from bioimpedance exams." },
+      { property: "og:description", content: "BioReport Studio generates premium clinical reports from bioimpedance exams." },
+      { name: "twitter:description", content: "BioReport Studio generates premium clinical reports from bioimpedance exams." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c883f03-5fe2-4324-84ad-4eadf4524d03/id-preview-fc5a33c0--26a42c4a-b53d-4fa2-b737-3b14bf0e0665.lovable.app-1779912970344.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c883f03-5fe2-4324-84ad-4eadf4524d03/id-preview-fc5a33c0--26a42c4a-b53d-4fa2-b737-3b14bf0e0665.lovable.app-1779912970344.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
