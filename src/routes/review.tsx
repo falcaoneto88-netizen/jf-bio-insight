@@ -394,7 +394,7 @@ function ReviewPage() {
           </div>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            A geração final do PDF clínico será habilitada na próxima fase.
+            O PDF é gerado localmente e baixado no seu dispositivo.
           </p>
 
           <div className="mt-2 text-center">
