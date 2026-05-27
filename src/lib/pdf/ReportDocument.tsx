@@ -1,6 +1,5 @@
 import {
   Document,
-  Font,
   Page,
   StyleSheet,
   Text,
@@ -25,37 +24,7 @@ import type {
 } from "@/store/report-store";
 
 // ----- Fonts -----
-Font.register({
-  family: "Inter",
-  fonts: [
-    {
-      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.ttf",
-      fontWeight: 400,
-    },
-    {
-      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa2JL7SUc.ttf",
-      fontWeight: 500,
-    },
-    {
-      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa1pL7SUc.ttf",
-      fontWeight: 700,
-    },
-  ],
-});
-
-Font.register({
-  family: "PlayfairDisplay",
-  fonts: [
-    {
-      src: "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDQ.ttf",
-      fontWeight: 500,
-    },
-    {
-      src: "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDQ.ttf",
-      fontWeight: 700,
-    },
-  ],
-});
+// Using built-in Helvetica to avoid external font fetch failures during pdf().toBlob().
 
 // ----- Palette -----
 const COLORS = {
@@ -74,7 +43,7 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     paddingBottom: 56,
     paddingHorizontal: 48,
-    fontFamily: "Inter",
+    fontFamily: "Helvetica",
     fontSize: 10.5,
     color: COLORS.black,
     backgroundColor: COLORS.white,
@@ -97,7 +66,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   brandName: {
-    fontFamily: "PlayfairDisplay",
+    fontFamily: "Helvetica-Bold",
     fontWeight: 700,
     fontSize: 13,
     color: COLORS.black,
@@ -150,7 +119,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   pageTitle: {
-    fontFamily: "PlayfairDisplay",
+    fontFamily: "Helvetica-Bold",
     fontWeight: 700,
     fontSize: 22,
     color: COLORS.black,
@@ -175,7 +144,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sectionTitle: {
-    fontFamily: "PlayfairDisplay",
+    fontFamily: "Helvetica-Bold",
     fontWeight: 700,
     fontSize: 13,
     color: COLORS.black,
@@ -263,7 +232,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   mealTitle: {
-    fontFamily: "PlayfairDisplay",
+    fontFamily: "Helvetica-Bold",
     fontWeight: 700,
     fontSize: 12,
     color: COLORS.black,
@@ -372,7 +341,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   guidelineTitle: {
-    fontFamily: "PlayfairDisplay",
+    fontFamily: "Helvetica-Bold",
     fontWeight: 700,
     fontSize: 12,
     color: COLORS.gold,
@@ -503,7 +472,7 @@ export function ReportDocument({
           <DataRow k="Idade" v={fmt(bc?.age || cd?.age, "anos")} />
           <DataRow k="Altura" v={fmt(bc?.height || cd?.height, "cm")} />
           <DataRow k="Peso" v={fmt(bc?.weight || cd?.weight, "kg")} />
-          <DataRow k="IMC" v={fmt(bc?.bmi, "kg/m²")} />
+          <DataRow k="IMC" v={fmt(bc?.bmi, "kg/m2")} />
           <DataRow
             k="Massa muscular esquelética"
             v={fmt(bc?.skeletalMuscleMass, "kg")}

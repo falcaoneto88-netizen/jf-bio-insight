@@ -150,6 +150,20 @@ type ReportState = {
   reset: () => void;
 };
 
+function normalizeBodyComposition(
+  bc: BodyCompositionData | null | undefined,
+): BodyCompositionData | null {
+  if (!bc) return null;
+  return {
+    ...bc,
+    weightHistory: Array.isArray(bc.weightHistory) ? bc.weightHistory : [],
+    skeletalMuscleHistory: Array.isArray(bc.skeletalMuscleHistory)
+      ? bc.skeletalMuscleHistory
+      : [],
+    bodyFatHistory: Array.isArray(bc.bodyFatHistory) ? bc.bodyFatHistory : [],
+  };
+}
+
 export const useReportStore = create<ReportState>()(
   persist(
     (set) => ({
@@ -164,11 +178,23 @@ export const useReportStore = create<ReportState>()(
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
+      version: 1,
+      migrate: (_persistedState, version) => {
+        if (version < 1) {
+          return { file: null, bodyComposition: null, clinicalData: null };
+        }
+        return _persistedState as Partial<ReportState>;
+      },
       partialize: (state) => ({
         file: state.file,
-        bodyComposition: state.bodyComposition,
+        bodyComposition: normalizeBodyComposition(state.bodyComposition),
         clinicalData: state.clinicalData,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.bodyComposition) {
+          state.bodyComposition = normalizeBodyComposition(state.bodyComposition);
+        }
+      },
     },
   ),
 );

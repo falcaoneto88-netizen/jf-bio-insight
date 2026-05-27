@@ -289,19 +289,19 @@ function ReviewPage() {
                       ["Massa livre de gordura", fmt(bc.fatFreeMass, "kg")],
                     ]}
                   />
-                  {(bc.weightHistory.length > 0 ||
-                    bc.skeletalMuscleHistory.length > 0 ||
-                    bc.bodyFatHistory.length > 0) && (
+                  {((bc.weightHistory ?? []).length > 0 ||
+                    (bc.skeletalMuscleHistory ?? []).length > 0 ||
+                    (bc.bodyFatHistory ?? []).length > 0) && (
                     <div className="space-y-2 border-t border-border/60 pt-3">
                       <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                         Histórico
                       </p>
-                      <HistoryList label="Peso (kg)" rows={bc.weightHistory} />
+                      <HistoryList label="Peso (kg)" rows={bc.weightHistory ?? []} />
                       <HistoryList
                         label="Massa muscular esquelética (kg)"
-                        rows={bc.skeletalMuscleHistory}
+                        rows={bc.skeletalMuscleHistory ?? []}
                       />
-                      <HistoryList label="% gordura corporal" rows={bc.bodyFatHistory} />
+                      <HistoryList label="% gordura corporal" rows={bc.bodyFatHistory ?? []} />
                     </div>
                   )}
                 </div>
