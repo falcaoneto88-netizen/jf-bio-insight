@@ -50,6 +50,14 @@ function Home() {
                 Aceita PDF, PNG ou JPG do exame
               </span>
             </div>
+            <div className="mt-6">
+              <Link
+                to="/history"
+                className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              >
+                Ver histórico de relatórios
+              </Link>
+            </div>
           </div>
         </section>
 
