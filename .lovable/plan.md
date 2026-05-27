@@ -1,43 +1,47 @@
-# Prescrição e Suplementação — Seção fixa na revisão
+# Geração automática de PDF clínico premium
 
-Criar uma nova seção no review.tsx chamada "Prescrição e Suplementação", posicionada logo após o card do plano alimentar.
+Gerar PDF A4 vertical premium (branco/preto/dourado) com 5 páginas a partir dos dados já presentes no review, usando `@react-pdf/renderer` no cliente (sem backend, sem custos). Download imediato ao clicar em "Gerar relatório".
 
-## 1. Componente `src/components/PrescriptionCard.tsx` (novo)
+## 1. Dependência
+- `bun add @react-pdf/renderer` (única dependência nova; suporta fontes Google e gera blob no browser).
 
-Card com borda dourada fina, estilo consistente com o `DietPlanCard`.
+## 2. Novo arquivo `src/lib/pdf/ReportDocument.tsx`
+Componente `<Document>` do react-pdf com 5 páginas A4:
 
-**Conteúdo fixo — Suplementos Obrigatórios:**
-- Título com ícone Pill + "Prescrição e Suplementação"
-- Lista com 6 suplementos em linhas claras:
-  1. Creatina monohidratada — 5 g junto com uma refeição
-  2. Ômega-3 (EPA/DHA) — 2 g na 1ª refeição + 2 g na 3ª refeição
-  3. Whey Protein — conforme indicado no plano alimentar
-  4. Vitamina D3 + K2 MK7 — 6.000 UI + 200 mcg
-  5. Electrolyte Powder — 8 g às 09:00 (Optimum Nutrition)
-  6. Magnésio bisglicinato — 300–400 mg à noite
-- Cada item com badge "Obrigatório" dourado.
+- **Página 1 — Bioimpedância**: nome, idade, sexo, altura, peso, IMC, massa muscular esquelética, % gordura, gordura visceral, TMB, data/hora do exame. Tabela de 2 colunas com linhas finas douradas.
+- **Página 2 — Análise Corporal**: badge do perfil primário + perfis secundários, depois 4 blocos (Diagnóstico, Pontos positivos, Pontos de atenção, Estratégia) extraídos de `classifyBody()`. Bloco final "Meta dos próximos 30 dias" derivada do perfil (texto fixo por perfil).
+- **Página 3 — Plano Alimentar**: 3 refeições da `adjustedDiet.meals` (12h/15h/19h) com blocos e opções já ajustadas (`adjustedDisplay`). Bloco "Regras gerais" listando `diet.generalRules` + hidratação alvo.
+- **Página 4 — Prescrição e Suplementação**: lista fixa dos 6 suplementos obrigatórios (mesma fonte do `PrescriptionCard`) + bloco condicional "Protocolo avançado" quando o switch estiver ativo. Aviso de lojas especializadas com URLs.
+- **Página 5 — Orientações Finais**: Água, Sono, Treino, Cardio, Constância, Reavaliação em 30 dias. Cada item com título dourado em negrito e parágrafo curto.
 
-**Atenção de compra:**
-- Bloco destacado com ícone Info: "Estes suplementos devem ser adquiridos exclusivamente em lojas especializadas."
-- Links clicáveis (abrem em nova aba):
-  - https://www.prozis.com/be/fr
-  - https://www.optimumnutrition.com
+**Layout compartilhado por página (`pageWrapper`)**:
+- Cabeçalho com linha dourada fina, "Dr. João Falcão" em serif negrito + subtítulo "Medicina Estética, Emagrecimento e Alta Performance".
+- Número da página no canto + data de emissão (DD/MM/YYYY).
+- Rodapé fixo em todas as páginas: "Relatório gerado pelo método Dr. João Falcão — acompanhamento individualizado." centralizado, cinza, linha dourada acima.
 
-**Prescrição clínica avançada (condicional):**
-- Switch/checkbox "Incluir protocolo avançado" no header do card.
-- Ao ativar, exibe bloco adicional com sugestões clínicas genéricas (placeholder para futuro: "Protocolo avançado será personalizado conforme exames laboratoriais e acompanhamento.").
+**Tipografia**: registrar via `Font.register` as fontes Google **Playfair Display** (títulos) e **Inter** (corpo), espelhando o app. Tamanhos: H1 18pt, H2 13pt, corpo 10.5pt, label 8pt uppercase tracking.
 
-## 2. Integração em `src/routes/review.tsx` (editar)
+**Paleta**: branco `#FFFFFF`, preto `#0A0A0A`, dourado `#C9A24B`, cinza claro `#E8E5DE`, texto secundário `#6B6B6B`.
 
-- Importar `PrescriptionCard`.
-- Adicionar `<PrescriptionCard />` entre o `<DietPlanCard />` e a seção "Arquivo enviado".
-- Estado local `showAdvancedProtocol` com `useState(false)` passado via prop ao card.
+## 3. Constantes compartilhadas `src/lib/prescription-data.ts`
+Extrair as listas `MANDATORY_SUPPLEMENTS`, `TRUSTED_SHOPS` e `ADVANCED_PROTOCOL_ITEMS` que hoje vivem dentro de `PrescriptionCard.tsx` para um módulo compartilhado, reaproveitado pelo PDF. `PrescriptionCard.tsx` passa a importar deste módulo (refactor sem mudança visual).
 
-## Fora do escopo
-- Sem persistência no store (estado local apenas).
-- Sem novas dependências (usa ícones e componentes UI existentes).
+## 4. Integração `src/routes/review.tsx`
+- Subir o estado `advancedProtocol` do `PrescriptionCard` para o `ReviewPage` (controlled component via prop `advanced` + `onAdvancedChange`) para que o PDF saiba se deve incluir o protocolo avançado.
+- Substituir a ação atual de `handleGenerate` (toast placeholder) por:
+  - Import dinâmico: `const { pdf } = await import("@react-pdf/renderer")` + `const { ReportDocument } = await import("@/lib/pdf/ReportDocument")` para não inflar o bundle inicial.
+  - Renderizar `pdf(<ReportDocument ... />).toBlob()`, criar URL com `URL.createObjectURL`, abrir/baixar como `relatorio-{nome-paciente|sem-nome}-{DDMMYYYY}.pdf`.
+  - Toast de sucesso e fallback de erro.
+- Botão "Gerar relatório" ganha estado `isGenerating` (desabilita + spinner curto).
 
-## Estilo
-- Mantém identidade visual médica premium: branco, preto, dourado como acento.
-- Tipografia serif nos títulos, sans-serif no corpo.
-- Bordas finas, espaçamento generoso.
+## 5. Fora do escopo
+- Sem envio por email.
+- Sem armazenamento no Supabase / histórico.
+- Sem assinatura digital, watermark, QR ou senha.
+- Sem geração server-side.
+
+## Detalhes técnicos
+- `@react-pdf/renderer` roda 100% no browser; nada vai para o servidor.
+- Import dinâmico mantém a página leve.
+- Página 5 com orientações é conteúdo estático curado por perfil clínico, não input do usuário.
+- Se algum dado estiver ausente, a célula exibe "—" (mesma convenção da tela).

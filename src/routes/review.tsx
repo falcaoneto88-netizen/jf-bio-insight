@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, FileText, Pencil, Sparkles, Activity } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowLeft, FileText, Loader2, Pencil, Sparkles, Activity } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { BrandHeader } from "@/components/BrandHeader";
@@ -104,10 +104,54 @@ function ReviewPage() {
     ],
   );
 
-  const handleGenerate = () => {
-    toast.success("Relatório em preparação", {
-      description: "A geração final do PDF será adicionada na próxima fase.",
-    });
+  const [advancedProtocol, setAdvancedProtocol] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    try {
+      const [{ pdf }, { ReportDocument }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("@/lib/pdf/ReportDocument"),
+      ]);
+      const blob = await pdf(
+        <ReportDocument
+          bodyComposition={bc}
+          clinicalData={cd}
+          analysis={analysis}
+          diet={diet}
+          includeAdvancedProtocol={advancedProtocol}
+        />,
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const d = new Date();
+      const stamp = `${String(d.getDate()).padStart(2, "0")}${String(
+        d.getMonth() + 1,
+      ).padStart(2, "0")}${d.getFullYear()}`;
+      const slug = (bc?.patientName || cd?.patientName || "paciente")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase() || "paciente";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-${slug}-${stamp}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      toast.success("Relatório gerado", {
+        description: "O download do PDF foi iniciado.",
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Falha ao gerar o PDF", {
+        description: "Tente novamente em alguns instantes.",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -163,7 +207,12 @@ function ReviewPage() {
 
             <DietPlanCard diet={diet} />
 
-            <PrescriptionCard />
+            <PrescriptionCard
+              advanced={advancedProtocol}
+              onAdvancedChange={setAdvancedProtocol}
+            />
+
+
 
 
 
@@ -327,15 +376,25 @@ function ReviewPage() {
             <Button
               size="lg"
               onClick={handleGenerate}
+              disabled={isGenerating}
               className="bg-gold text-gold-foreground hover:bg-gold/90"
             >
-              <Sparkles />
-              Gerar relatório
+              {isGenerating ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Gerando…
+                </>
+              ) : (
+                <>
+                  <Sparkles />
+                  Gerar relatório
+                </>
+              )}
             </Button>
           </div>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            A geração final do PDF clínico será habilitada na próxima fase.
+            O PDF é gerado localmente e baixado no seu dispositivo.
           </p>
 
           <div className="mt-2 text-center">

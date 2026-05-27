@@ -1,0 +1,697 @@
+import {
+  Document,
+  Font,
+  Page,
+  StyleSheet,
+  Text,
+  View,
+} from "@react-pdf/renderer";
+
+import type {
+  ClassificationResult,
+  ProfileTag,
+} from "@/lib/body-classifier";
+import { PROFILE_LABELS } from "@/lib/body-classifier";
+import type { AdjustedDiet } from "@/lib/diet-adjuster";
+import {
+  ADVANCED_PROTOCOL_ITEMS,
+  FINAL_GUIDELINES,
+  MANDATORY_SUPPLEMENTS,
+  TRUSTED_SHOPS,
+} from "@/lib/prescription-data";
+import type {
+  BodyCompositionData,
+  ClinicalData,
+} from "@/store/report-store";
+
+// ----- Fonts -----
+Font.register({
+  family: "Inter",
+  fonts: [
+    {
+      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.ttf",
+      fontWeight: 400,
+    },
+    {
+      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa2JL7SUc.ttf",
+      fontWeight: 500,
+    },
+    {
+      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa1pL7SUc.ttf",
+      fontWeight: 700,
+    },
+  ],
+});
+
+Font.register({
+  family: "PlayfairDisplay",
+  fonts: [
+    {
+      src: "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDQ.ttf",
+      fontWeight: 500,
+    },
+    {
+      src: "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDQ.ttf",
+      fontWeight: 700,
+    },
+  ],
+});
+
+// ----- Palette -----
+const COLORS = {
+  white: "#FFFFFF",
+  black: "#0A0A0A",
+  gold: "#C9A24B",
+  goldSoft: "#F4ECD7",
+  border: "#E8E5DE",
+  muted: "#6B6B6B",
+  bgSoft: "#FAF8F3",
+};
+
+// ----- Styles -----
+const styles = StyleSheet.create({
+  page: {
+    paddingTop: 64,
+    paddingBottom: 56,
+    paddingHorizontal: 48,
+    fontFamily: "Inter",
+    fontSize: 10.5,
+    color: COLORS.black,
+    backgroundColor: COLORS.white,
+    lineHeight: 1.5,
+  },
+  // Header
+  header: {
+    position: "absolute",
+    top: 24,
+    left: 48,
+    right: 48,
+    paddingBottom: 8,
+    borderBottomWidth: 0.6,
+    borderBottomColor: COLORS.gold,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  brand: {
+    flexDirection: "column",
+  },
+  brandName: {
+    fontFamily: "PlayfairDisplay",
+    fontWeight: 700,
+    fontSize: 13,
+    color: COLORS.black,
+    letterSpacing: 0.4,
+  },
+  brandTagline: {
+    fontSize: 7.5,
+    color: COLORS.muted,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginTop: 2,
+  },
+  headerMeta: {
+    fontSize: 7.5,
+    color: COLORS.muted,
+    textAlign: "right",
+    letterSpacing: 0.6,
+  },
+  // Footer
+  footer: {
+    position: "absolute",
+    bottom: 24,
+    left: 48,
+    right: 48,
+    paddingTop: 8,
+    borderTopWidth: 0.6,
+    borderTopColor: COLORS.gold,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  footerText: {
+    fontSize: 7.5,
+    color: COLORS.muted,
+    letterSpacing: 0.4,
+    fontStyle: "italic",
+  },
+  footerPage: {
+    fontSize: 7.5,
+    color: COLORS.muted,
+    letterSpacing: 0.6,
+  },
+  // Page title
+  pageEyebrow: {
+    fontSize: 8,
+    color: COLORS.gold,
+    letterSpacing: 2.4,
+    textTransform: "uppercase",
+    fontWeight: 700,
+    marginBottom: 6,
+  },
+  pageTitle: {
+    fontFamily: "PlayfairDisplay",
+    fontWeight: 700,
+    fontSize: 22,
+    color: COLORS.black,
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
+  pageSubtitle: {
+    fontSize: 10,
+    color: COLORS.muted,
+    marginBottom: 20,
+  },
+  // Sections
+  section: {
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 8,
+    color: COLORS.gold,
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    fontWeight: 700,
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    fontFamily: "PlayfairDisplay",
+    fontWeight: 700,
+    fontSize: 13,
+    color: COLORS.black,
+    marginBottom: 6,
+  },
+  paragraph: {
+    fontSize: 10.5,
+    color: COLORS.black,
+    lineHeight: 1.55,
+  },
+  paragraphMuted: {
+    fontSize: 10,
+    color: COLORS.muted,
+    lineHeight: 1.5,
+  },
+  // Data rows
+  dataRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderBottomWidth: 0.4,
+    borderBottomColor: COLORS.border,
+  },
+  dataKey: {
+    fontSize: 10,
+    color: COLORS.muted,
+  },
+  dataValue: {
+    fontSize: 10.5,
+    color: COLORS.black,
+    fontWeight: 500,
+  },
+  // Badge
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 14,
+  },
+  badgePrimary: {
+    fontSize: 8,
+    color: COLORS.gold,
+    backgroundColor: COLORS.goldSoft,
+    borderWidth: 0.6,
+    borderColor: COLORS.gold,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    fontWeight: 700,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  badgeSecondary: {
+    fontSize: 8,
+    color: COLORS.muted,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  // Analysis blocks
+  analysisBlock: {
+    borderLeftWidth: 1.5,
+    borderLeftColor: COLORS.gold,
+    paddingLeft: 10,
+    marginBottom: 12,
+  },
+  analysisLabel: {
+    fontSize: 8,
+    color: COLORS.gold,
+    letterSpacing: 1.6,
+    textTransform: "uppercase",
+    fontWeight: 700,
+    marginBottom: 3,
+  },
+  // Meal
+  mealBlock: {
+    borderLeftWidth: 1.5,
+    borderLeftColor: COLORS.gold,
+    paddingLeft: 12,
+    marginBottom: 14,
+  },
+  mealTitle: {
+    fontFamily: "PlayfairDisplay",
+    fontWeight: 700,
+    fontSize: 12,
+    color: COLORS.black,
+    marginBottom: 6,
+  },
+  mealTime: {
+    color: COLORS.gold,
+  },
+  mealGroupLabel: {
+    fontSize: 8,
+    color: COLORS.gold,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    fontWeight: 700,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  mealItem: {
+    fontSize: 10,
+    color: COLORS.black,
+    marginBottom: 1.5,
+  },
+  // List item
+  listItem: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  bullet: {
+    width: 10,
+    color: COLORS.gold,
+    fontSize: 10,
+  },
+  listText: {
+    flex: 1,
+    fontSize: 10,
+    color: COLORS.black,
+    lineHeight: 1.5,
+  },
+  // Supplement card
+  supplementItem: {
+    borderLeftWidth: 1.5,
+    borderLeftColor: COLORS.gold,
+    paddingLeft: 10,
+    marginBottom: 10,
+  },
+  supplementHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+  },
+  supplementName: {
+    fontSize: 10.5,
+    fontWeight: 700,
+    color: COLORS.black,
+    marginRight: 4,
+  },
+  supplementDose: {
+    fontSize: 10,
+    color: COLORS.black,
+  },
+  supplementBadge: {
+    fontSize: 7,
+    color: COLORS.gold,
+    backgroundColor: COLORS.goldSoft,
+    borderWidth: 0.5,
+    borderColor: COLORS.gold,
+    paddingVertical: 1.5,
+    paddingHorizontal: 5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    fontWeight: 700,
+    marginLeft: 6,
+  },
+  supplementNote: {
+    fontSize: 9,
+    color: COLORS.muted,
+    marginTop: 2,
+    fontStyle: "italic",
+  },
+  noticeBox: {
+    borderWidth: 0.6,
+    borderColor: COLORS.gold,
+    backgroundColor: COLORS.goldSoft,
+    padding: 12,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  noticeTitle: {
+    fontSize: 10,
+    fontWeight: 700,
+    color: COLORS.black,
+    marginBottom: 4,
+  },
+  noticeBody: {
+    fontSize: 9.5,
+    color: COLORS.black,
+    lineHeight: 1.5,
+  },
+  link: {
+    fontSize: 10,
+    color: COLORS.black,
+    fontWeight: 500,
+    textDecoration: "underline",
+  },
+  guideline: {
+    marginBottom: 12,
+  },
+  guidelineTitle: {
+    fontFamily: "PlayfairDisplay",
+    fontWeight: 700,
+    fontSize: 12,
+    color: COLORS.gold,
+    marginBottom: 3,
+  },
+  guidelineText: {
+    fontSize: 10.5,
+    color: COLORS.black,
+    lineHeight: 1.55,
+  },
+});
+
+// ----- Helpers -----
+function fmt(v: string | undefined | null, suffix?: string): string {
+  if (!v || !String(v).trim()) return "—";
+  return suffix ? `${v} ${suffix}` : String(v);
+}
+
+function todayDDMMYYYY(): string {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
+const SEX_LABELS: Record<string, string> = {
+  feminino: "Feminino",
+  masculino: "Masculino",
+};
+
+const GOAL_30D: Record<ProfileTag, string> = {
+  emagrecimento: "Reduzir 2 a 4 kg de gordura corporal preservando massa muscular; aderência ≥ 90% ao plano alimentar e ≥ 3 treinos resistidos/semana.",
+  emagrecimento_metabolico_prioritario:
+    "Reduzir 3 a 5 kg, com queda mínima de 1 ponto na gordura visceral; caminhada diária ≥ 8.000 passos + treino resistido 3x/sem.",
+  recomposicao:
+    "Ganhar 0,3 a 0,5 kg de massa muscular esquelética e reduzir 1 a 2% de gordura corporal; treino resistido 4x/sem com progressão de carga.",
+  ganho_massa:
+    "Ganhar 0,5 a 1,0 kg de massa muscular esquelética; superávit calórico moderado e treino 4 a 5x/sem com sobrecarga progressiva.",
+  baixa_massa_muscular:
+    "Aumentar 0,5 kg de massa muscular esquelética; proteína ≥ 2 g/kg/dia e treino resistido 4x/sem com foco em hipertrofia.",
+  gordura_visceral_elevada:
+    "Reduzir 1 a 2 pontos na gordura visceral; eliminar ultraprocessados e álcool, adicionar HIIT 2x/sem.",
+  metabolismo_reduzido:
+    "Estabilizar TMB com treino de força 3 a 4x/sem e manutenção calórica estratégica; reavaliar composição em 30 dias.",
+  perfil_atletico:
+    "Manter composição corporal e otimizar performance: periodizar treinos e priorizar sono e recuperação.",
+  risco_metabolico_aumentado:
+    "Reduzir cintura em 2 a 4 cm; controle de carboidratos refinados, treino resistido + cardio leve diário.",
+};
+
+// ----- Layout: header + footer chrome -----
+function PageChrome({ pageLabel }: { pageLabel: string }) {
+  return (
+    <>
+      <View style={styles.header} fixed>
+        <View style={styles.brand}>
+          <Text style={styles.brandName}>Dr. João Falcão</Text>
+          <Text style={styles.brandTagline}>
+            Medicina Estética · Emagrecimento · Alta Performance
+          </Text>
+        </View>
+        <Text style={styles.headerMeta}>
+          {`Relatório clínico  ·  ${todayDDMMYYYY()}`}
+        </Text>
+      </View>
+      <View style={styles.footer} fixed>
+        <Text style={styles.footerText}>
+          Relatório gerado pelo método Dr. João Falcão — acompanhamento
+          individualizado.
+        </Text>
+        <Text style={styles.footerPage}>{pageLabel}</Text>
+      </View>
+    </>
+  );
+}
+
+function DataRow({ k, v }: { k: string; v: string }) {
+  return (
+    <View style={styles.dataRow}>
+      <Text style={styles.dataKey}>{k}</Text>
+      <Text style={styles.dataValue}>{v}</Text>
+    </View>
+  );
+}
+
+// ----- Document -----
+export type ReportInput = {
+  bodyComposition: BodyCompositionData | null;
+  clinicalData: ClinicalData | null;
+  analysis: ClassificationResult | null;
+  diet: AdjustedDiet;
+  includeAdvancedProtocol: boolean;
+};
+
+export function ReportDocument({
+  bodyComposition,
+  clinicalData,
+  analysis,
+  diet,
+  includeAdvancedProtocol,
+}: ReportInput) {
+  const bc = bodyComposition;
+  const cd = clinicalData;
+  const patientName =
+    bc?.patientName?.trim() || cd?.patientName?.trim() || "Paciente";
+
+  return (
+    <Document
+      title={`Relatório clínico — ${patientName}`}
+      author="Dr. João Falcão"
+      subject="Relatório de composição corporal"
+    >
+      {/* PAGE 1 — Bioimpedância */}
+      <Page size="A4" style={styles.page}>
+        <PageChrome pageLabel="Página 1 de 5" />
+        <Text style={styles.pageEyebrow}>Página 1</Text>
+        <Text style={styles.pageTitle}>Dados da Bioimpedância</Text>
+        <Text style={styles.pageSubtitle}>
+          Composição corporal aferida no exame de bioimpedância.
+        </Text>
+
+        <View style={styles.section}>
+          <DataRow k="Nome do paciente" v={fmt(bc?.patientName || cd?.patientName)} />
+          <DataRow
+            k="Sexo"
+            v={SEX_LABELS[bc?.sex || cd?.sex || ""] || "—"}
+          />
+          <DataRow k="Idade" v={fmt(bc?.age || cd?.age, "anos")} />
+          <DataRow k="Altura" v={fmt(bc?.height || cd?.height, "cm")} />
+          <DataRow k="Peso" v={fmt(bc?.weight || cd?.weight, "kg")} />
+          <DataRow k="IMC" v={fmt(bc?.bmi, "kg/m²")} />
+          <DataRow
+            k="Massa muscular esquelética"
+            v={fmt(bc?.skeletalMuscleMass, "kg")}
+          />
+          <DataRow
+            k="Percentual de gordura corporal"
+            v={fmt(bc?.bodyFatPercentage, "%")}
+          />
+          <DataRow k="Gordura visceral" v={fmt(bc?.visceralFat)} />
+          <DataRow
+            k="Taxa metabólica basal"
+            v={fmt(bc?.basalMetabolicRate, "kcal")}
+          />
+          <DataRow k="Data e hora do exame" v={fmt(bc?.examDateTime)} />
+        </View>
+      </Page>
+
+      {/* PAGE 2 — Análise Corporal */}
+      <Page size="A4" style={styles.page}>
+        <PageChrome pageLabel="Página 2 de 5" />
+        <Text style={styles.pageEyebrow}>Página 2</Text>
+        <Text style={styles.pageTitle}>Análise Corporal</Text>
+        <Text style={styles.pageSubtitle}>
+          Diagnóstico clínico e estratégia recomendada.
+        </Text>
+
+        {analysis ? (
+          <>
+            <View style={styles.badgeRow}>
+              <Text style={styles.badgePrimary}>
+                {PROFILE_LABELS[analysis.primaryProfile]}
+              </Text>
+              {analysis.secondaryProfiles.map((t) => (
+                <Text key={t} style={styles.badgeSecondary}>
+                  {PROFILE_LABELS[t]}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.analysisBlock}>
+              <Text style={styles.analysisLabel}>Diagnóstico corporal</Text>
+              <Text style={styles.paragraph}>{analysis.narrative.diagnosis}</Text>
+            </View>
+            <View style={styles.analysisBlock}>
+              <Text style={styles.analysisLabel}>Pontos positivos</Text>
+              <Text style={styles.paragraph}>{analysis.narrative.strength}</Text>
+            </View>
+            <View style={styles.analysisBlock}>
+              <Text style={styles.analysisLabel}>Pontos de atenção</Text>
+              <Text style={styles.paragraph}>{analysis.narrative.attention}</Text>
+            </View>
+            <View style={styles.analysisBlock}>
+              <Text style={styles.analysisLabel}>Estratégia recomendada</Text>
+              <Text style={styles.paragraph}>{analysis.narrative.strategy}</Text>
+            </View>
+            <View style={styles.analysisBlock}>
+              <Text style={styles.analysisLabel}>Meta dos próximos 30 dias</Text>
+              <Text style={styles.paragraph}>
+                {GOAL_30D[analysis.primaryProfile]}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.paragraphMuted}>
+            Dados insuficientes para gerar a análise — preencha sexo, idade,
+            peso, altura e percentual de gordura.
+          </Text>
+        )}
+      </Page>
+
+      {/* PAGE 3 — Plano Alimentar */}
+      <Page size="A4" style={styles.page}>
+        <PageChrome pageLabel="Página 3 de 5" />
+        <Text style={styles.pageEyebrow}>Página 3</Text>
+        <Text style={styles.pageTitle}>Plano Alimentar</Text>
+        <Text style={styles.pageSubtitle}>
+          {diet.base.name} — quantidades ajustadas conforme perfil clínico.
+        </Text>
+
+        {diet.meals.map((meal) => (
+          <View key={meal.id} style={styles.mealBlock} wrap={false}>
+            <Text style={styles.mealTitle}>
+              {meal.name} <Text style={styles.mealTime}>— {meal.time}</Text>
+            </Text>
+            {meal.blocks.map((block) => (
+              <View key={block.id}>
+                <Text style={styles.mealGroupLabel}>{block.title}</Text>
+                {block.options.map((opt) => (
+                  <Text key={opt.id} style={styles.mealItem}>
+                    — {opt.adjustedDisplay}
+                  </Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        ))}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Regras gerais</Text>
+          {diet.generalRules.map((rule, i) => (
+            <View key={i} style={styles.listItem}>
+              <Text style={styles.bullet}>•</Text>
+              <Text style={styles.listText}>{rule}</Text>
+            </View>
+          ))}
+          <View style={styles.listItem}>
+            <Text style={styles.bullet}>•</Text>
+            <Text style={styles.listText}>
+              {`Hidratação alvo: ${diet.targets.waterLitersPerDay
+                .toString()
+                .replace(".", ",")} L/dia.`}
+            </Text>
+          </View>
+        </View>
+      </Page>
+
+      {/* PAGE 4 — Prescrição e Suplementação */}
+      <Page size="A4" style={styles.page}>
+        <PageChrome pageLabel="Página 4 de 5" />
+        <Text style={styles.pageEyebrow}>Página 4</Text>
+        <Text style={styles.pageTitle}>Prescrição e Suplementação</Text>
+        <Text style={styles.pageSubtitle}>
+          Protocolo de suplementação base e orientações de aquisição.
+        </Text>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Suplementos — Obrigatórios</Text>
+          {MANDATORY_SUPPLEMENTS.map((s) => (
+            <View key={s.name} style={styles.supplementItem} wrap={false}>
+              <View style={styles.supplementHeader}>
+                <Text style={styles.supplementName}>{s.name}</Text>
+                <Text style={styles.supplementDose}>— {s.dose}</Text>
+                <Text style={styles.supplementBadge}>Obrigatório</Text>
+              </View>
+              {s.note && <Text style={styles.supplementNote}>{s.note}</Text>}
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.noticeBox} wrap={false}>
+          <Text style={styles.noticeTitle}>Atenção à aquisição</Text>
+          <Text style={styles.noticeBody}>
+            Estes suplementos devem ser adquiridos exclusivamente em lojas
+            especializadas e confiáveis. Sites recomendados:
+          </Text>
+          {TRUSTED_SHOPS.map((shop) => (
+            <Text key={shop.url} style={[styles.link, { marginTop: 4 }]}>
+              {shop.label}  ·  {shop.url}
+            </Text>
+          ))}
+        </View>
+
+        {includeAdvancedProtocol && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Protocolo avançado</Text>
+            <Text style={[styles.paragraphMuted, { marginBottom: 8 }]}>
+              Complementar — personalizar conforme exames laboratoriais e
+              acompanhamento clínico.
+            </Text>
+            {ADVANCED_PROTOCOL_ITEMS.map((s) => (
+              <View key={s.name} style={styles.supplementItem} wrap={false}>
+                <View style={styles.supplementHeader}>
+                  <Text style={styles.supplementName}>{s.name}</Text>
+                  <Text style={styles.supplementDose}>— {s.dose}</Text>
+                </View>
+                {s.note && <Text style={styles.supplementNote}>{s.note}</Text>}
+              </View>
+            ))}
+          </View>
+        )}
+      </Page>
+
+      {/* PAGE 5 — Orientações Finais */}
+      <Page size="A4" style={styles.page}>
+        <PageChrome pageLabel="Página 5 de 5" />
+        <Text style={styles.pageEyebrow}>Página 5</Text>
+        <Text style={styles.pageTitle}>Orientações Finais</Text>
+        <Text style={styles.pageSubtitle}>
+          Pilares de adesão para resultados clínicos sustentáveis.
+        </Text>
+
+        {FINAL_GUIDELINES.map((g) => (
+          <View key={g.title} style={styles.guideline} wrap={false}>
+            <Text style={styles.guidelineTitle}>{g.title}</Text>
+            <Text style={styles.guidelineText}>{g.text}</Text>
+          </View>
+        ))}
+      </Page>
+    </Document>
+  );
+}
