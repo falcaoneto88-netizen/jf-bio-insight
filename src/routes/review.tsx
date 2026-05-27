@@ -4,10 +4,13 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { BrandHeader } from "@/components/BrandHeader";
+import { DietPlanCard } from "@/components/DietPlanCard";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
+import { DIETA_BASE_DR_JOAO } from "@/lib/diet-base";
+import { adjustDiet } from "@/lib/diet-adjuster";
 import {
   useReportStore,
   type MainGoal,
@@ -16,6 +19,12 @@ import {
   type YesNo,
   type YesNoNA,
 } from "@/store/report-store";
+
+function parseKg(v: string | undefined | null): number | null {
+  if (!v) return null;
+  const n = Number(String(v).replace(/[^\d,.\-]/g, "").replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
 export const Route = createFileRoute("/review")({
   head: () => ({
@@ -61,6 +70,16 @@ function ReviewPage() {
   const analysis = useMemo(
     () => classifyBody(bodyComposition, clinicalData),
     [bodyComposition, clinicalData],
+  );
+
+  const diet = useMemo(
+    () =>
+      adjustDiet(DIETA_BASE_DR_JOAO, {
+        weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
+        profile: analysis?.primaryProfile ?? null,
+        mainGoal: cd?.mainGoal ?? "",
+      }),
+    [bc?.weight, cd?.weight, cd?.mainGoal, analysis?.primaryProfile],
   );
 
   const handleGenerate = () => {
