@@ -14,10 +14,9 @@ import { PROFILE_LABELS } from "@/lib/body-classifier";
 import type { AdjustedDiet } from "@/lib/diet-adjuster";
 import { compareExams, formatDelta, type EvolutionRow } from "@/lib/evolution-analyzer";
 import {
-  ADVANCED_PROTOCOL_ITEMS,
-  FINAL_GUIDELINES,
-  MANDATORY_SUPPLEMENTS,
   TRUSTED_SHOPS,
+  buildDefaultPrescription,
+  type PrescriptionData,
 } from "@/lib/prescription-data";
 import type { ReportHistoryEntry } from "@/lib/report-history";
 import type {
@@ -479,6 +478,7 @@ export type ReportInput = {
   diet: AdjustedDiet;
   includeAdvancedProtocol: boolean;
   previousExam?: ReportHistoryEntry | null;
+  prescription?: PrescriptionData | null;
 };
 
 export function ReportDocument({
@@ -488,7 +488,10 @@ export function ReportDocument({
   diet,
   includeAdvancedProtocol,
   previousExam,
+  prescription,
 }: ReportInput) {
+  const rx: PrescriptionData = prescription ?? buildDefaultPrescription();
+
   const bc = bodyComposition;
   const cd = clinicalData;
   const evolutionRows: EvolutionRow[] = previousExam?.bodyComposition
@@ -701,8 +704,8 @@ export function ReportDocument({
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Suplementos - Obrigatórios</Text>
-          {MANDATORY_SUPPLEMENTS.map((s) => (
-            <View key={s.name} style={styles.supplementItem} wrap={false}>
+          {rx.mandatory.map((s) => (
+            <View key={s.id} style={styles.supplementItem} wrap={false}>
               <View style={styles.supplementHeader}>
                 <Text style={styles.supplementName}>{safe(s.name)}</Text>
                 <Text style={styles.supplementDose}>- {safe(s.dose)}</Text>
@@ -726,15 +729,15 @@ export function ReportDocument({
           ))}
         </View>
 
-        {includeAdvancedProtocol && (
+        {includeAdvancedProtocol && rx.advanced.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Protocolo avançado</Text>
             <Text style={[styles.paragraphMuted, { marginBottom: 8 }]}>
               Complementar - personalizar conforme exames laboratoriais e
               acompanhamento clínico.
             </Text>
-            {ADVANCED_PROTOCOL_ITEMS.map((s) => (
-              <View key={s.name} style={styles.supplementItem} wrap={false}>
+            {rx.advanced.map((s) => (
+              <View key={s.id} style={styles.supplementItem} wrap={false}>
                 <View style={styles.supplementHeader}>
                   <Text style={styles.supplementName}>{safe(s.name)}</Text>
                   <Text style={styles.supplementDose}>- {safe(s.dose)}</Text>
@@ -756,8 +759,8 @@ export function ReportDocument({
           Pilares de adesão para resultados clínicos sustentáveis.
         </Text>
 
-        {FINAL_GUIDELINES.map((g) => (
-          <View key={g.title} style={styles.guideline} wrap={false}>
+        {rx.guidelines.map((g) => (
+          <View key={g.id} style={styles.guideline} wrap={false}>
             <Text style={styles.guidelineTitle}>{safe(g.title)}</Text>
             <Text style={styles.guidelineText}>{safe(g.text)}</Text>
           </View>

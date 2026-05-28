@@ -106,7 +106,7 @@ function ReviewPage() {
     ],
   );
 
-  const [advancedProtocol, setAdvancedProtocol] = useState(false);
+  const prescription = useReportStore((s) => s.prescription);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerate = async () => {
@@ -122,7 +122,8 @@ function ReviewPage() {
           clinicalData={cd}
           analysis={analysis}
           diet={diet}
-          includeAdvancedProtocol={advancedProtocol}
+          prescription={prescription}
+          includeAdvancedProtocol={prescription?.advancedEnabled ?? false}
           previousExam={previousExam}
         />,
       ).toBlob();
@@ -236,10 +237,8 @@ function ReviewPage() {
 
             <DietPlanCard diet={diet} />
 
-            <PrescriptionCard
-              advanced={advancedProtocol}
-              onAdvancedChange={setAdvancedProtocol}
-            />
+            <PrescriptionCard />
+
 
 
 
