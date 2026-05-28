@@ -175,10 +175,19 @@ export const useReportStore = create<ReportState>()(
       file: null,
       bodyComposition: null,
       clinicalData: null,
+      previousExam: null,
       setFile: (file) => set({ file }),
       setBodyComposition: (data) => set({ bodyComposition: data }),
       setClinicalData: (data) => set({ clinicalData: data }),
-      reset: () => set({ file: null, bodyComposition: null, clinicalData: null }),
+      setPreviousExam: (entry) => set({ previousExam: entry }),
+      clearPreviousExam: () => set({ previousExam: null }),
+      reset: () =>
+        set({
+          file: null,
+          bodyComposition: null,
+          clinicalData: null,
+          previousExam: null,
+        }),
     }),
     {
       name: "jf-bioreport-draft",
@@ -186,7 +195,12 @@ export const useReportStore = create<ReportState>()(
       version: 1,
       migrate: (_persistedState, version) => {
         if (version < 1) {
-          return { file: null, bodyComposition: null, clinicalData: null };
+          return {
+            file: null,
+            bodyComposition: null,
+            clinicalData: null,
+            previousExam: null,
+          };
         }
         return _persistedState as Partial<ReportState>;
       },
@@ -194,6 +208,7 @@ export const useReportStore = create<ReportState>()(
         file: state.file,
         bodyComposition: normalizeBodyComposition(state.bodyComposition),
         clinicalData: state.clinicalData,
+        previousExam: state.previousExam,
       }),
       onRehydrateStorage: () => (state) => {
         if (state && state.bodyComposition) {
