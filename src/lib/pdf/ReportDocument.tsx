@@ -354,6 +354,19 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     lineHeight: 1.55,
   },
+  // Evolution table
+  evoRow: {
+    flexDirection: "row",
+    paddingVertical: 5,
+    borderBottomWidth: 0.4,
+    borderBottomColor: COLORS.border,
+  },
+  evoCellLabel: { flex: 2.2, fontSize: 9.5, color: COLORS.black },
+  evoCellNum: { flex: 1, fontSize: 9.5, color: COLORS.black, textAlign: "right" },
+  evoCellDelta: { flex: 1.2, fontSize: 9.5, textAlign: "right", fontWeight: 700 },
+  evoHeaderCellLabel: { flex: 2.2, fontSize: 8, color: COLORS.muted, letterSpacing: 1, textTransform: "uppercase" },
+  evoHeaderCellNum: { flex: 1, fontSize: 8, color: COLORS.muted, letterSpacing: 1, textTransform: "uppercase", textAlign: "right" },
+  evoHeaderCellDelta: { flex: 1.2, fontSize: 8, color: COLORS.muted, letterSpacing: 1, textTransform: "uppercase", textAlign: "right" },
 });
 
 // ----- Helpers -----
