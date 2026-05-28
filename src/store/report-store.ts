@@ -151,11 +151,14 @@ type ReportState = {
   bodyComposition: BodyCompositionData | null;
   clinicalData: ClinicalData | null;
   previousExam: ReportHistoryEntry | null;
+  prescription: PrescriptionData | null;
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
   setClinicalData: (data: ClinicalData) => void;
   setPreviousExam: (entry: ReportHistoryEntry | null) => void;
   clearPreviousExam: () => void;
+  setPrescription: (data: PrescriptionData) => void;
+  resetPrescription: () => void;
   reset: () => void;
 };
 
@@ -180,23 +183,27 @@ export const useReportStore = create<ReportState>()(
       bodyComposition: null,
       clinicalData: null,
       previousExam: null,
+      prescription: null,
       setFile: (file) => set({ file }),
       setBodyComposition: (data) => set({ bodyComposition: data }),
       setClinicalData: (data) => set({ clinicalData: data }),
       setPreviousExam: (entry) => set({ previousExam: entry }),
       clearPreviousExam: () => set({ previousExam: null }),
+      setPrescription: (data) => set({ prescription: data }),
+      resetPrescription: () => set({ prescription: buildDefaultPrescription() }),
       reset: () =>
         set({
           file: null,
           bodyComposition: null,
           clinicalData: null,
           previousExam: null,
+          prescription: null,
         }),
     }),
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
-      version: 1,
+      version: 2,
       migrate: (_persistedState, version) => {
         if (version < 1) {
           return {
@@ -204,15 +211,18 @@ export const useReportStore = create<ReportState>()(
             bodyComposition: null,
             clinicalData: null,
             previousExam: null,
+            prescription: null,
           };
         }
-        return _persistedState as Partial<ReportState>;
+        const s = (_persistedState ?? {}) as Partial<ReportState>;
+        return { ...s, prescription: s.prescription ?? null };
       },
       partialize: (state) => ({
         file: state.file,
         bodyComposition: normalizeBodyComposition(state.bodyComposition),
         clinicalData: state.clinicalData,
         previousExam: state.previousExam,
+        prescription: state.prescription,
       }),
       onRehydrateStorage: () => (state) => {
         if (state && state.bodyComposition) {
@@ -222,3 +232,4 @@ export const useReportStore = create<ReportState>()(
     },
   ),
 );
+
