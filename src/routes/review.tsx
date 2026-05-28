@@ -146,18 +146,24 @@ function ReviewPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-      addReportToHistory({
-        patientName: bc?.patientName || cd?.patientName || "Paciente",
-        examDate: bc?.examDateTime || "",
-        generatedAt: new Date().toISOString(),
-        mainGoal: cd?.mainGoal ? GOAL_LABELS[cd.mainGoal] : "—",
-        bodyClassification: analysis
-          ? PROFILE_LABELS[analysis.primaryProfile]
-          : "—",
-        pdfFileName: fileName,
-        bodyComposition: bc,
-        clinicalData: cd,
-      });
+      try {
+        await addReportToHistory({
+          patientName: bc?.patientName || cd?.patientName || "Paciente",
+          examDate: bc?.examDateTime || "",
+          generatedAt: new Date().toISOString(),
+          mainGoal: cd?.mainGoal ? GOAL_LABELS[cd.mainGoal] : "—",
+          bodyClassification: analysis
+            ? PROFILE_LABELS[analysis.primaryProfile]
+            : "—",
+          pdfFileName: fileName,
+          bodyComposition: bc,
+          clinicalData: cd,
+        });
+      } catch (e) {
+        console.error("[reports] failed to save to cloud", e);
+        toast.warning("Relatório gerado, mas não foi guardado na cloud");
+      }
+
 
       toast.success("Relatório gerado", {
         description: "O download do PDF foi iniciado.",

@@ -19,7 +19,9 @@ import {
   getReportHistory,
   type ReportHistoryEntry,
 } from "@/lib/report-history";
+import { migrateLocalHistoryToCloud } from "@/lib/migrate-local-history";
 import { useReportStore } from "@/store/report-store";
+
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -45,16 +47,36 @@ function HistoryPage() {
   const [entries, setEntries] = useState<ReportHistoryEntry[] | null>(null);
 
   useEffect(() => {
-    setEntries(getReportHistory());
+    let cancelled = false;
+    (async () => {
+      try {
+        await migrateLocalHistoryToCloud();
+        const list = await getReportHistory();
+        if (!cancelled) setEntries(list);
+      } catch {
+        if (!cancelled) {
+          setEntries([]);
+          toast.error("Falha ao carregar o histórico da cloud");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleClear = () => {
+  const handleClear = async () => {
     if (!entries || entries.length === 0) return;
     if (!window.confirm("Limpar todo o histórico de relatórios?")) return;
-    clearReportHistory();
-    setEntries([]);
-    toast.success("Histórico limpo");
+    try {
+      await clearReportHistory();
+      setEntries([]);
+      toast.success("Histórico limpo");
+    } catch {
+      toast.error("Falha ao limpar o histórico");
+    }
   };
+
 
   const handleReopen = (entry: ReportHistoryEntry) => {
     if (!entry.bodyComposition || !entry.clinicalData) {

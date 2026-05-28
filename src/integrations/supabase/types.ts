@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      reports: {
+        Row: {
+          body_classification: string
+          body_composition: Json | null
+          clinical_data: Json | null
+          created_at: string
+          exam_date: string
+          generated_at: string
+          id: string
+          main_goal: string
+          patient_name: string
+          pdf_file_name: string
+        }
+        Insert: {
+          body_classification?: string
+          body_composition?: Json | null
+          clinical_data?: Json | null
+          created_at?: string
+          exam_date?: string
+          generated_at?: string
+          id?: string
+          main_goal?: string
+          patient_name?: string
+          pdf_file_name?: string
+        }
+        Update: {
+          body_classification?: string
+          body_composition?: Json | null
+          clinical_data?: Json | null
+          created_at?: string
+          exam_date?: string
+          generated_at?: string
+          id?: string
+          main_goal?: string
+          patient_name?: string
+          pdf_file_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
