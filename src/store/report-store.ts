@@ -2,6 +2,10 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 import type { ReportHistoryEntry } from "@/lib/report-history";
+import {
+  buildDefaultPrescription,
+  type PrescriptionData,
+} from "@/lib/prescription-data";
 
 export type UploadedFile = {
   name: string;
