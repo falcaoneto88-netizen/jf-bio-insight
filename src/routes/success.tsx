@@ -49,8 +49,12 @@ function SuccessPage() {
   const navigate = useNavigate();
   const { bodyComposition: bc, clinicalData: cd, reset } = useReportStore();
 
-  const [generatedAt] = useState(() => new Date().toISOString());
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    setGeneratedAt(new Date().toISOString());
+  }, []);
 
   const patientName =
     bc?.patientName || cd?.patientName || "Paciente";
