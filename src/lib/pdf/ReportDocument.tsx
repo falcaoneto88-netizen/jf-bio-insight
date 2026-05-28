@@ -629,15 +629,15 @@ export function ReportDocument({
         </Text>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Suplementos — Obrigatórios</Text>
+          <Text style={styles.sectionLabel}>Suplementos - Obrigatórios</Text>
           {MANDATORY_SUPPLEMENTS.map((s) => (
             <View key={s.name} style={styles.supplementItem} wrap={false}>
               <View style={styles.supplementHeader}>
-                <Text style={styles.supplementName}>{s.name}</Text>
-                <Text style={styles.supplementDose}>— {s.dose}</Text>
+                <Text style={styles.supplementName}>{safe(s.name)}</Text>
+                <Text style={styles.supplementDose}>- {safe(s.dose)}</Text>
                 <Text style={styles.supplementBadge}>Obrigatório</Text>
               </View>
-              {s.note && <Text style={styles.supplementNote}>{s.note}</Text>}
+              {s.note && <Text style={styles.supplementNote}>{safe(s.note)}</Text>}
             </View>
           ))}
         </View>
@@ -650,7 +650,7 @@ export function ReportDocument({
           </Text>
           {TRUSTED_SHOPS.map((shop) => (
             <Text key={shop.url} style={[styles.link, { marginTop: 4 }]}>
-              {shop.label}  ·  {shop.url}
+              {safe(shop.label)}  -  {safe(shop.url)}
             </Text>
           ))}
         </View>
@@ -659,21 +659,22 @@ export function ReportDocument({
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Protocolo avançado</Text>
             <Text style={[styles.paragraphMuted, { marginBottom: 8 }]}>
-              Complementar — personalizar conforme exames laboratoriais e
+              Complementar - personalizar conforme exames laboratoriais e
               acompanhamento clínico.
             </Text>
             {ADVANCED_PROTOCOL_ITEMS.map((s) => (
               <View key={s.name} style={styles.supplementItem} wrap={false}>
                 <View style={styles.supplementHeader}>
-                  <Text style={styles.supplementName}>{s.name}</Text>
-                  <Text style={styles.supplementDose}>— {s.dose}</Text>
+                  <Text style={styles.supplementName}>{safe(s.name)}</Text>
+                  <Text style={styles.supplementDose}>- {safe(s.dose)}</Text>
                 </View>
-                {s.note && <Text style={styles.supplementNote}>{s.note}</Text>}
+                {s.note && <Text style={styles.supplementNote}>{safe(s.note)}</Text>}
               </View>
             ))}
           </View>
         )}
       </Page>
+
 
       {/* PAGE 5 — Orientações Finais */}
       <Page size="A4" style={styles.page}>
