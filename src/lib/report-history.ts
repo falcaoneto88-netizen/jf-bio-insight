@@ -1,6 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
 import type { BodyCompositionData, ClinicalData } from "@/store/report-store";
-
-const STORAGE_KEY = "jf-bioreport-history";
 
 export type ReportHistoryEntry = {
   id: string;
@@ -15,49 +14,85 @@ export type ReportHistoryEntry = {
   clinicalData?: ClinicalData | null;
 };
 
-function safeRead(): ReportHistoryEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as ReportHistoryEntry[]) : [];
-  } catch {
-    return [];
-  }
-}
+type ReportRow = {
+  id: string;
+  patient_name: string | null;
+  exam_date: string | null;
+  generated_at: string;
+  main_goal: string | null;
+  body_classification: string | null;
+  pdf_file_name: string | null;
+  body_composition: BodyCompositionData | null;
+  clinical_data: ClinicalData | null;
+};
 
-function safeWrite(entries: ReportHistoryEntry[]) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch {
-    // ignore quota errors
-  }
-}
-
-export function getReportHistory(): ReportHistoryEntry[] {
-  return safeRead().sort((a, b) =>
-    b.generatedAt.localeCompare(a.generatedAt),
-  );
-}
-
-export function addReportToHistory(
-  entry: Omit<ReportHistoryEntry, "id">,
-): ReportHistoryEntry {
-  const full: ReportHistoryEntry = {
-    id:
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    ...entry,
+function rowToEntry(r: ReportRow): ReportHistoryEntry {
+  return {
+    id: r.id,
+    patientName: r.patient_name ?? "",
+    examDate: r.exam_date ?? "",
+    generatedAt: r.generated_at,
+    mainGoal: r.main_goal ?? "",
+    bodyClassification: r.body_classification ?? "",
+    pdfFileName: r.pdf_file_name ?? "",
+    bodyComposition: r.body_composition,
+    clinicalData: r.clinical_data,
   };
-  const list = safeRead();
-  list.unshift(full);
-  safeWrite(list.slice(0, 200));
-  return full;
 }
 
-export function clearReportHistory() {
-  safeWrite([]);
+function entryToRow(entry: Omit<ReportHistoryEntry, "id"> & { id?: string }) {
+  return {
+    ...(entry.id ? { id: entry.id } : {}),
+    patient_name: entry.patientName ?? "",
+    exam_date: entry.examDate ?? "",
+    generated_at: entry.generatedAt,
+    main_goal: entry.mainGoal ?? "",
+    body_classification: entry.bodyClassification ?? "",
+    pdf_file_name: entry.pdfFileName ?? "",
+    body_composition: entry.bodyComposition ?? null,
+    clinical_data: entry.clinicalData ?? null,
+  };
+}
+
+export async function getReportHistory(): Promise<ReportHistoryEntry[]> {
+  const { data, error } = await supabase
+    .from("reports")
+    .select(
+      "id, patient_name, exam_date, generated_at, main_goal, body_classification, pdf_file_name, body_composition, clinical_data",
+    )
+    .order("generated_at", { ascending: false })
+    .limit(200);
+  if (error) {
+    console.error("[reports] getReportHistory", error);
+    throw error;
+  }
+  return (data ?? []).map((r) => rowToEntry(r as unknown as ReportRow));
+}
+
+export async function addReportToHistory(
+  entry: Omit<ReportHistoryEntry, "id">,
+): Promise<ReportHistoryEntry> {
+  const { data, error } = await supabase
+    .from("reports")
+    .insert(entryToRow(entry))
+    .select(
+      "id, patient_name, exam_date, generated_at, main_goal, body_classification, pdf_file_name, body_composition, clinical_data",
+    )
+    .single();
+  if (error) {
+    console.error("[reports] addReportToHistory", error);
+    throw error;
+  }
+  return rowToEntry(data as unknown as ReportRow);
+}
+
+export async function clearReportHistory(): Promise<void> {
+  const { error } = await supabase
+    .from("reports")
+    .delete()
+    .not("id", "is", null);
+  if (error) {
+    console.error("[reports] clearReportHistory", error);
+    throw error;
+  }
 }
