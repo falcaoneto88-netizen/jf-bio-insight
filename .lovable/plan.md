@@ -1,50 +1,125 @@
 ## Objetivo
-Três correções pequenas e isoladas para deixar o app pronto para teste, sem tocar em IA, dieta, upload, formulário clínico ou lógica de prescrição.
+Encurtar drasticamente o fluxo quando o paciente já tem relatório anterior: reabrir do histórico, pré-preencher dados clínicos e de bioimpedância, e gerar PDF que **destaca a evolução** (deltas) em relação ao último exame.
 
-## 1. Normalizar glifos não suportados no `ReportDocument.tsx`
+Sem backend, sem auth — tudo via `localStorage`, mantendo o padrão atual.
 
-O PDF usa Helvetica (fonte padrão do `@react-pdf/renderer` após removermos as Google Fonts). Helvetica **não** contém vários caracteres comuns no relatório clínico, o que causa glifos faltando ou erro silencioso.
+---
 
-Ação: auditar `src/lib/pdf/ReportDocument.tsx` inteiro e substituir:
-- `²` → `2` (ex.: `kg/m²` → `kg/m2`) — já feito no IMC, replicar em qualquer outra ocorrência
-- `³` → `3`
-- `≥` → `>=`
-- `≤` → `<=`
-- `–` (en-dash) e `—` (em-dash) → `-`
-- `→` → `->`
-- `•` (bullet U+2022) → manter apenas se já estiver renderizando; caso contrário trocar por `-`
-- Aspas tipográficas `" " ' '` → `" "` / `'`
+## Fase A — Persistir snapshot completo no histórico
 
-Sem alterar conteúdo clínico — apenas a forma do caractere.
+Hoje `report-history.ts` salva só metadados (nome, data, objetivo, classificação, nome do arquivo). Para reabrir, precisamos do estado completo.
 
-## 2. Corrigir hidratação em `/history`
+**Modificado:** `src/lib/report-history.ts`
+- Adicionar campos opcionais ao `ReportHistoryEntry`:
+  - `bodyComposition: BodyCompositionData`
+  - `clinicalData: ClinicalData`
+  - `prescription: PrescriptionDraft | null` (já existe da Fase 1)
+- Manter compat: entradas antigas sem esses campos continuam aparecendo no `/history`, mas sem botão "Reabrir".
 
-`src/routes/history.tsx` lê `localStorage` durante o render inicial, causando o mesmo SSR mismatch do `/success`.
+**Modificado:** `src/routes/review.tsx` (no `handleDownload`)
+- Ao chamar `addReportToHistory`, incluir `bodyComposition`, `clinicalData`, `prescription` no payload.
 
-Ação: aplicar o mesmo padrão já usado no `/success`:
-- Estado inicial `useState<ReportHistoryEntry[] | null>(null)`
-- `useEffect(() => { setEntries(getReportHistory()); }, [])`
-- Enquanto `entries === null`, renderizar skeleton/placeholder neutro (mesma estrutura do estado vazio) para evitar mismatch
+---
 
-Sem alterar `src/lib/report-history.ts` nem o layout visual da página.
+## Fase B — Reabrir paciente a partir do histórico
 
-## 3. Fallback robusto no botão "Baixar PDF" (`/success`)
+**Modificado:** `src/routes/history.tsx`
+- Nova coluna "Ações" com botão **"Nova consulta"** (ícone `RefreshCw`) em cada linha que tenha snapshot completo.
+- Ao clicar:
+  1. Carregar `bodyComposition` + `clinicalData` no `useReportStore`
+  2. Guardar referência ao exame anterior: `setPreviousExam(entry)` (novo no store)
+  3. Navegar para `/upload` com flag `?return=1` (ou direto para `/clinical-form` — ver decisão abaixo)
 
-Hoje, se `pdf().toBlob()` falhar, o usuário só vê `toast.error("Falha ao baixar o PDF")` genérico.
+**Decisão de fluxo:** pular `/upload` e ir direto para `/body-composition` em modo edição. O usuário ainda pode subir um novo arquivo de bioimpedância depois pelo botão "Trocar arquivo", mas o caminho padrão é: **conferir bioimpedância → conferir clínico → revisar → gerar**.
 
-Ação em `src/routes/success.tsx`:
-- Capturar a mensagem real do erro e exibir no toast (ex.: `toast.error("Falha ao gerar PDF", { description: err?.message })`)
-- Manter o botão habilitado após falha para o usuário poder tentar novamente
-- Adicionar `disabled` quando `generatedAt === null` (evita clique no primeiro frame antes do `useEffect`)
+---
 
-Sem alterar a função `handleDownload` em `review.tsx` nem o fluxo de geração.
+## Fase C — Estado de "exame anterior" no store
 
-## Escopo / não-escopo
-- **Modificados:** `src/lib/pdf/ReportDocument.tsx`, `src/routes/history.tsx`, `src/routes/success.tsx`
-- **Não tocados:** IA, `diet-adjuster.ts`, `diet-base.ts`, `body-classifier.ts`, upload, `clinical-form.tsx`, `review.tsx`, store, rotas de API, autenticação
+**Modificado:** `src/store/report-store.ts`
+- Adicionar:
+  - `previousExam: ReportHistoryEntry | null`
+  - `setPreviousExam(entry)`
+  - `clearPreviousExam()`
+- Incluir em `persist` (sobrevive a refresh).
+- `reset()` também limpa `previousExam`.
 
-## Verificação final
-- Build passa
-- Console sem warnings de hidratação em `/history` e `/success`
-- PDF gerado abre sem retângulos pretos ou glifos faltando
-- Toast de erro mostra mensagem útil se o download falhar
+---
+
+## Fase D — Indicador visual "Consulta de retorno"
+
+**Novo:** `src/components/ReturnVisitBadge.tsx`
+- Badge dourado discreto: "Consulta de retorno · último exame em DD/MM/AAAA"
+- Exibido no topo de: `/body-composition`, `/clinical-form`, `/review` quando `previousExam !== null`.
+- Botão pequeno "Sair do modo retorno" → `clearPreviousExam()` + toast.
+
+---
+
+## Fase E — Comparativo de evolução no PDF (alto impacto)
+
+**Modificado:** `src/lib/pdf/ReportDocument.tsx`
+- Aceitar prop opcional `previousExam: ReportHistoryEntry | null`.
+- Se presente, adicionar **bloco "Evolução desde a última consulta"** logo após o resumo de bioimpedância:
+  - Tabela compacta com 4 colunas: Indicador | Anterior (DD/MM) | Atual | Δ
+  - Indicadores: Peso, % Gordura, Massa Magra Esquelética, Gordura Visceral, IMC
+  - Setas direcionais textuais (`v` para baixo, `^` para cima) + cor (verde quando alinhado ao objetivo, âmbar quando contrário). Helvetica não tem ▼▲ — usar caracteres ASCII.
+  - Lógica de "alinhado ao objetivo" em `src/lib/evolution-analyzer.ts` (novo, puro), que recebe `mainGoal` + delta e retorna `"positive" | "negative" | "neutral"`.
+
+**Novo:** `src/lib/evolution-analyzer.ts`
+- Função pura `compareExams(current, previous, goal)` retornando array de `{ label, previous, current, delta, deltaPct, direction, alignment }`.
+- Testável isoladamente, sem dependência de React/PDF.
+
+**Modificado:** `src/routes/review.tsx`
+- Passar `previousExam` do store para `<ReportDocument />` e para `pdf().toBlob()`.
+
+---
+
+## Fase F — Ajustes finos no formulário clínico (opcional, dentro do escopo)
+
+**Modificado:** `src/routes/clinical-form.tsx`
+- Quando `previousExam` existe, mostrar bloco "Atualizar desde a última consulta" no topo com 3 campos rápidos:
+  - "Mudou alguma medicação?" (textarea curta)
+  - "Aderência à dieta anterior" (radio: alta/média/baixa)
+  - "Aderência ao treino anterior" (radio: alta/média/baixa)
+- Esses campos vão para `additionalNotes` (concatenados) — sem mudar o schema de `ClinicalData`.
+
+---
+
+## Arquivos
+
+**Novos:**
+- `src/components/ReturnVisitBadge.tsx`
+- `src/lib/evolution-analyzer.ts`
+
+**Modificados:**
+- `src/lib/report-history.ts` — snapshot completo
+- `src/store/report-store.ts` — `previousExam` + setters
+- `src/routes/history.tsx` — botão "Nova consulta"
+- `src/routes/body-composition.tsx` — badge de retorno
+- `src/routes/clinical-form.tsx` — badge + bloco de atualização
+- `src/routes/review.tsx` — badge + passar `previousExam` ao PDF + salvar snapshot
+- `src/lib/pdf/ReportDocument.tsx` — bloco de evolução
+
+**Não tocados:** IA, `diet-base.ts`, `diet-adjuster.ts`, `body-classifier.ts`, upload, `prescription-data.ts`, autenticação, backend.
+
+---
+
+## Verificação
+- Reabrir paciente do `/history` carrega bioimpedância e clínico corretamente
+- Badge "Consulta de retorno" aparece nas 3 telas e some ao sair do modo
+- PDF mostra bloco de evolução com 5 indicadores e setas corretas (`v`/`^`)
+- Verde quando delta alinhado ao objetivo (ex: peso ↓ em "emagrecimento"), âmbar quando contrário
+- Entradas antigas do histórico (sem snapshot) continuam visíveis, sem botão "Nova consulta"
+- Sair → reset() limpa `previousExam`
+- Refresh no meio do fluxo preserva o modo retorno (persist)
+
+---
+
+## Ordem de entrega sugerida
+1. Fases A + C (snapshot + store) — base, sem UI ainda
+2. Fase B (botão reabrir no histórico) — fluxo funcional ponta a ponta
+3. Fase E (comparativo no PDF) — **maior valor clínico**
+4. Fase D (badge visual)
+5. Fase F (campos de atualização) — opcional, se quiser fechar o ciclo
+
+Posso ir entregando fase por fase para você validar, ou tudo de uma vez. Como prefere?
