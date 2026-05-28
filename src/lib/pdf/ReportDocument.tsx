@@ -531,44 +531,45 @@ export function ReportDocument({
           <>
             <View style={styles.badgeRow}>
               <Text style={styles.badgePrimary}>
-                {PROFILE_LABELS[analysis.primaryProfile]}
+                {safe(PROFILE_LABELS[analysis.primaryProfile])}
               </Text>
               {analysis.secondaryProfiles.map((t) => (
                 <Text key={t} style={styles.badgeSecondary}>
-                  {PROFILE_LABELS[t]}
+                  {safe(PROFILE_LABELS[t])}
                 </Text>
               ))}
             </View>
 
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Diagnóstico corporal</Text>
-              <Text style={styles.paragraph}>{analysis.narrative.diagnosis}</Text>
+              <Text style={styles.paragraph}>{safe(analysis.narrative.diagnosis)}</Text>
             </View>
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Pontos positivos</Text>
-              <Text style={styles.paragraph}>{analysis.narrative.strength}</Text>
+              <Text style={styles.paragraph}>{safe(analysis.narrative.strength)}</Text>
             </View>
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Pontos de atenção</Text>
-              <Text style={styles.paragraph}>{analysis.narrative.attention}</Text>
+              <Text style={styles.paragraph}>{safe(analysis.narrative.attention)}</Text>
             </View>
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Estratégia recomendada</Text>
-              <Text style={styles.paragraph}>{analysis.narrative.strategy}</Text>
+              <Text style={styles.paragraph}>{safe(analysis.narrative.strategy)}</Text>
             </View>
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Meta dos próximos 30 dias</Text>
               <Text style={styles.paragraph}>
-                {GOAL_30D[analysis.primaryProfile]}
+                {safe(GOAL_30D[analysis.primaryProfile])}
               </Text>
             </View>
           </>
         ) : (
           <Text style={styles.paragraphMuted}>
-            Dados insuficientes para gerar a análise — preencha sexo, idade,
+            Dados insuficientes para gerar a análise - preencha sexo, idade,
             peso, altura e percentual de gordura.
           </Text>
         )}
+
       </Page>
 
       {/* PAGE 3 — Plano Alimentar */}
