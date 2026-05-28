@@ -355,10 +355,37 @@ const styles = StyleSheet.create({
 });
 
 // ----- Helpers -----
-function fmt(v: string | undefined | null, suffix?: string): string {
-  if (!v || !String(v).trim()) return "—";
-  return suffix ? `${v} ${suffix}` : String(v);
+// Helvetica (built-in) ships with WinAnsi encoding. Glyphs outside it render
+// as empty boxes (or break silently). Normalize all dynamic text through safe().
+const GLYPH_MAP: Array<[RegExp, string]> = [
+  [/\u00B2/g, "2"],   // ²
+  [/\u00B3/g, "3"],   // ³
+  [/\u2265/g, ">="],  // ≥
+  [/\u2264/g, "<="],  // ≤
+  [/\u2260/g, "!="],  // ≠
+  [/\u2192/g, "->"],  // →
+  [/\u2190/g, "<-"],  // ←
+  [/\u2194/g, "<->"], // ↔
+  [/\u2013/g, "-"],   // – en-dash
+  [/\u2014/g, "-"],   // — em-dash
+  [/\u2022/g, "-"],   // • bullet (safe fallback)
+  [/[\u201C\u201D]/g, '"'], // " "
+  [/[\u2018\u2019]/g, "'"], // ' '
+  [/\u2026/g, "..."], // …
+];
+
+function safe(s: string | undefined | null): string {
+  if (s === undefined || s === null) return "";
+  let out = String(s);
+  for (const [re, rep] of GLYPH_MAP) out = out.replace(re, rep);
+  return out;
 }
+
+function fmt(v: string | undefined | null, suffix?: string): string {
+  if (!v || !String(v).trim()) return "-";
+  return safe(suffix ? `${v} ${suffix}` : String(v));
+}
+
 
 function todayDDMMYYYY(): string {
   const d = new Date();
@@ -373,15 +400,15 @@ const SEX_LABELS: Record<string, string> = {
 };
 
 const GOAL_30D: Record<ProfileTag, string> = {
-  emagrecimento: "Reduzir 2 a 4 kg de gordura corporal preservando massa muscular; aderência ≥ 90% ao plano alimentar e ≥ 3 treinos resistidos/semana.",
+  emagrecimento: "Reduzir 2 a 4 kg de gordura corporal preservando massa muscular; aderência >= 90% ao plano alimentar e >= 3 treinos resistidos/semana.",
   emagrecimento_metabolico_prioritario:
-    "Reduzir 3 a 5 kg, com queda mínima de 1 ponto na gordura visceral; caminhada diária ≥ 8.000 passos + treino resistido 3x/sem.",
+    "Reduzir 3 a 5 kg, com queda mínima de 1 ponto na gordura visceral; caminhada diária >= 8.000 passos + treino resistido 3x/sem.",
   recomposicao:
     "Ganhar 0,3 a 0,5 kg de massa muscular esquelética e reduzir 1 a 2% de gordura corporal; treino resistido 4x/sem com progressão de carga.",
   ganho_massa:
     "Ganhar 0,5 a 1,0 kg de massa muscular esquelética; superávit calórico moderado e treino 4 a 5x/sem com sobrecarga progressiva.",
   baixa_massa_muscular:
-    "Aumentar 0,5 kg de massa muscular esquelética; proteína ≥ 2 g/kg/dia e treino resistido 4x/sem com foco em hipertrofia.",
+    "Aumentar 0,5 kg de massa muscular esquelética; proteína >= 2 g/kg/dia e treino resistido 4x/sem com foco em hipertrofia.",
   gordura_visceral_elevada:
     "Reduzir 1 a 2 pontos na gordura visceral; eliminar ultraprocessados e álcool, adicionar HIIT 2x/sem.",
   metabolismo_reduzido:
@@ -391,6 +418,7 @@ const GOAL_30D: Record<ProfileTag, string> = {
   risco_metabolico_aumentado:
     "Reduzir cintura em 2 a 4 cm; controle de carboidratos refinados, treino resistido + cardio leve diário.",
 };
+
 
 // ----- Layout: header + footer chrome -----
 function PageChrome({ pageLabel }: { pageLabel: string }) {
@@ -409,9 +437,10 @@ function PageChrome({ pageLabel }: { pageLabel: string }) {
       </View>
       <View style={styles.footer} fixed>
         <Text style={styles.footerText}>
-          Relatório gerado pelo método Dr. João Falcão — acompanhamento
+          Relatório gerado pelo método Dr. João Falcão - acompanhamento
           individualizado.
         </Text>
+
         <Text style={styles.footerPage}>{pageLabel}</Text>
       </View>
     </>
@@ -467,8 +496,9 @@ export function ReportDocument({
           <DataRow k="Nome do paciente" v={fmt(bc?.patientName || cd?.patientName)} />
           <DataRow
             k="Sexo"
-            v={SEX_LABELS[bc?.sex || cd?.sex || ""] || "—"}
+            v={SEX_LABELS[bc?.sex || cd?.sex || ""] || "-"}
           />
+
           <DataRow k="Idade" v={fmt(bc?.age || cd?.age, "anos")} />
           <DataRow k="Altura" v={fmt(bc?.height || cd?.height, "cm")} />
           <DataRow k="Peso" v={fmt(bc?.weight || cd?.weight, "kg")} />
@@ -503,44 +533,45 @@ export function ReportDocument({
           <>
             <View style={styles.badgeRow}>
               <Text style={styles.badgePrimary}>
-                {PROFILE_LABELS[analysis.primaryProfile]}
+                {safe(PROFILE_LABELS[analysis.primaryProfile])}
               </Text>
               {analysis.secondaryProfiles.map((t) => (
                 <Text key={t} style={styles.badgeSecondary}>
-                  {PROFILE_LABELS[t]}
+                  {safe(PROFILE_LABELS[t])}
                 </Text>
               ))}
             </View>
 
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Diagnóstico corporal</Text>
-              <Text style={styles.paragraph}>{analysis.narrative.diagnosis}</Text>
+              <Text style={styles.paragraph}>{safe(analysis.narrative.diagnosis)}</Text>
             </View>
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Pontos positivos</Text>
-              <Text style={styles.paragraph}>{analysis.narrative.strength}</Text>
+              <Text style={styles.paragraph}>{safe(analysis.narrative.strength)}</Text>
             </View>
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Pontos de atenção</Text>
-              <Text style={styles.paragraph}>{analysis.narrative.attention}</Text>
+              <Text style={styles.paragraph}>{safe(analysis.narrative.attention)}</Text>
             </View>
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Estratégia recomendada</Text>
-              <Text style={styles.paragraph}>{analysis.narrative.strategy}</Text>
+              <Text style={styles.paragraph}>{safe(analysis.narrative.strategy)}</Text>
             </View>
             <View style={styles.analysisBlock}>
               <Text style={styles.analysisLabel}>Meta dos próximos 30 dias</Text>
               <Text style={styles.paragraph}>
-                {GOAL_30D[analysis.primaryProfile]}
+                {safe(GOAL_30D[analysis.primaryProfile])}
               </Text>
             </View>
           </>
         ) : (
           <Text style={styles.paragraphMuted}>
-            Dados insuficientes para gerar a análise — preencha sexo, idade,
+            Dados insuficientes para gerar a análise - preencha sexo, idade,
             peso, altura e percentual de gordura.
           </Text>
         )}
+
       </Page>
 
       {/* PAGE 3 — Plano Alimentar */}
@@ -549,20 +580,20 @@ export function ReportDocument({
         <Text style={styles.pageEyebrow}>Página 3</Text>
         <Text style={styles.pageTitle}>Plano Alimentar</Text>
         <Text style={styles.pageSubtitle}>
-          {diet.base.name} — quantidades ajustadas conforme perfil clínico.
+          {safe(diet.base.name)} - quantidades ajustadas conforme perfil clínico.
         </Text>
 
         {diet.meals.map((meal) => (
           <View key={meal.id} style={styles.mealBlock} wrap={false}>
             <Text style={styles.mealTitle}>
-              {meal.name} <Text style={styles.mealTime}>— {meal.time}</Text>
+              {safe(meal.name)} <Text style={styles.mealTime}>- {safe(meal.time)}</Text>
             </Text>
             {meal.blocks.map((block) => (
               <View key={block.id}>
-                <Text style={styles.mealGroupLabel}>{block.title}</Text>
+                <Text style={styles.mealGroupLabel}>{safe(block.title)}</Text>
                 {block.options.map((opt) => (
                   <Text key={opt.id} style={styles.mealItem}>
-                    — {opt.adjustedDisplay}
+                    - {safe(opt.adjustedDisplay)}
                   </Text>
                 ))}
               </View>
@@ -574,12 +605,12 @@ export function ReportDocument({
           <Text style={styles.sectionLabel}>Regras gerais</Text>
           {diet.generalRules.map((rule, i) => (
             <View key={i} style={styles.listItem}>
-              <Text style={styles.bullet}>•</Text>
-              <Text style={styles.listText}>{rule}</Text>
+              <Text style={styles.bullet}>-</Text>
+              <Text style={styles.listText}>{safe(rule)}</Text>
             </View>
           ))}
           <View style={styles.listItem}>
-            <Text style={styles.bullet}>•</Text>
+            <Text style={styles.bullet}>-</Text>
             <Text style={styles.listText}>
               {`Hidratação alvo: ${diet.targets.waterLitersPerDay
                 .toString()
@@ -588,6 +619,7 @@ export function ReportDocument({
           </View>
         </View>
       </Page>
+
 
       {/* PAGE 4 — Prescrição e Suplementação */}
       <Page size="A4" style={styles.page}>
@@ -599,15 +631,15 @@ export function ReportDocument({
         </Text>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Suplementos — Obrigatórios</Text>
+          <Text style={styles.sectionLabel}>Suplementos - Obrigatórios</Text>
           {MANDATORY_SUPPLEMENTS.map((s) => (
             <View key={s.name} style={styles.supplementItem} wrap={false}>
               <View style={styles.supplementHeader}>
-                <Text style={styles.supplementName}>{s.name}</Text>
-                <Text style={styles.supplementDose}>— {s.dose}</Text>
+                <Text style={styles.supplementName}>{safe(s.name)}</Text>
+                <Text style={styles.supplementDose}>- {safe(s.dose)}</Text>
                 <Text style={styles.supplementBadge}>Obrigatório</Text>
               </View>
-              {s.note && <Text style={styles.supplementNote}>{s.note}</Text>}
+              {s.note && <Text style={styles.supplementNote}>{safe(s.note)}</Text>}
             </View>
           ))}
         </View>
@@ -620,7 +652,7 @@ export function ReportDocument({
           </Text>
           {TRUSTED_SHOPS.map((shop) => (
             <Text key={shop.url} style={[styles.link, { marginTop: 4 }]}>
-              {shop.label}  ·  {shop.url}
+              {safe(shop.label)}  -  {safe(shop.url)}
             </Text>
           ))}
         </View>
@@ -629,21 +661,22 @@ export function ReportDocument({
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Protocolo avançado</Text>
             <Text style={[styles.paragraphMuted, { marginBottom: 8 }]}>
-              Complementar — personalizar conforme exames laboratoriais e
+              Complementar - personalizar conforme exames laboratoriais e
               acompanhamento clínico.
             </Text>
             {ADVANCED_PROTOCOL_ITEMS.map((s) => (
               <View key={s.name} style={styles.supplementItem} wrap={false}>
                 <View style={styles.supplementHeader}>
-                  <Text style={styles.supplementName}>{s.name}</Text>
-                  <Text style={styles.supplementDose}>— {s.dose}</Text>
+                  <Text style={styles.supplementName}>{safe(s.name)}</Text>
+                  <Text style={styles.supplementDose}>- {safe(s.dose)}</Text>
                 </View>
-                {s.note && <Text style={styles.supplementNote}>{s.note}</Text>}
+                {s.note && <Text style={styles.supplementNote}>{safe(s.note)}</Text>}
               </View>
             ))}
           </View>
         )}
       </Page>
+
 
       {/* PAGE 5 — Orientações Finais */}
       <Page size="A4" style={styles.page}>
@@ -656,10 +689,11 @@ export function ReportDocument({
 
         {FINAL_GUIDELINES.map((g) => (
           <View key={g.title} style={styles.guideline} wrap={false}>
-            <Text style={styles.guidelineTitle}>{g.title}</Text>
-            <Text style={styles.guidelineText}>{g.text}</Text>
+            <Text style={styles.guidelineTitle}>{safe(g.title)}</Text>
+            <Text style={styles.guidelineText}>{safe(g.text)}</Text>
           </View>
         ))}
+
 
         <View style={{ marginTop: 24, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: "#C9A84C" }}>
           <Text style={[styles.paragraphMuted, { fontSize: 8, textAlign: "center" }]}>

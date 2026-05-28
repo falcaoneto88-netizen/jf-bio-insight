@@ -142,10 +142,13 @@ function SuccessPage() {
       toast.success("Download iniciado");
     } catch (err) {
       console.error(err);
-      toast.error("Falha ao baixar o PDF");
+      const description =
+        err instanceof Error && err.message ? err.message : undefined;
+      toast.error("Falha ao gerar o PDF", { description });
     } finally {
       setIsDownloading(false);
     }
+
   };
 
   const handleNewReport = () => {
@@ -188,9 +191,10 @@ function SuccessPage() {
             <Button
               size="lg"
               onClick={handleDownload}
-              disabled={isDownloading}
+              disabled={isDownloading || generatedAt === null}
               className="bg-gold text-gold-foreground hover:bg-gold/90"
             >
+
               {isDownloading ? (
                 <>
                   <Loader2 className="animate-spin" />
