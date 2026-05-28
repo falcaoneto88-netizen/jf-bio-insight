@@ -481,6 +481,7 @@ export type ReportInput = {
   diet: AdjustedDiet;
   includeAdvancedProtocol: boolean;
   previousExam?: ReportHistoryEntry | null;
+  prescription?: PrescriptionData | null;
 };
 
 export function ReportDocument({
@@ -490,7 +491,10 @@ export function ReportDocument({
   diet,
   includeAdvancedProtocol,
   previousExam,
+  prescription,
 }: ReportInput) {
+  const rx: PrescriptionData = prescription ?? buildDefaultPrescription();
+
   const bc = bodyComposition;
   const cd = clinicalData;
   const evolutionRows: EvolutionRow[] = previousExam?.bodyComposition
