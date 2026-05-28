@@ -106,7 +106,7 @@ function ReviewPage() {
     ],
   );
 
-  const [advancedProtocol, setAdvancedProtocol] = useState(false);
+  const prescription = useReportStore((s) => s.prescription);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerate = async () => {
