@@ -18,6 +18,8 @@ import {
   FINAL_GUIDELINES,
   MANDATORY_SUPPLEMENTS,
   TRUSTED_SHOPS,
+  buildDefaultPrescription,
+  type PrescriptionData,
 } from "@/lib/prescription-data";
 import type { ReportHistoryEntry } from "@/lib/report-history";
 import type {
