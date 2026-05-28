@@ -762,8 +762,8 @@ export function ReportDocument({
           Pilares de adesão para resultados clínicos sustentáveis.
         </Text>
 
-        {FINAL_GUIDELINES.map((g) => (
-          <View key={g.title} style={styles.guideline} wrap={false}>
+        {rx.guidelines.map((g) => (
+          <View key={g.id} style={styles.guideline} wrap={false}>
             <Text style={styles.guidelineTitle}>{safe(g.title)}</Text>
             <Text style={styles.guidelineText}>{safe(g.text)}</Text>
           </View>
