@@ -19,7 +19,9 @@ import {
   getReportHistory,
   type ReportHistoryEntry,
 } from "@/lib/report-history";
+import { migrateLocalHistoryToCloud } from "@/lib/migrate-local-history";
 import { useReportStore } from "@/store/report-store";
+
 
 export const Route = createFileRoute("/history")({
   head: () => ({
