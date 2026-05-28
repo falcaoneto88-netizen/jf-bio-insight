@@ -687,10 +687,11 @@ export function ReportDocument({
 
         {FINAL_GUIDELINES.map((g) => (
           <View key={g.title} style={styles.guideline} wrap={false}>
-            <Text style={styles.guidelineTitle}>{g.title}</Text>
-            <Text style={styles.guidelineText}>{g.text}</Text>
+            <Text style={styles.guidelineTitle}>{safe(g.title)}</Text>
+            <Text style={styles.guidelineText}>{safe(g.text)}</Text>
           </View>
         ))}
+
 
         <View style={{ marginTop: 24, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: "#C9A84C" }}>
           <Text style={[styles.paragraphMuted, { fontSize: 8, textAlign: "center" }]}>
