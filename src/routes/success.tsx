@@ -142,10 +142,13 @@ function SuccessPage() {
       toast.success("Download iniciado");
     } catch (err) {
       console.error(err);
-      toast.error("Falha ao baixar o PDF");
+      const description =
+        err instanceof Error && err.message ? err.message : undefined;
+      toast.error("Falha ao gerar o PDF", { description });
     } finally {
       setIsDownloading(false);
     }
+
   };
 
   const handleNewReport = () => {
