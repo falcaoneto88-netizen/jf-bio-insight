@@ -237,10 +237,8 @@ function ReviewPage() {
 
             <DietPlanCard diet={diet} />
 
-            <PrescriptionCard
-              advanced={advancedProtocol}
-              onAdvancedChange={setAdvancedProtocol}
-            />
+            <PrescriptionCard />
+
 
 
 
