@@ -126,6 +126,7 @@ function ReviewPage() {
           includeAdvancedProtocol={prescription?.advancedEnabled ?? false}
           previousExam={previousExam}
         />,
+      ).toBlob();
       const url = URL.createObjectURL(blob);
       const d = new Date();
       const stamp = `${String(d.getDate()).padStart(2, "0")}${String(
