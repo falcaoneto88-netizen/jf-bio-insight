@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+import type { ReportHistoryEntry } from "@/lib/report-history";
+
 export type UploadedFile = {
   name: string;
   size: number;
@@ -144,9 +146,12 @@ type ReportState = {
   file: UploadedFile | null;
   bodyComposition: BodyCompositionData | null;
   clinicalData: ClinicalData | null;
+  previousExam: ReportHistoryEntry | null;
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
   setClinicalData: (data: ClinicalData) => void;
+  setPreviousExam: (entry: ReportHistoryEntry | null) => void;
+  clearPreviousExam: () => void;
   reset: () => void;
 };
 
