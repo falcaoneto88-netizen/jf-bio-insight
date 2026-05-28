@@ -732,15 +732,15 @@ export function ReportDocument({
           ))}
         </View>
 
-        {includeAdvancedProtocol && (
+        {includeAdvancedProtocol && rx.advanced.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Protocolo avançado</Text>
             <Text style={[styles.paragraphMuted, { marginBottom: 8 }]}>
               Complementar - personalizar conforme exames laboratoriais e
               acompanhamento clínico.
             </Text>
-            {ADVANCED_PROTOCOL_ITEMS.map((s) => (
-              <View key={s.name} style={styles.supplementItem} wrap={false}>
+            {rx.advanced.map((s) => (
+              <View key={s.id} style={styles.supplementItem} wrap={false}>
                 <View style={styles.supplementHeader}>
                   <Text style={styles.supplementName}>{safe(s.name)}</Text>
                   <Text style={styles.supplementDose}>- {safe(s.dose)}</Text>
