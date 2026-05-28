@@ -12,12 +12,14 @@ import type {
 } from "@/lib/body-classifier";
 import { PROFILE_LABELS } from "@/lib/body-classifier";
 import type { AdjustedDiet } from "@/lib/diet-adjuster";
+import { compareExams, formatDelta, type EvolutionRow } from "@/lib/evolution-analyzer";
 import {
   ADVANCED_PROTOCOL_ITEMS,
   FINAL_GUIDELINES,
   MANDATORY_SUPPLEMENTS,
   TRUSTED_SHOPS,
 } from "@/lib/prescription-data";
+import type { ReportHistoryEntry } from "@/lib/report-history";
 import type {
   BodyCompositionData,
   ClinicalData,
@@ -352,6 +354,19 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     lineHeight: 1.55,
   },
+  // Evolution table
+  evoRow: {
+    flexDirection: "row",
+    paddingVertical: 5,
+    borderBottomWidth: 0.4,
+    borderBottomColor: COLORS.border,
+  },
+  evoCellLabel: { flex: 2.2, fontSize: 9.5, color: COLORS.black },
+  evoCellNum: { flex: 1, fontSize: 9.5, color: COLORS.black, textAlign: "right" },
+  evoCellDelta: { flex: 1.2, fontSize: 9.5, textAlign: "right", fontWeight: 700 },
+  evoHeaderCellLabel: { flex: 2.2, fontSize: 8, color: COLORS.muted, letterSpacing: 1, textTransform: "uppercase" },
+  evoHeaderCellNum: { flex: 1, fontSize: 8, color: COLORS.muted, letterSpacing: 1, textTransform: "uppercase", textAlign: "right" },
+  evoHeaderCellDelta: { flex: 1.2, fontSize: 8, color: COLORS.muted, letterSpacing: 1, textTransform: "uppercase", textAlign: "right" },
 });
 
 // ----- Helpers -----
@@ -463,6 +478,7 @@ export type ReportInput = {
   analysis: ClassificationResult | null;
   diet: AdjustedDiet;
   includeAdvancedProtocol: boolean;
+  previousExam?: ReportHistoryEntry | null;
 };
 
 export function ReportDocument({
@@ -471,9 +487,17 @@ export function ReportDocument({
   analysis,
   diet,
   includeAdvancedProtocol,
+  previousExam,
 }: ReportInput) {
   const bc = bodyComposition;
   const cd = clinicalData;
+  const evolutionRows: EvolutionRow[] = previousExam?.bodyComposition
+    ? compareExams(bc, previousExam.bodyComposition, cd?.mainGoal ?? "")
+    : [];
+  const previousLabel = previousExam?.bodyComposition?.examDateTime
+    || previousExam?.examDate
+    || previousExam?.generatedAt
+    || "";
   const patientName =
     bc?.patientName?.trim() || cd?.patientName?.trim() || "Paciente";
 
@@ -518,6 +542,51 @@ export function ReportDocument({
           />
           <DataRow k="Data e hora do exame" v={fmt(bc?.examDateTime)} />
         </View>
+
+        {evolutionRows.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionLabel}>Evolução desde a última consulta</Text>
+            <Text style={[styles.paragraphMuted, { marginBottom: 6 }]}>
+              {safe(`Comparativo com o exame anterior (${previousLabel || "data não informada"}).`)}
+            </Text>
+            <View style={styles.evoRow}>
+              <Text style={styles.evoHeaderCellLabel}>Indicador</Text>
+              <Text style={styles.evoHeaderCellNum}>Anterior</Text>
+              <Text style={styles.evoHeaderCellNum}>Atual</Text>
+              <Text style={styles.evoHeaderCellDelta}>Variação</Text>
+            </View>
+            {evolutionRows.map((row) => {
+              const color =
+                row.alignment === "positive"
+                  ? "#1f7a3a"
+                  : row.alignment === "negative"
+                    ? "#b45309"
+                    : COLORS.muted;
+              return (
+                <View key={row.key} style={styles.evoRow}>
+                  <Text style={styles.evoCellLabel}>{safe(row.label)}</Text>
+                  <Text style={styles.evoCellNum}>
+                    {safe(
+                      row.previous !== null
+                        ? `${String(row.previous).replace(".", ",")}${row.unit ? " " + row.unit : ""}`
+                        : "-",
+                    )}
+                  </Text>
+                  <Text style={styles.evoCellNum}>
+                    {safe(
+                      row.current !== null
+                        ? `${String(row.current).replace(".", ",")}${row.unit ? " " + row.unit : ""}`
+                        : "-",
+                    )}
+                  </Text>
+                  <Text style={[styles.evoCellDelta, { color }]}>
+                    {safe(formatDelta(row))}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </Page>
 
       {/* PAGE 2 — Análise Corporal */}

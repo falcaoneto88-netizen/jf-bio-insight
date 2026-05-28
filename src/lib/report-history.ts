@@ -1,3 +1,5 @@
+import type { BodyCompositionData, ClinicalData } from "@/store/report-store";
+
 const STORAGE_KEY = "jf-bioreport-history";
 
 export type ReportHistoryEntry = {
@@ -8,6 +10,9 @@ export type ReportHistoryEntry = {
   mainGoal: string;
   bodyClassification: string;
   pdfFileName: string;
+  // Snapshot completo para reabrir como "consulta de retorno"
+  bodyComposition?: BodyCompositionData | null;
+  clinicalData?: ClinicalData | null;
 };
 
 function safeRead(): ReportHistoryEntry[] {

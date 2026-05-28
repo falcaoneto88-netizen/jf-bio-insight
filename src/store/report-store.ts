@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+import type { ReportHistoryEntry } from "@/lib/report-history";
+
 export type UploadedFile = {
   name: string;
   size: number;
@@ -144,9 +146,12 @@ type ReportState = {
   file: UploadedFile | null;
   bodyComposition: BodyCompositionData | null;
   clinicalData: ClinicalData | null;
+  previousExam: ReportHistoryEntry | null;
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
   setClinicalData: (data: ClinicalData) => void;
+  setPreviousExam: (entry: ReportHistoryEntry | null) => void;
+  clearPreviousExam: () => void;
   reset: () => void;
 };
 
@@ -170,10 +175,19 @@ export const useReportStore = create<ReportState>()(
       file: null,
       bodyComposition: null,
       clinicalData: null,
+      previousExam: null,
       setFile: (file) => set({ file }),
       setBodyComposition: (data) => set({ bodyComposition: data }),
       setClinicalData: (data) => set({ clinicalData: data }),
-      reset: () => set({ file: null, bodyComposition: null, clinicalData: null }),
+      setPreviousExam: (entry) => set({ previousExam: entry }),
+      clearPreviousExam: () => set({ previousExam: null }),
+      reset: () =>
+        set({
+          file: null,
+          bodyComposition: null,
+          clinicalData: null,
+          previousExam: null,
+        }),
     }),
     {
       name: "jf-bioreport-draft",
@@ -181,7 +195,12 @@ export const useReportStore = create<ReportState>()(
       version: 1,
       migrate: (_persistedState, version) => {
         if (version < 1) {
-          return { file: null, bodyComposition: null, clinicalData: null };
+          return {
+            file: null,
+            bodyComposition: null,
+            clinicalData: null,
+            previousExam: null,
+          };
         }
         return _persistedState as Partial<ReportState>;
       },
@@ -189,6 +208,7 @@ export const useReportStore = create<ReportState>()(
         file: state.file,
         bodyComposition: normalizeBodyComposition(state.bodyComposition),
         clinicalData: state.clinicalData,
+        previousExam: state.previousExam,
       }),
       onRehydrateStorage: () => (state) => {
         if (state && state.bodyComposition) {

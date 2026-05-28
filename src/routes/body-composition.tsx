@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Calculator, CheckCircle2, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import { BrandHeader } from "@/components/BrandHeader";
+import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,7 +100,11 @@ function BodyCompositionPage() {
         <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
           <Stepper current={2} />
 
-          <Card className="mt-10 border-border/80">
+          <div className="mt-6">
+            <ReturnVisitBadge />
+          </div>
+
+          <Card className="mt-4 border-border/80">
             <CardHeader>
               <CardTitle className="font-serif text-2xl">Dados da Bioimpedância</CardTitle>
               <CardDescription>
