@@ -578,20 +578,20 @@ export function ReportDocument({
         <Text style={styles.pageEyebrow}>Página 3</Text>
         <Text style={styles.pageTitle}>Plano Alimentar</Text>
         <Text style={styles.pageSubtitle}>
-          {diet.base.name} — quantidades ajustadas conforme perfil clínico.
+          {safe(diet.base.name)} - quantidades ajustadas conforme perfil clínico.
         </Text>
 
         {diet.meals.map((meal) => (
           <View key={meal.id} style={styles.mealBlock} wrap={false}>
             <Text style={styles.mealTitle}>
-              {meal.name} <Text style={styles.mealTime}>— {meal.time}</Text>
+              {safe(meal.name)} <Text style={styles.mealTime}>- {safe(meal.time)}</Text>
             </Text>
             {meal.blocks.map((block) => (
               <View key={block.id}>
-                <Text style={styles.mealGroupLabel}>{block.title}</Text>
+                <Text style={styles.mealGroupLabel}>{safe(block.title)}</Text>
                 {block.options.map((opt) => (
                   <Text key={opt.id} style={styles.mealItem}>
-                    — {opt.adjustedDisplay}
+                    - {safe(opt.adjustedDisplay)}
                   </Text>
                 ))}
               </View>
@@ -603,12 +603,12 @@ export function ReportDocument({
           <Text style={styles.sectionLabel}>Regras gerais</Text>
           {diet.generalRules.map((rule, i) => (
             <View key={i} style={styles.listItem}>
-              <Text style={styles.bullet}>•</Text>
-              <Text style={styles.listText}>{rule}</Text>
+              <Text style={styles.bullet}>-</Text>
+              <Text style={styles.listText}>{safe(rule)}</Text>
             </View>
           ))}
           <View style={styles.listItem}>
-            <Text style={styles.bullet}>•</Text>
+            <Text style={styles.bullet}>-</Text>
             <Text style={styles.listText}>
               {`Hidratação alvo: ${diet.targets.waterLitersPerDay
                 .toString()
@@ -617,6 +617,7 @@ export function ReportDocument({
           </View>
         </View>
       </Page>
+
 
       {/* PAGE 4 — Prescrição e Suplementação */}
       <Page size="A4" style={styles.page}>
