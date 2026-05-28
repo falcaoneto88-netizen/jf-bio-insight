@@ -14,9 +14,6 @@ import { PROFILE_LABELS } from "@/lib/body-classifier";
 import type { AdjustedDiet } from "@/lib/diet-adjuster";
 import { compareExams, formatDelta, type EvolutionRow } from "@/lib/evolution-analyzer";
 import {
-  ADVANCED_PROTOCOL_ITEMS,
-  FINAL_GUIDELINES,
-  MANDATORY_SUPPLEMENTS,
   TRUSTED_SHOPS,
   buildDefaultPrescription,
   type PrescriptionData,
