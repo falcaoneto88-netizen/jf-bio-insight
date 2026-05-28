@@ -355,9 +355,35 @@ const styles = StyleSheet.create({
 });
 
 // ----- Helpers -----
+// Helvetica (built-in) ships with WinAnsi encoding. Glyphs outside it render
+// as empty boxes (or break silently). Normalize all dynamic text through safe().
+const GLYPH_MAP: Array<[RegExp, string]> = [
+  [/\u00B2/g, "2"],   // ²
+  [/\u00B3/g, "3"],   // ³
+  [/\u2265/g, ">="],  // ≥
+  [/\u2264/g, "<="],  // ≤
+  [/\u2260/g, "!="],  // ≠
+  [/\u2192/g, "->"],  // →
+  [/\u2190/g, "<-"],  // ←
+  [/\u2194/g, "<->"], // ↔
+  [/\u2013/g, "-"],   // – en-dash
+  [/\u2014/g, "-"],   // — em-dash
+  [/\u2022/g, "-"],   // • bullet (safe fallback)
+  [/[\u201C\u201D]/g, '"'], // " "
+  [/[\u2018\u2019]/g, "'"], // ' '
+  [/\u2026/g, "..."], // …
+];
+
+function safe(s: string | undefined | null): string {
+  if (s === undefined || s === null) return "";
+  let out = String(s);
+  for (const [re, rep] of GLYPH_MAP) out = out.replace(re, rep);
+  return out;
+}
+
 function fmt(v: string | undefined | null, suffix?: string): string {
   if (!v || !String(v).trim()) return "—";
-  return suffix ? `${v} ${suffix}` : String(v);
+  return safe(suffix ? `${v} ${suffix}` : String(v));
 }
 
 function todayDDMMYYYY(): string {
@@ -373,15 +399,15 @@ const SEX_LABELS: Record<string, string> = {
 };
 
 const GOAL_30D: Record<ProfileTag, string> = {
-  emagrecimento: "Reduzir 2 a 4 kg de gordura corporal preservando massa muscular; aderência ≥ 90% ao plano alimentar e ≥ 3 treinos resistidos/semana.",
+  emagrecimento: "Reduzir 2 a 4 kg de gordura corporal preservando massa muscular; aderência >= 90% ao plano alimentar e >= 3 treinos resistidos/semana.",
   emagrecimento_metabolico_prioritario:
-    "Reduzir 3 a 5 kg, com queda mínima de 1 ponto na gordura visceral; caminhada diária ≥ 8.000 passos + treino resistido 3x/sem.",
+    "Reduzir 3 a 5 kg, com queda mínima de 1 ponto na gordura visceral; caminhada diária >= 8.000 passos + treino resistido 3x/sem.",
   recomposicao:
     "Ganhar 0,3 a 0,5 kg de massa muscular esquelética e reduzir 1 a 2% de gordura corporal; treino resistido 4x/sem com progressão de carga.",
   ganho_massa:
     "Ganhar 0,5 a 1,0 kg de massa muscular esquelética; superávit calórico moderado e treino 4 a 5x/sem com sobrecarga progressiva.",
   baixa_massa_muscular:
-    "Aumentar 0,5 kg de massa muscular esquelética; proteína ≥ 2 g/kg/dia e treino resistido 4x/sem com foco em hipertrofia.",
+    "Aumentar 0,5 kg de massa muscular esquelética; proteína >= 2 g/kg/dia e treino resistido 4x/sem com foco em hipertrofia.",
   gordura_visceral_elevada:
     "Reduzir 1 a 2 pontos na gordura visceral; eliminar ultraprocessados e álcool, adicionar HIIT 2x/sem.",
   metabolismo_reduzido:
@@ -391,6 +417,7 @@ const GOAL_30D: Record<ProfileTag, string> = {
   risco_metabolico_aumentado:
     "Reduzir cintura em 2 a 4 cm; controle de carboidratos refinados, treino resistido + cardio leve diário.",
 };
+
 
 // ----- Layout: header + footer chrome -----
 function PageChrome({ pageLabel }: { pageLabel: string }) {
