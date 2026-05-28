@@ -382,9 +382,10 @@ function safe(s: string | undefined | null): string {
 }
 
 function fmt(v: string | undefined | null, suffix?: string): string {
-  if (!v || !String(v).trim()) return "—";
+  if (!v || !String(v).trim()) return "-";
   return safe(suffix ? `${v} ${suffix}` : String(v));
 }
+
 
 function todayDDMMYYYY(): string {
   const d = new Date();
