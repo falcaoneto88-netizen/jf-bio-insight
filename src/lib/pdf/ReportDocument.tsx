@@ -542,6 +542,51 @@ export function ReportDocument({
           />
           <DataRow k="Data e hora do exame" v={fmt(bc?.examDateTime)} />
         </View>
+
+        {evolutionRows.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionLabel}>Evolução desde a última consulta</Text>
+            <Text style={[styles.paragraphMuted, { marginBottom: 6 }]}>
+              {safe(`Comparativo com o exame anterior (${previousLabel || "data não informada"}).`)}
+            </Text>
+            <View style={styles.evoRow}>
+              <Text style={styles.evoHeaderCellLabel}>Indicador</Text>
+              <Text style={styles.evoHeaderCellNum}>Anterior</Text>
+              <Text style={styles.evoHeaderCellNum}>Atual</Text>
+              <Text style={styles.evoHeaderCellDelta}>Variação</Text>
+            </View>
+            {evolutionRows.map((row) => {
+              const color =
+                row.alignment === "positive"
+                  ? "#1f7a3a"
+                  : row.alignment === "negative"
+                    ? "#b45309"
+                    : COLORS.muted;
+              return (
+                <View key={row.key} style={styles.evoRow}>
+                  <Text style={styles.evoCellLabel}>{safe(row.label)}</Text>
+                  <Text style={styles.evoCellNum}>
+                    {safe(
+                      row.previous !== null
+                        ? `${String(row.previous).replace(".", ",")}${row.unit ? " " + row.unit : ""}`
+                        : "-",
+                    )}
+                  </Text>
+                  <Text style={styles.evoCellNum}>
+                    {safe(
+                      row.current !== null
+                        ? `${String(row.current).replace(".", ",")}${row.unit ? " " + row.unit : ""}`
+                        : "-",
+                    )}
+                  </Text>
+                  <Text style={[styles.evoCellDelta, { color }]}>
+                    {safe(formatDelta(row))}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </Page>
 
       {/* PAGE 2 — Análise Corporal */}
