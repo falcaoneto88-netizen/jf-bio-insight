@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, FileText, Trash2 } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, FileText, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ import {
   getReportHistory,
   type ReportHistoryEntry,
 } from "@/lib/report-history";
+import { useReportStore } from "@/store/report-store";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -40,19 +41,37 @@ function formatDateTime(iso: string): string {
 }
 
 function HistoryPage() {
-  const [entries, setEntries] = useState<ReportHistoryEntry[]>([]);
+  const navigate = useNavigate();
+  const [entries, setEntries] = useState<ReportHistoryEntry[] | null>(null);
 
   useEffect(() => {
     setEntries(getReportHistory());
   }, []);
 
   const handleClear = () => {
-    if (entries.length === 0) return;
+    if (!entries || entries.length === 0) return;
     if (!window.confirm("Limpar todo o histórico de relatórios?")) return;
     clearReportHistory();
     setEntries([]);
     toast.success("Histórico limpo");
   };
+
+  const handleReopen = (entry: ReportHistoryEntry) => {
+    if (!entry.bodyComposition || !entry.clinicalData) {
+      toast.error("Este relatório não tem dados suficientes para reabrir");
+      return;
+    }
+    const store = useReportStore.getState();
+    store.setBodyComposition(entry.bodyComposition);
+    store.setClinicalData(entry.clinicalData);
+    store.setPreviousExam(entry);
+    toast.success("Modo consulta de retorno ativado", {
+      description: `Dados de ${entry.patientName} carregados.`,
+    });
+    navigate({ to: "/body-composition" });
+  };
+
+  const list = entries ?? [];
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -66,7 +85,7 @@ function HistoryPage() {
                 Início
               </Link>
             </Button>
-            {entries.length > 0 && (
+            {list.length > 0 && (
               <Button variant="outline" size="sm" onClick={handleClear}>
                 <Trash2 className="h-4 w-4" />
                 Limpar histórico
@@ -83,7 +102,13 @@ function HistoryPage() {
             </p>
           </div>
 
-          {entries.length === 0 ? (
+          {entries === null ? (
+            <Card className="border-border/80">
+              <CardContent className="py-16 text-center text-sm text-muted-foreground">
+                Carregando…
+              </CardContent>
+            </Card>
+          ) : list.length === 0 ? (
             <Card className="border-border/80">
               <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
                 <div className="grid h-12 w-12 place-content-center rounded-full border border-gold/40 text-gold">
@@ -113,33 +138,53 @@ function HistoryPage() {
                         <TableHead>Objetivo</TableHead>
                         <TableHead>Classificação</TableHead>
                         <TableHead>Arquivo</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {entries.map((e) => (
-                        <TableRow key={e.id}>
-                          <TableCell className="font-medium text-foreground">
-                            {e.patientName || "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {e.examDate || "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDateTime(e.generatedAt)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {e.mainGoal || "—"}
-                          </TableCell>
-                          <TableCell>
-                            <span className="rounded-sm border border-gold/60 bg-gold/10 px-2 py-0.5 text-xs uppercase tracking-[0.12em] text-gold">
-                              {e.bodyClassification || "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {e.pdfFileName || "—"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {list.map((e) => {
+                        const canReopen = !!(e.bodyComposition && e.clinicalData);
+                        return (
+                          <TableRow key={e.id}>
+                            <TableCell className="font-medium text-foreground">
+                              {e.patientName || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {e.examDate || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatDateTime(e.generatedAt)}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {e.mainGoal || "—"}
+                            </TableCell>
+                            <TableCell>
+                              <span className="rounded-sm border border-gold/60 bg-gold/10 px-2 py-0.5 text-xs uppercase tracking-[0.12em] text-gold">
+                                {e.bodyClassification || "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {e.pdfFileName || "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {canReopen ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleReopen(e)}
+                                >
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                  Nova consulta
+                                </Button>
+                              ) : (
+                                <span className="text-xs italic text-muted-foreground">
+                                  —
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

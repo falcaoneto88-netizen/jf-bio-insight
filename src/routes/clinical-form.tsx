@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 
 import { BrandHeader } from "@/components/BrandHeader";
+import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -101,7 +102,11 @@ function ClinicalFormPage() {
         <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
           <Stepper current={3} />
 
-          <div className="mt-10 mb-6 text-center">
+          <div className="mt-6">
+            <ReturnVisitBadge />
+          </div>
+
+          <div className="mt-4 mb-6 text-center">
             <h1 className="font-serif text-3xl text-foreground sm:text-4xl">
               Dados Clínicos Complementares
             </h1>
