@@ -437,9 +437,10 @@ function PageChrome({ pageLabel }: { pageLabel: string }) {
       </View>
       <View style={styles.footer} fixed>
         <Text style={styles.footerText}>
-          Relatório gerado pelo método Dr. João Falcão — acompanhamento
+          Relatório gerado pelo método Dr. João Falcão - acompanhamento
           individualizado.
         </Text>
+
         <Text style={styles.footerPage}>{pageLabel}</Text>
       </View>
     </>
