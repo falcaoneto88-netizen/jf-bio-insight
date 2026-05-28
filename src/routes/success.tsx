@@ -49,8 +49,12 @@ function SuccessPage() {
   const navigate = useNavigate();
   const { bodyComposition: bc, clinicalData: cd, reset } = useReportStore();
 
-  const [generatedAt] = useState(() => new Date().toISOString());
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    setGeneratedAt(new Date().toISOString());
+  }, []);
 
   const patientName =
     bc?.patientName || cd?.patientName || "Paciente";
@@ -169,7 +173,7 @@ function SuccessPage() {
           <Card className="mt-10 border-gold/40">
             <CardContent className="space-y-4 p-6">
               <Row label="Paciente" value={patientName} highlight />
-              <Row label="Data de geração" value={formatDateTime(generatedAt)} />
+              <Row label="Data de geração" value={generatedAt ? formatDateTime(generatedAt) : "—"} />
               <Row label="Objetivo" value={goalLabel} />
               <div className="flex items-center justify-between gap-4 pt-1">
                 <span className="text-sm text-muted-foreground">Classificação corporal</span>
