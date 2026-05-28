@@ -496,8 +496,9 @@ export function ReportDocument({
           <DataRow k="Nome do paciente" v={fmt(bc?.patientName || cd?.patientName)} />
           <DataRow
             k="Sexo"
-            v={SEX_LABELS[bc?.sex || cd?.sex || ""] || "—"}
+            v={SEX_LABELS[bc?.sex || cd?.sex || ""] || "-"}
           />
+
           <DataRow k="Idade" v={fmt(bc?.age || cd?.age, "anos")} />
           <DataRow k="Altura" v={fmt(bc?.height || cd?.height, "cm")} />
           <DataRow k="Peso" v={fmt(bc?.weight || cd?.weight, "kg")} />
