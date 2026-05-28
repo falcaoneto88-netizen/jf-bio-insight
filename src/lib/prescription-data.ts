@@ -72,3 +72,52 @@ export const FINAL_GUIDELINES: { title: string; text: string }[] = [
     text: "Nova bioimpedância e revisão clínica em 30 dias para ajustar estratégia, suplementação e progressão de treino.",
   },
 ];
+
+// ---- Editable prescription model ----
+
+export type PrescriptionItem = {
+  id: string;
+  name: string;
+  dose: string;
+  note?: string;
+};
+
+export type GuidelineItem = {
+  id: string;
+  title: string;
+  text: string;
+};
+
+export type PrescriptionData = {
+  mandatory: PrescriptionItem[];
+  advanced: PrescriptionItem[];
+  guidelines: GuidelineItem[];
+  advancedEnabled: boolean;
+};
+
+let __idCounter = 0;
+function makeId(prefix: string): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  __idCounter += 1;
+  return `${prefix}-${Date.now()}-${__idCounter}`;
+}
+
+export function buildDefaultPrescription(): PrescriptionData {
+  return {
+    mandatory: MANDATORY_SUPPLEMENTS.map((s) => ({ id: makeId("m"), ...s })),
+    advanced: ADVANCED_PROTOCOL_ITEMS.map((s) => ({ id: makeId("a"), ...s })),
+    guidelines: FINAL_GUIDELINES.map((g) => ({ id: makeId("g"), ...g })),
+    advancedEnabled: false,
+  };
+}
+
+export function makePrescriptionItem(): PrescriptionItem {
+  return { id: makeId("i"), name: "", dose: "", note: "" };
+}
+
+export function makeGuidelineItem(): GuidelineItem {
+  return { id: makeId("g"), title: "", text: "" };
+}
+
