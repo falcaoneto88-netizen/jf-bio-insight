@@ -191,9 +191,10 @@ function SuccessPage() {
             <Button
               size="lg"
               onClick={handleDownload}
-              disabled={isDownloading}
+              disabled={isDownloading || generatedAt === null}
               className="bg-gold text-gold-foreground hover:bg-gold/90"
             >
+
               {isDownloading ? (
                 <>
                   <Loader2 className="animate-spin" />
