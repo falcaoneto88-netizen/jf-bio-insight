@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
 import { PrescriptionCard } from "@/components/PrescriptionCard";
+import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +65,7 @@ const TRAINING_TYPE_LABELS: Record<TrainingType, string> = {
 
 function ReviewPage() {
   const navigate = useNavigate();
-  const { file, bodyComposition, clinicalData } = useReportStore();
+  const { file, bodyComposition, clinicalData, previousExam } = useReportStore();
 
   const bc = bodyComposition;
   const cd = clinicalData;
@@ -122,6 +123,7 @@ function ReviewPage() {
           analysis={analysis}
           diet={diet}
           includeAdvancedProtocol={advancedProtocol}
+          previousExam={previousExam}
         />,
       ).toBlob();
       const url = URL.createObjectURL(blob);
@@ -153,6 +155,8 @@ function ReviewPage() {
           ? PROFILE_LABELS[analysis.primaryProfile]
           : "—",
         pdfFileName: fileName,
+        bodyComposition: bc,
+        clinicalData: cd,
       });
 
       toast.success("Relatório gerado", {
@@ -176,7 +180,11 @@ function ReviewPage() {
         <div className="mx-auto max-w-4xl">
           <Stepper current={4} />
 
-          <div className="mt-10 mb-6 text-center">
+          <div className="mt-6">
+            <ReturnVisitBadge />
+          </div>
+
+          <div className="mt-4 mb-6 text-center">
             <h1 className="font-serif text-3xl text-foreground sm:text-4xl">Revisão final</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Confirme os dados antes de gerar o relatório clínico.
