@@ -12,12 +12,14 @@ import type {
 } from "@/lib/body-classifier";
 import { PROFILE_LABELS } from "@/lib/body-classifier";
 import type { AdjustedDiet } from "@/lib/diet-adjuster";
+import { compareExams, formatDelta, type EvolutionRow } from "@/lib/evolution-analyzer";
 import {
   ADVANCED_PROTOCOL_ITEMS,
   FINAL_GUIDELINES,
   MANDATORY_SUPPLEMENTS,
   TRUSTED_SHOPS,
 } from "@/lib/prescription-data";
+import type { ReportHistoryEntry } from "@/lib/report-history";
 import type {
   BodyCompositionData,
   ClinicalData,
@@ -463,6 +465,7 @@ export type ReportInput = {
   analysis: ClassificationResult | null;
   diet: AdjustedDiet;
   includeAdvancedProtocol: boolean;
+  previousExam?: ReportHistoryEntry | null;
 };
 
 export function ReportDocument({
@@ -471,9 +474,17 @@ export function ReportDocument({
   analysis,
   diet,
   includeAdvancedProtocol,
+  previousExam,
 }: ReportInput) {
   const bc = bodyComposition;
   const cd = clinicalData;
+  const evolutionRows: EvolutionRow[] = previousExam?.bodyComposition
+    ? compareExams(bc, previousExam.bodyComposition, cd?.mainGoal ?? "")
+    : [];
+  const previousLabel = previousExam?.bodyComposition?.examDateTime
+    || previousExam?.examDate
+    || previousExam?.generatedAt
+    || "";
   const patientName =
     bc?.patientName?.trim() || cd?.patientName?.trim() || "Paciente";
 
