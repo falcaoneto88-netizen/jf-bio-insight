@@ -19,9 +19,12 @@ import {
   type PrescriptionData,
 } from "@/lib/prescription-data";
 import type { ReportHistoryEntry } from "@/lib/report-history";
-import type {
-  BodyCompositionData,
-  ClinicalData,
+import {
+  defaultReportOptions,
+  type BodyCompositionData,
+  type ClinicalData,
+  type ReportOptions,
+  type ReportSectionKey,
 } from "@/store/report-store";
 
 // ----- Fonts -----
