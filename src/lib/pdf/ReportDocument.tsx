@@ -722,12 +722,14 @@ export function ReportDocument({
           </View>
         </View>
       </Page>
+      )}
 
 
       {/* PAGE 4 — Prescrição e Suplementação */}
+      {opts.sections.prescription && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 4 de 5" />
-        <Text style={styles.pageEyebrow}>Página 4</Text>
+        <PageChrome pageLabel={pageLabel("prescription")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("prescription")}`}</Text>
         <Text style={styles.pageTitle}>Prescrição e Suplementação</Text>
         <Text style={styles.pageSubtitle}>
           Protocolo de suplementação base e orientações de aquisição.
