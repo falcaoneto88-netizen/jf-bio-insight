@@ -50,6 +50,9 @@ function SuccessPage() {
   const navigate = useNavigate();
   const { bodyComposition: bc, clinicalData: cd, reset } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
+  const prescription = useReportStore((s) => s.prescription);
+  const reportOptions = useReportStore((s) => s.reportOptions);
+  const previousExam = useReportStore((s) => s.previousExam);
 
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -114,13 +117,23 @@ function SuccessPage() {
         import("@react-pdf/renderer"),
         import("@/lib/pdf/ReportDocument"),
       ]);
+      console.log(
+        "[PDF] m1.proteina options:",
+        diet.meals
+          .find((m) => m.id === "m1")
+          ?.blocks.find((b) => b.id === "proteina")
+          ?.options.map((o) => o.label),
+      );
       const blob = await pdf(
         <ReportDocument
           bodyComposition={bc}
           clinicalData={cd}
           analysis={analysis}
           diet={diet}
-          includeAdvancedProtocol={false}
+          prescription={prescription}
+          includeAdvancedProtocol={prescription?.advancedEnabled ?? false}
+          previousExam={previousExam}
+          options={reportOptions}
         />,
       ).toBlob();
       const url = URL.createObjectURL(blob);
