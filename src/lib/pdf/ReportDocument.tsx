@@ -781,12 +781,14 @@ export function ReportDocument({
           </View>
         )}
       </Page>
+      )}
 
 
       {/* PAGE 5 — Orientações Finais */}
+      {opts.sections.finalGuidelines && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 5 de 5" />
-        <Text style={styles.pageEyebrow}>Página 5</Text>
+        <PageChrome pageLabel={pageLabel("finalGuidelines")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("finalGuidelines")}`}</Text>
         <Text style={styles.pageTitle}>Orientações Finais</Text>
         <Text style={styles.pageSubtitle}>
           Pilares de adesão para resultados clínicos sustentáveis.
