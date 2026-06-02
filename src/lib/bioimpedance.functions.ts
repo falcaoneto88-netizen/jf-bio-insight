@@ -160,6 +160,23 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
     }
 
     const dataUrl = `data:${data.mimeType};base64,${data.fileBase64}`;
+    const isPdf = data.mimeType === "application/pdf";
+
+    const userContent: Array<Record<string, unknown>> = [
+      {
+        type: "text",
+        text: `Extraia os dados do exame de bioimpedância no arquivo "${data.fileName}".`,
+      },
+      isPdf
+        ? {
+            type: "file",
+            file: {
+              filename: data.fileName,
+              file_data: dataUrl,
+            },
+          }
+        : { type: "image_url", image_url: { url: dataUrl } },
+    ];
 
     try {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -172,16 +189,7 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
           model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `Extraia os dados do exame de bioimpedância no arquivo "${data.fileName}".`,
-                },
-                { type: "image_url", image_url: { url: dataUrl } },
-              ],
-            },
+            { role: "user", content: userContent },
           ],
           tools: [toolSchema],
           tool_choice: { type: "function", function: { name: "extract_bioimpedance" } },
@@ -220,7 +228,23 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
         return { data: null, error: "Resposta da IA em formato inválido." };
       }
 
-      return { data: mapToBodyComposition(parsed), error: null };
+      const mapped = mapToBodyComposition(parsed);
+      const hasAnyValue = Object.entries(mapped).some(([k, v]) => {
+        if (k === "weightHistory" || k === "skeletalMuscleHistory" || k === "bodyFatHistory") {
+          return Array.isArray(v) && v.length > 0;
+        }
+        return typeof v === "string" && v.trim() !== "";
+      });
+      if (!hasAnyValue) {
+        console.warn("extractBioimpedance: empty extraction", { fileName: data.fileName, mimeType: data.mimeType });
+        return {
+          data: null,
+          error: isPdf
+            ? "Não foi possível ler este PDF. Tente reenviar ou enviar como imagem (PNG/JPG)."
+            : "Não foi possível identificar os campos nesta imagem. Tente outra foto mais nítida.",
+        };
+      }
+      return { data: mapped, error: null };
     } catch (err) {
       console.error("extractBioimpedance failed", err);
       return { data: null, error: "Falha ao processar o exame. Verifique sua conexão e tente novamente." };

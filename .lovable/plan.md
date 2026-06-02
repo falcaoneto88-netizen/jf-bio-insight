@@ -1,63 +1,37 @@
-## Objetivo
+## Problema
 
-Permitir editar todos os blocos da prescrição (suplementos obrigatórios, protocolo avançado e diretrizes finais) no ecrã de revisão, antes de gerar o PDF. Manter os valores atuais como "defaults" e refletir as edições no PDF.
+Hoje o upload de PDF não preenche os campos da bioimpedância. A IA recebe o ficheiro como `image_url`, formato que o gateway Gemini só aceita para imagens — para PDF a resposta vem vazia e os campos ficam em branco.
 
-## Estado atual (confirmação)
+## Solução
 
-- `src/components/PrescriptionCard.tsx` renderiza listas estáticas vindas de `src/lib/prescription-data.ts`.
-- `src/lib/pdf/ReportDocument.tsx` importa `MANDATORY_SUPPLEMENTS` e `ADVANCED_PROTOCOL_ITEMS` diretamente — ignora qualquer edição feita na UI.
-- `report-store.ts` não tem campo de prescrição.
-- Resultado: hoje **não é editável**. A tarefa anterior ficou incompleta.
+Ajuste cirúrgico apenas no servidor (`src/lib/bioimpedance.functions.ts`). Nenhuma alteração de UI, store, PDF, histórico ou base de dados.
 
-## Alterações
+### Mudanças
 
-### 1. Store (`src/store/report-store.ts`)
-Adicionar:
-```ts
-type PrescriptionItem = { id: string; name: string; dose: string; note?: string };
-type GuidelineItem = { id: string; title: string; text: string };
-type PrescriptionData = {
-  mandatory: PrescriptionItem[];
-  advanced: PrescriptionItem[];
-  guidelines: GuidelineItem[];
-  advancedEnabled: boolean;
-};
-prescription: PrescriptionData | null;
-setPrescription / resetPrescription / initPrescriptionFromDefaults
-```
-Persistido no mesmo `jf-bioreport-draft` (bump version, migrate seguro).
+1. **`src/lib/bioimpedance.functions.ts`**
+   - Detetar `mimeType` antes de montar o payload para o gateway.
+   - Se for `image/png` ou `image/jpeg` → manter exatamente o payload atual (`type: "image_url"`).
+   - Se for `application/pdf` → enviar como:
+     ```
+     { type: "file", file: { filename, file_data: "data:application/pdf;base64,..." } }
+     ```
+     (formato suportado pelo Lovable AI Gateway / Gemini para PDFs.)
+   - Acrescentar mensagem de erro clara quando a IA devolver `tool_calls` vazio ou todos os campos nulos ("Não foi possível ler este exame. Tente uma imagem (PNG/JPG) ou reenvie o PDF.") em vez de gravar dados vazios.
+   - Log de diagnóstico em caso de resposta inesperada (sem expor o ficheiro).
 
-### 2. `src/lib/prescription-data.ts`
-Manter constantes atuais como **defaults**. Adicionar helper `buildDefaultPrescription()` que devolve a estrutura com `id`s estáveis (`crypto.randomUUID()` no cliente).
+### O que NÃO muda
 
-### 3. `PrescriptionCard.tsx` — virar editor
-- Cada item vira uma linha com 2 `Input` (nome, dose) + `Textarea` curto (nota opcional) + botão remover.
-- Botão "Adicionar suplemento" em cada bloco (Obrigatórios / Avançado).
-- Bloco novo "Diretrizes finais" editável (título + texto) usando `FINAL_GUIDELINES` como default.
-- Toggle "Protocolo avançado" continua e passa a controlar `advancedEnabled` no store.
-- Botão discreto "Repor padrão" por bloco.
-- Tudo lê/escreve via `useReportStore`.
+- UI de upload (`src/routes/upload.tsx`).
+- Store, histórico, PDF, prescrição, dieta.
+- Limites de tamanho, tipos aceites, fluxo de retry/continuar.
+- Comportamento para PNG/JPG continua idêntico.
 
-### 4. `review.tsx`
-- No mount: se `prescription === null`, chamar `setPrescription(buildDefaultPrescription())`.
-- Passar `prescription` ao `<PrescriptionCard />` (ou o card consome do store).
-- Ao gerar PDF, passar `prescription` para `ReportDocument`.
+### Verificação
 
-### 5. `src/lib/pdf/ReportDocument.tsx`
-- Aceitar `prescription: PrescriptionData` nas props.
-- Substituir os `MANDATORY_SUPPLEMENTS.map` / `ADVANCED_PROTOCOL_ITEMS.map` / `FINAL_GUIDELINES` pelos arrays vindos das props.
-- Mostrar bloco avançado só se `advancedEnabled`.
-- Fallback para defaults se prop ausente (retrocompat).
+- Testar com um PDF real de bioimpedância → campos devem aparecer em `/body-composition`.
+- Testar com PNG/JPG → comportamento idêntico ao atual (não regredir).
+- Testar PDF ilegível → mensagem de erro clara, sem dados em branco.
 
-## Fora de escopo
-- Salvar templates por utilizador (não há auth).
-- Reordenar itens por drag-and-drop (pode vir depois; por agora só ↑/↓ se trivial, senão omitir).
-- Alterar IA, dieta, histórico, bioimpedância.
+### Risco
 
-## Verificação
-1. Abrir `/review`: prescrição aparece pré-preenchida com os valores atuais.
-2. Editar nome/dose, adicionar item novo, remover item, editar diretriz.
-3. Toggle avançado liga/desliga o bloco.
-4. "Repor padrão" volta aos defaults.
-5. Gerar PDF: página "Prescrição e Suplementação" reflete exatamente o que está no ecrã.
-6. Recarregar a página: edições persistem (mesmo draft localStorage).
+Baixo. Se o gateway recusar o novo formato, cai no mesmo estado de erro já tratado hoje ("Tentar novamente" / "Continuar mesmo assim") — nunca pior que o estado atual.
