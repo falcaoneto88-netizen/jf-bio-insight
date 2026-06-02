@@ -187,6 +187,7 @@ type ReportState = {
   previousExam: ReportHistoryEntry | null;
   prescription: PrescriptionData | null;
   reportOptions: ReportOptions;
+  dietCustomization: DietCustomization;
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
   setClinicalData: (data: ClinicalData) => void;
@@ -199,6 +200,9 @@ type ReportState = {
   setClinicalNotes: (value: string) => void;
   setPatientNotes: (value: string) => void;
   resetReportOptions: () => void;
+  removeDietItem: (blockKey: DietBlockKey, itemId: string) => void;
+  addDietItem: (blockKey: DietBlockKey, item: CustomFoodItem) => void;
+  resetAllDietCustomization: () => void;
   reset: () => void;
 };
 
