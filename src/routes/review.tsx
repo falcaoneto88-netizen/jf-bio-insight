@@ -108,9 +108,15 @@ function ReviewPage() {
   );
 
   const prescription = useReportStore((s) => s.prescription);
+  const reportOptions = useReportStore((s) => s.reportOptions);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerate = async () => {
+    const anyEnabled = Object.values(reportOptions.sections).some(Boolean);
+    if (!anyEnabled) {
+      toast.error("Selecione pelo menos uma seção do relatório");
+      return;
+    }
     setIsGenerating(true);
     try {
       const [{ pdf }, { ReportDocument }] = await Promise.all([
@@ -126,6 +132,7 @@ function ReviewPage() {
           prescription={prescription}
           includeAdvancedProtocol={prescription?.advancedEnabled ?? false}
           previousExam={previousExam}
+          options={reportOptions}
         />,
       ).toBlob();
       const url = URL.createObjectURL(blob);
