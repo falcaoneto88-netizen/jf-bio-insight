@@ -50,6 +50,9 @@ function SuccessPage() {
   const navigate = useNavigate();
   const { bodyComposition: bc, clinicalData: cd, reset } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
+  const prescription = useReportStore((s) => s.prescription);
+  const reportOptions = useReportStore((s) => s.reportOptions);
+  const previousExam = useReportStore((s) => s.previousExam);
 
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
