@@ -117,13 +117,23 @@ function SuccessPage() {
         import("@react-pdf/renderer"),
         import("@/lib/pdf/ReportDocument"),
       ]);
+      console.log(
+        "[PDF] m1.proteina options:",
+        diet.meals
+          .find((m) => m.id === "m1")
+          ?.blocks.find((b) => b.id === "proteina")
+          ?.options.map((o) => o.label),
+      );
       const blob = await pdf(
         <ReportDocument
           bodyComposition={bc}
           clinicalData={cd}
           analysis={analysis}
           diet={diet}
-          includeAdvancedProtocol={false}
+          prescription={prescription}
+          includeAdvancedProtocol={prescription?.advancedEnabled ?? false}
+          previousExam={previousExam}
+          options={reportOptions}
         />,
       ).toBlob();
       const url = URL.createObjectURL(blob);
