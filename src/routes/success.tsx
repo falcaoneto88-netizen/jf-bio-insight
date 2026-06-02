@@ -65,7 +65,7 @@ function SuccessPage() {
 
   const diet = useMemo(
     () =>
-      adjustDiet(DIETA_BASE_DR_JOAO, {
+      adjustDiet(applyDietCustomization(DIETA_BASE_DR_JOAO, dietCustomization), {
         weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
         profile: analysis?.primaryProfile ?? null,
         mainGoal: cd?.mainGoal ?? "",
@@ -91,6 +91,7 @@ function SuccessPage() {
       cd?.diabetes,
       cd?.hypertension,
       analysis?.primaryProfile,
+      dietCustomization,
     ],
   );
 
