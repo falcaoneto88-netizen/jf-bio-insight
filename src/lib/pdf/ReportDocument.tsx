@@ -674,11 +674,13 @@ export function ReportDocument({
         )}
 
       </Page>
+      )}
 
       {/* PAGE 3 — Plano Alimentar */}
+      {opts.sections.dietPlan && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 3 de 5" />
-        <Text style={styles.pageEyebrow}>Página 3</Text>
+        <PageChrome pageLabel={pageLabel("dietPlan")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("dietPlan")}`}</Text>
         <Text style={styles.pageTitle}>Plano Alimentar</Text>
         <Text style={styles.pageSubtitle}>
           {safe(diet.base.name)} - quantidades ajustadas conforme perfil clínico.
