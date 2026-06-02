@@ -228,7 +228,23 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
         return { data: null, error: "Resposta da IA em formato inválido." };
       }
 
-      return { data: mapToBodyComposition(parsed), error: null };
+      const mapped = mapToBodyComposition(parsed);
+      const hasAnyValue = Object.entries(mapped).some(([k, v]) => {
+        if (k === "weightHistory" || k === "skeletalMuscleHistory" || k === "bodyFatHistory") {
+          return Array.isArray(v) && v.length > 0;
+        }
+        return typeof v === "string" && v.trim() !== "";
+      });
+      if (!hasAnyValue) {
+        console.warn("extractBioimpedance: empty extraction", { fileName: data.fileName, mimeType: data.mimeType });
+        return {
+          data: null,
+          error: isPdf
+            ? "Não foi possível ler este PDF. Tente reenviar ou enviar como imagem (PNG/JPG)."
+            : "Não foi possível identificar os campos nesta imagem. Tente outra foto mais nítida.",
+        };
+      }
+      return { data: mapped, error: null };
     } catch (err) {
       console.error("extractBioimpedance failed", err);
       return { data: null, error: "Falha ao processar o exame. Verifique sua conexão e tente novamente." };
