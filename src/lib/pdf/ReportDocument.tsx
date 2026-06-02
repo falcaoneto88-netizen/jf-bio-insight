@@ -808,6 +808,7 @@ export function ReportDocument({
           </Text>
         </View>
       </Page>
+      )}
     </Document>
   );
 }
