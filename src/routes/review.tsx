@@ -207,6 +207,9 @@ function ReviewPage() {
           </div>
 
           <div className="space-y-4">
+            <ReportSectionsCard />
+
+
             <Card className="border-gold/40">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="flex items-center gap-2 font-serif text-lg">
