@@ -618,11 +618,13 @@ export function ReportDocument({
           </View>
         )}
       </Page>
+      )}
 
       {/* PAGE 2 — Análise Corporal */}
+      {opts.sections.analysis && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 2 de 5" />
-        <Text style={styles.pageEyebrow}>Página 2</Text>
+        <PageChrome pageLabel={pageLabel("analysis")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("analysis")}`}</Text>
         <Text style={styles.pageTitle}>Análise Corporal</Text>
         <Text style={styles.pageSubtitle}>
           Diagnóstico clínico e estratégia recomendada.
