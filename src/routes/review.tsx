@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
+import { DietEditorCard } from "@/components/DietEditorCard";
 import { PrescriptionCard } from "@/components/PrescriptionCard";
 import { ReportNotesCard } from "@/components/ReportNotesCard";
 import { ReportSectionsCard } from "@/components/ReportSectionsCard";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
 import { DIETA_BASE_DR_JOAO } from "@/lib/diet-base";
+import { applyDietCustomization } from "@/lib/diet-customization";
 import { adjustDiet } from "@/lib/diet-adjuster";
 import { addReportToHistory } from "@/lib/report-history";
 import {
@@ -68,6 +70,7 @@ const TRAINING_TYPE_LABELS: Record<TrainingType, string> = {
 function ReviewPage() {
   const navigate = useNavigate();
   const { file, bodyComposition, clinicalData, previousExam } = useReportStore();
+  const dietCustomization = useReportStore((s) => s.dietCustomization);
 
   const bc = bodyComposition;
   const cd = clinicalData;
@@ -79,7 +82,7 @@ function ReviewPage() {
 
   const diet = useMemo(
     () =>
-      adjustDiet(DIETA_BASE_DR_JOAO, {
+      adjustDiet(applyDietCustomization(DIETA_BASE_DR_JOAO, dietCustomization), {
         weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
         profile: analysis?.primaryProfile ?? null,
         mainGoal: cd?.mainGoal ?? "",
@@ -105,6 +108,7 @@ function ReviewPage() {
       cd?.diabetes,
       cd?.hypertension,
       analysis?.primaryProfile,
+      dietCustomization,
     ],
   );
 
@@ -249,6 +253,8 @@ function ReviewPage() {
                 )}
               </CardContent>
             </Card>
+
+            <DietEditorCard />
 
             <DietPlanCard diet={diet} />
 

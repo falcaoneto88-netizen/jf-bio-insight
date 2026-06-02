@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
 import { DIETA_BASE_DR_JOAO } from "@/lib/diet-base";
+import { applyDietCustomization } from "@/lib/diet-customization";
 import { adjustDiet } from "@/lib/diet-adjuster";
 import { useReportStore, type MainGoal } from "@/store/report-store";
 
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/success")({
 function SuccessPage() {
   const navigate = useNavigate();
   const { bodyComposition: bc, clinicalData: cd, reset } = useReportStore();
+  const dietCustomization = useReportStore((s) => s.dietCustomization);
 
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -63,7 +65,7 @@ function SuccessPage() {
 
   const diet = useMemo(
     () =>
-      adjustDiet(DIETA_BASE_DR_JOAO, {
+      adjustDiet(applyDietCustomization(DIETA_BASE_DR_JOAO, dietCustomization), {
         weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
         profile: analysis?.primaryProfile ?? null,
         mainGoal: cd?.mainGoal ?? "",
@@ -89,6 +91,7 @@ function SuccessPage() {
       cd?.diabetes,
       cd?.hypertension,
       analysis?.primaryProfile,
+      dietCustomization,
     ],
   );
 

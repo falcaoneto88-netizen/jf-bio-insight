@@ -6,6 +6,13 @@ import {
   buildDefaultPrescription,
   type PrescriptionData,
 } from "@/lib/prescription-data";
+import {
+  emptyOverride,
+  normalizeDietCustomization,
+  type CustomFoodItem,
+  type DietBlockKey,
+  type DietCustomization,
+} from "@/lib/diet-customization";
 
 export type UploadedFile = {
   name: string;
@@ -180,6 +187,7 @@ type ReportState = {
   previousExam: ReportHistoryEntry | null;
   prescription: PrescriptionData | null;
   reportOptions: ReportOptions;
+  dietCustomization: DietCustomization;
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
   setClinicalData: (data: ClinicalData) => void;
@@ -192,6 +200,9 @@ type ReportState = {
   setClinicalNotes: (value: string) => void;
   setPatientNotes: (value: string) => void;
   resetReportOptions: () => void;
+  removeDietItem: (blockKey: DietBlockKey, itemId: string) => void;
+  addDietItem: (blockKey: DietBlockKey, item: CustomFoodItem) => void;
+  resetAllDietCustomization: () => void;
   reset: () => void;
 };
 
@@ -229,6 +240,7 @@ export const useReportStore = create<ReportState>()(
       previousExam: null,
       prescription: null,
       reportOptions: normalizeReportOptions(null),
+      dietCustomization: {},
       setFile: (file) => set({ file }),
       setBodyComposition: (data) => set({ bodyComposition: data }),
       setClinicalData: (data) => set({ clinicalData: data }),
@@ -262,6 +274,42 @@ export const useReportStore = create<ReportState>()(
         set((s) => ({ reportOptions: { ...s.reportOptions, patientNotes: value } })),
       resetReportOptions: () =>
         set({ reportOptions: normalizeReportOptions(null) }),
+      removeDietItem: (blockKey, itemId) =>
+        set((s) => {
+          const current = s.dietCustomization[blockKey] ?? emptyOverride();
+          const isCustom = itemId.startsWith("custom_");
+          const next = {
+            removedIds: isCustom
+              ? current.removedIds
+              : current.removedIds.includes(itemId)
+                ? current.removedIds
+                : [...current.removedIds, itemId],
+            added: isCustom
+              ? current.added.filter((a) => a.id !== itemId)
+              : current.added,
+          };
+          return {
+            dietCustomization: { ...s.dietCustomization, [blockKey]: next },
+          };
+        }),
+      addDietItem: (blockKey, item) => {
+        const label = item.label.trim();
+        if (!label) return;
+        const safeItem = { id: item.id, label: label.slice(0, 60) };
+        set((s) => {
+          const current = s.dietCustomization[blockKey] ?? emptyOverride();
+          return {
+            dietCustomization: {
+              ...s.dietCustomization,
+              [blockKey]: {
+                removedIds: current.removedIds,
+                added: [...current.added, safeItem],
+              },
+            },
+          };
+        });
+      },
+      resetAllDietCustomization: () => set({ dietCustomization: {} }),
       reset: () =>
         set({
           file: null,
@@ -270,12 +318,13 @@ export const useReportStore = create<ReportState>()(
           previousExam: null,
           prescription: null,
           reportOptions: normalizeReportOptions(null),
+          dietCustomization: {},
         }),
     }),
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
-      version: 3,
+      version: 4,
       migrate: (_persistedState, version) => {
         if (version < 1) {
           return {
@@ -285,6 +334,7 @@ export const useReportStore = create<ReportState>()(
             previousExam: null,
             prescription: null,
             reportOptions: normalizeReportOptions(null),
+            dietCustomization: {},
           };
         }
         const s = (_persistedState ?? {}) as Partial<ReportState>;
@@ -292,6 +342,7 @@ export const useReportStore = create<ReportState>()(
           ...s,
           prescription: s.prescription ?? null,
           reportOptions: normalizeReportOptions(s.reportOptions),
+          dietCustomization: normalizeDietCustomization(s.dietCustomization),
         };
       },
       partialize: (state) => ({
@@ -301,6 +352,7 @@ export const useReportStore = create<ReportState>()(
         previousExam: state.previousExam,
         prescription: state.prescription,
         reportOptions: state.reportOptions,
+        dietCustomization: state.dietCustomization,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -308,6 +360,7 @@ export const useReportStore = create<ReportState>()(
             state.bodyComposition = normalizeBodyComposition(state.bodyComposition);
           }
           state.reportOptions = normalizeReportOptions(state.reportOptions);
+          state.dietCustomization = normalizeDietCustomization(state.dietCustomization);
         }
       },
     },
