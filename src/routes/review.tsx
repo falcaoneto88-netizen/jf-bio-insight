@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
 import { PrescriptionCard } from "@/components/PrescriptionCard";
+import { ReportNotesCard } from "@/components/ReportNotesCard";
 import { ReportSectionsCard } from "@/components/ReportSectionsCard";
 import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
@@ -208,6 +209,9 @@ function ReviewPage() {
 
           <div className="space-y-4">
             <ReportSectionsCard />
+            <ReportNotesCard />
+
+
 
 
             <Card className="border-gold/40">

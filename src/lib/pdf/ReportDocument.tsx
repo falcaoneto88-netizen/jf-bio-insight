@@ -809,6 +809,32 @@ export function ReportDocument({
         </View>
       </Page>
       )}
+
+      {/* PAGE 6 — Notas finais ao paciente (opcional) */}
+      {hasPatientNotesContent && (
+      <Page size="A4" style={styles.page}>
+        <PageChrome pageLabel={pageLabel("patientNotes")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("patientNotes")}`}</Text>
+        <Text style={styles.pageTitle}>Mensagem ao paciente</Text>
+        <Text style={styles.pageSubtitle}>
+          Orientações finais e palavras de acompanhamento.
+        </Text>
+
+        <View style={styles.analysisBlock}>
+          {opts.patientNotes
+            .trim()
+            .split(/\n+/)
+            .map((para, i) => (
+              <Text
+                key={i}
+                style={i > 0 ? [styles.paragraph, { marginTop: 8 }] : styles.paragraph}
+              >
+                {safe(para)}
+              </Text>
+            ))}
+        </View>
+      </Page>
+      )}
     </Document>
   );
 }
