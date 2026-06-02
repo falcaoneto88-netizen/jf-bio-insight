@@ -482,6 +482,7 @@ export type ReportInput = {
   includeAdvancedProtocol: boolean;
   previousExam?: ReportHistoryEntry | null;
   prescription?: PrescriptionData | null;
+  options?: ReportOptions;
 };
 
 export function ReportDocument({
@@ -492,8 +493,10 @@ export function ReportDocument({
   includeAdvancedProtocol,
   previousExam,
   prescription,
+  options,
 }: ReportInput) {
   const rx: PrescriptionData = prescription ?? buildDefaultPrescription();
+  const opts: ReportOptions = options ?? defaultReportOptions;
 
   const bc = bodyComposition;
   const cd = clinicalData;
@@ -507,6 +510,26 @@ export function ReportDocument({
   const patientName =
     bc?.patientName?.trim() || cd?.patientName?.trim() || "Paciente";
 
+  // Dynamic page numbering: only enabled sections count
+  const orderedKeys: ReportSectionKey[] = [
+    "bioimpedance",
+    "analysis",
+    "dietPlan",
+    "prescription",
+    "finalGuidelines",
+    "patientNotes",
+  ];
+  const hasPatientNotesContent =
+    opts.sections.patientNotes && opts.patientNotes.trim() !== "";
+  const enabled: ReportSectionKey[] = orderedKeys.filter((k) =>
+    k === "patientNotes" ? hasPatientNotesContent : opts.sections[k],
+  );
+  const totalPages = enabled.length;
+  const pageNumberOf = (key: ReportSectionKey): number =>
+    enabled.indexOf(key) + 1;
+  const pageLabel = (key: ReportSectionKey): string =>
+    `Página ${pageNumberOf(key)} de ${totalPages}`;
+
   return (
     <Document
       title={`Relatório clínico — ${patientName}`}
@@ -514,9 +537,10 @@ export function ReportDocument({
       subject="Relatório de composição corporal"
     >
       {/* PAGE 1 — Bioimpedância */}
+      {opts.sections.bioimpedance && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 1 de 5" />
-        <Text style={styles.pageEyebrow}>Página 1</Text>
+        <PageChrome pageLabel={pageLabel("bioimpedance")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("bioimpedance")}`}</Text>
         <Text style={styles.pageTitle}>Dados da Bioimpedância</Text>
         <Text style={styles.pageSubtitle}>
           Composição corporal aferida no exame de bioimpedância.
