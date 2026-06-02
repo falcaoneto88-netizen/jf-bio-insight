@@ -160,6 +160,23 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
     }
 
     const dataUrl = `data:${data.mimeType};base64,${data.fileBase64}`;
+    const isPdf = data.mimeType === "application/pdf";
+
+    const userContent: Array<Record<string, unknown>> = [
+      {
+        type: "text",
+        text: `Extraia os dados do exame de bioimpedância no arquivo "${data.fileName}".`,
+      },
+      isPdf
+        ? {
+            type: "file",
+            file: {
+              filename: data.fileName,
+              file_data: dataUrl,
+            },
+          }
+        : { type: "image_url", image_url: { url: dataUrl } },
+    ];
 
     try {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -172,16 +189,7 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
           model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `Extraia os dados do exame de bioimpedância no arquivo "${data.fileName}".`,
-                },
-                { type: "image_url", image_url: { url: dataUrl } },
-              ],
-            },
+            { role: "user", content: userContent },
           ],
           tools: [toolSchema],
           tool_choice: { type: "function", function: { name: "extract_bioimpedance" } },
