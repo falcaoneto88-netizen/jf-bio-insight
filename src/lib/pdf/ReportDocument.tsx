@@ -19,9 +19,12 @@ import {
   type PrescriptionData,
 } from "@/lib/prescription-data";
 import type { ReportHistoryEntry } from "@/lib/report-history";
-import type {
-  BodyCompositionData,
-  ClinicalData,
+import {
+  defaultReportOptions,
+  type BodyCompositionData,
+  type ClinicalData,
+  type ReportOptions,
+  type ReportSectionKey,
 } from "@/store/report-store";
 
 // ----- Fonts -----
@@ -479,6 +482,7 @@ export type ReportInput = {
   includeAdvancedProtocol: boolean;
   previousExam?: ReportHistoryEntry | null;
   prescription?: PrescriptionData | null;
+  options?: ReportOptions;
 };
 
 export function ReportDocument({
@@ -489,8 +493,10 @@ export function ReportDocument({
   includeAdvancedProtocol,
   previousExam,
   prescription,
+  options,
 }: ReportInput) {
   const rx: PrescriptionData = prescription ?? buildDefaultPrescription();
+  const opts: ReportOptions = options ?? defaultReportOptions;
 
   const bc = bodyComposition;
   const cd = clinicalData;
@@ -504,6 +510,26 @@ export function ReportDocument({
   const patientName =
     bc?.patientName?.trim() || cd?.patientName?.trim() || "Paciente";
 
+  // Dynamic page numbering: only enabled sections count
+  const orderedKeys: ReportSectionKey[] = [
+    "bioimpedance",
+    "analysis",
+    "dietPlan",
+    "prescription",
+    "finalGuidelines",
+    "patientNotes",
+  ];
+  const hasPatientNotesContent =
+    opts.sections.patientNotes && opts.patientNotes.trim() !== "";
+  const enabled: ReportSectionKey[] = orderedKeys.filter((k) =>
+    k === "patientNotes" ? hasPatientNotesContent : opts.sections[k],
+  );
+  const totalPages = enabled.length;
+  const pageNumberOf = (key: ReportSectionKey): number =>
+    enabled.indexOf(key) + 1;
+  const pageLabel = (key: ReportSectionKey): string =>
+    `Página ${pageNumberOf(key)} de ${totalPages}`;
+
   return (
     <Document
       title={`Relatório clínico — ${patientName}`}
@@ -511,9 +537,10 @@ export function ReportDocument({
       subject="Relatório de composição corporal"
     >
       {/* PAGE 1 — Bioimpedância */}
+      {opts.sections.bioimpedance && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 1 de 5" />
-        <Text style={styles.pageEyebrow}>Página 1</Text>
+        <PageChrome pageLabel={pageLabel("bioimpedance")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("bioimpedance")}`}</Text>
         <Text style={styles.pageTitle}>Dados da Bioimpedância</Text>
         <Text style={styles.pageSubtitle}>
           Composição corporal aferida no exame de bioimpedância.
@@ -591,11 +618,13 @@ export function ReportDocument({
           </View>
         )}
       </Page>
+      )}
 
       {/* PAGE 2 — Análise Corporal */}
+      {opts.sections.analysis && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 2 de 5" />
-        <Text style={styles.pageEyebrow}>Página 2</Text>
+        <PageChrome pageLabel={pageLabel("analysis")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("analysis")}`}</Text>
         <Text style={styles.pageTitle}>Análise Corporal</Text>
         <Text style={styles.pageSubtitle}>
           Diagnóstico clínico e estratégia recomendada.
@@ -645,11 +674,13 @@ export function ReportDocument({
         )}
 
       </Page>
+      )}
 
       {/* PAGE 3 — Plano Alimentar */}
+      {opts.sections.dietPlan && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 3 de 5" />
-        <Text style={styles.pageEyebrow}>Página 3</Text>
+        <PageChrome pageLabel={pageLabel("dietPlan")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("dietPlan")}`}</Text>
         <Text style={styles.pageTitle}>Plano Alimentar</Text>
         <Text style={styles.pageSubtitle}>
           {safe(diet.base.name)} - quantidades ajustadas conforme perfil clínico.
@@ -691,12 +722,14 @@ export function ReportDocument({
           </View>
         </View>
       </Page>
+      )}
 
 
       {/* PAGE 4 — Prescrição e Suplementação */}
+      {opts.sections.prescription && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 4 de 5" />
-        <Text style={styles.pageEyebrow}>Página 4</Text>
+        <PageChrome pageLabel={pageLabel("prescription")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("prescription")}`}</Text>
         <Text style={styles.pageTitle}>Prescrição e Suplementação</Text>
         <Text style={styles.pageSubtitle}>
           Protocolo de suplementação base e orientações de aquisição.
@@ -748,12 +781,14 @@ export function ReportDocument({
           </View>
         )}
       </Page>
+      )}
 
 
       {/* PAGE 5 — Orientações Finais */}
+      {opts.sections.finalGuidelines && (
       <Page size="A4" style={styles.page}>
-        <PageChrome pageLabel="Página 5 de 5" />
-        <Text style={styles.pageEyebrow}>Página 5</Text>
+        <PageChrome pageLabel={pageLabel("finalGuidelines")} />
+        <Text style={styles.pageEyebrow}>{`Página ${pageNumberOf("finalGuidelines")}`}</Text>
         <Text style={styles.pageTitle}>Orientações Finais</Text>
         <Text style={styles.pageSubtitle}>
           Pilares de adesão para resultados clínicos sustentáveis.
@@ -773,6 +808,7 @@ export function ReportDocument({
           </Text>
         </View>
       </Page>
+      )}
     </Document>
   );
 }

@@ -146,12 +146,40 @@ export const emptyClinicalData: ClinicalData = {
   additionalNotes: "",
 };
 
+export type ReportSectionKey =
+  | "bioimpedance"
+  | "analysis"
+  | "dietPlan"
+  | "prescription"
+  | "finalGuidelines"
+  | "patientNotes";
+
+export type ReportOptions = {
+  sections: Record<ReportSectionKey, boolean>;
+  clinicalNotes: string; // interno — nunca no PDF
+  patientNotes: string; // sai como <Page> se sections.patientNotes && texto
+};
+
+export const defaultReportOptions: ReportOptions = {
+  sections: {
+    bioimpedance: true,
+    analysis: true,
+    dietPlan: true,
+    prescription: true,
+    finalGuidelines: true,
+    patientNotes: false,
+  },
+  clinicalNotes: "",
+  patientNotes: "",
+};
+
 type ReportState = {
   file: UploadedFile | null;
   bodyComposition: BodyCompositionData | null;
   clinicalData: ClinicalData | null;
   previousExam: ReportHistoryEntry | null;
   prescription: PrescriptionData | null;
+  reportOptions: ReportOptions;
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
   setClinicalData: (data: ClinicalData) => void;
@@ -159,6 +187,11 @@ type ReportState = {
   clearPreviousExam: () => void;
   setPrescription: (data: PrescriptionData) => void;
   resetPrescription: () => void;
+  setReportSection: (key: ReportSectionKey, value: boolean) => void;
+  setAllReportSections: (value: boolean) => void;
+  setClinicalNotes: (value: string) => void;
+  setPatientNotes: (value: string) => void;
+  resetReportOptions: () => void;
   reset: () => void;
 };
 
@@ -176,6 +209,17 @@ function normalizeBodyComposition(
   };
 }
 
+function normalizeReportOptions(
+  o: Partial<ReportOptions> | null | undefined,
+): ReportOptions {
+  if (!o) return { ...defaultReportOptions, sections: { ...defaultReportOptions.sections } };
+  return {
+    sections: { ...defaultReportOptions.sections, ...(o.sections ?? {}) },
+    clinicalNotes: typeof o.clinicalNotes === "string" ? o.clinicalNotes : "",
+    patientNotes: typeof o.patientNotes === "string" ? o.patientNotes : "",
+  };
+}
+
 export const useReportStore = create<ReportState>()(
   persist(
     (set) => ({
@@ -184,6 +228,7 @@ export const useReportStore = create<ReportState>()(
       clinicalData: null,
       previousExam: null,
       prescription: null,
+      reportOptions: normalizeReportOptions(null),
       setFile: (file) => set({ file }),
       setBodyComposition: (data) => set({ bodyComposition: data }),
       setClinicalData: (data) => set({ clinicalData: data }),
@@ -191,6 +236,32 @@ export const useReportStore = create<ReportState>()(
       clearPreviousExam: () => set({ previousExam: null }),
       setPrescription: (data) => set({ prescription: data }),
       resetPrescription: () => set({ prescription: buildDefaultPrescription() }),
+      setReportSection: (key, value) =>
+        set((s) => ({
+          reportOptions: {
+            ...s.reportOptions,
+            sections: { ...s.reportOptions.sections, [key]: value },
+          },
+        })),
+      setAllReportSections: (value) =>
+        set((s) => ({
+          reportOptions: {
+            ...s.reportOptions,
+            sections: (Object.keys(s.reportOptions.sections) as ReportSectionKey[]).reduce(
+              (acc, k) => {
+                acc[k] = value;
+                return acc;
+              },
+              {} as Record<ReportSectionKey, boolean>,
+            ),
+          },
+        })),
+      setClinicalNotes: (value) =>
+        set((s) => ({ reportOptions: { ...s.reportOptions, clinicalNotes: value } })),
+      setPatientNotes: (value) =>
+        set((s) => ({ reportOptions: { ...s.reportOptions, patientNotes: value } })),
+      resetReportOptions: () =>
+        set({ reportOptions: normalizeReportOptions(null) }),
       reset: () =>
         set({
           file: null,
@@ -198,12 +269,13 @@ export const useReportStore = create<ReportState>()(
           clinicalData: null,
           previousExam: null,
           prescription: null,
+          reportOptions: normalizeReportOptions(null),
         }),
     }),
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
-      version: 2,
+      version: 3,
       migrate: (_persistedState, version) => {
         if (version < 1) {
           return {
@@ -212,10 +284,15 @@ export const useReportStore = create<ReportState>()(
             clinicalData: null,
             previousExam: null,
             prescription: null,
+            reportOptions: normalizeReportOptions(null),
           };
         }
         const s = (_persistedState ?? {}) as Partial<ReportState>;
-        return { ...s, prescription: s.prescription ?? null };
+        return {
+          ...s,
+          prescription: s.prescription ?? null,
+          reportOptions: normalizeReportOptions(s.reportOptions),
+        };
       },
       partialize: (state) => ({
         file: state.file,
@@ -223,13 +300,16 @@ export const useReportStore = create<ReportState>()(
         clinicalData: state.clinicalData,
         previousExam: state.previousExam,
         prescription: state.prescription,
+        reportOptions: state.reportOptions,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state && state.bodyComposition) {
-          state.bodyComposition = normalizeBodyComposition(state.bodyComposition);
+        if (state) {
+          if (state.bodyComposition) {
+            state.bodyComposition = normalizeBodyComposition(state.bodyComposition);
+          }
+          state.reportOptions = normalizeReportOptions(state.reportOptions);
         }
       },
     },
   ),
 );
-

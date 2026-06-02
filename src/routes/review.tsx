@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
 import { PrescriptionCard } from "@/components/PrescriptionCard";
+import { ReportSectionsCard } from "@/components/ReportSectionsCard";
 import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
@@ -107,9 +108,15 @@ function ReviewPage() {
   );
 
   const prescription = useReportStore((s) => s.prescription);
+  const reportOptions = useReportStore((s) => s.reportOptions);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerate = async () => {
+    const anyEnabled = Object.values(reportOptions.sections).some(Boolean);
+    if (!anyEnabled) {
+      toast.error("Selecione pelo menos uma seção do relatório");
+      return;
+    }
     setIsGenerating(true);
     try {
       const [{ pdf }, { ReportDocument }] = await Promise.all([
@@ -125,6 +132,7 @@ function ReviewPage() {
           prescription={prescription}
           includeAdvancedProtocol={prescription?.advancedEnabled ?? false}
           previousExam={previousExam}
+          options={reportOptions}
         />,
       ).toBlob();
       const url = URL.createObjectURL(blob);
@@ -199,6 +207,9 @@ function ReviewPage() {
           </div>
 
           <div className="space-y-4">
+            <ReportSectionsCard />
+
+
             <Card className="border-gold/40">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="flex items-center gap-2 font-serif text-lg">
