@@ -6,6 +6,13 @@ import {
   buildDefaultPrescription,
   type PrescriptionData,
 } from "@/lib/prescription-data";
+import {
+  emptyOverride,
+  normalizeDietCustomization,
+  type CustomFoodItem,
+  type DietBlockKey,
+  type DietCustomization,
+} from "@/lib/diet-customization";
 
 export type UploadedFile = {
   name: string;
