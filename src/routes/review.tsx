@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
+import { DietEditorCard } from "@/components/DietEditorCard";
 import { PrescriptionCard } from "@/components/PrescriptionCard";
 import { ReportNotesCard } from "@/components/ReportNotesCard";
 import { ReportSectionsCard } from "@/components/ReportSectionsCard";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
 import { DIETA_BASE_DR_JOAO } from "@/lib/diet-base";
+import { applyDietCustomization } from "@/lib/diet-customization";
 import { adjustDiet } from "@/lib/diet-adjuster";
 import { addReportToHistory } from "@/lib/report-history";
 import {
