@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
 import { PrescriptionCard } from "@/components/PrescriptionCard";
+import { ReportSectionsCard } from "@/components/ReportSectionsCard";
 import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
