@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Calculator, CheckCircle2, Plus, Sparkles, Trash2 } from "lucide-react";
 
@@ -45,6 +45,13 @@ function BodyCompositionPage() {
     bodyComposition ?? emptyBodyComposition,
   );
   const [errors, setErrors] = useState<Partial<Record<keyof BodyCompositionData, string>>>({});
+  const hydratedRef = useRef(!!bodyComposition);
+  useEffect(() => {
+    if (!hydratedRef.current && bodyComposition) {
+      setData(bodyComposition);
+      hydratedRef.current = true;
+    }
+  }, [bodyComposition]);
 
   const extracted = !!bodyComposition;
 
