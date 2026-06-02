@@ -254,6 +254,8 @@ function ReviewPage() {
               </CardContent>
             </Card>
 
+            <DietEditorCard />
+
             <DietPlanCard diet={diet} />
 
             <PrescriptionCard />
