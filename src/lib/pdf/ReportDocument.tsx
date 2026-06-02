@@ -827,7 +827,7 @@ export function ReportDocument({
             .map((para, i) => (
               <Text
                 key={i}
-                style={[styles.paragraph, i > 0 ? { marginTop: 8 } : null]}
+                style={i > 0 ? [styles.paragraph, { marginTop: 8 }] : styles.paragraph}
               >
                 {safe(para)}
               </Text>
