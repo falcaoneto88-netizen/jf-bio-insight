@@ -213,10 +213,12 @@ export function adjustDiet(
     mainGoal: MainGoal;
     clinical: ClinicalContext | null;
   },
+  extras?: ExtraMeal[],
 ): AdjustedDiet {
   const key: ProfileKey =
     ctx.profile ??
     (ctx.mainGoal && PROFILE_MATRIX[ctx.mainGoal] ? ctx.mainGoal : "default");
+
   const matrix = PROFILE_MATRIX[key] ?? PROFILE_MATRIX.default;
 
   const water = ctx.weightKg
