@@ -6,6 +6,7 @@ import type {
   Meal,
   MealBlock,
 } from "@/lib/diet-base";
+import type { ExtraMeal } from "@/lib/extra-meals";
 
 export type DietTargets = {
   proteinGPerKg: number;
@@ -24,9 +25,12 @@ export type AdjustedMealBlock = Omit<MealBlock, "options"> & {
   options: AdjustedFoodOption[];
 };
 
-export type AdjustedMeal = Omit<Meal, "blocks"> & {
+export type AdjustedMeal = Omit<Meal, "blocks" | "id"> & {
+  id: string;
   blocks: AdjustedMealBlock[];
+  isExtra?: boolean;
 };
+
 
 export type Supplement = {
   name: string;
