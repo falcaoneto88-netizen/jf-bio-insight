@@ -50,6 +50,7 @@ function SuccessPage() {
   const navigate = useNavigate();
   const { bodyComposition: bc, clinicalData: cd, reset } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
+  const extraMeals = useReportStore((s) => s.extraMeals);
   const prescription = useReportStore((s) => s.prescription);
   const reportOptions = useReportStore((s) => s.reportOptions);
   const previousExam = useReportStore((s) => s.previousExam);
@@ -68,21 +69,25 @@ function SuccessPage() {
 
   const diet = useMemo(
     () =>
-      adjustDiet(applyDietCustomization(DIETA_BASE_DR_JOAO, dietCustomization), {
-        weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
-        profile: analysis?.primaryProfile ?? null,
-        mainGoal: cd?.mainGoal ?? "",
-        clinical: cd
-          ? {
-              gallbladderRemoved: cd.gallbladderRemoved,
-              menopause: cd.menopause,
-              currentlyTraining: cd.currentlyTraining,
-              trainingTime: cd.trainingTime,
-              diabetes: cd.diabetes,
-              hypertension: cd.hypertension,
-            }
-          : null,
-      }),
+      adjustDiet(
+        applyDietCustomization(DIETA_BASE_DR_JOAO, dietCustomization),
+        {
+          weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
+          profile: analysis?.primaryProfile ?? null,
+          mainGoal: cd?.mainGoal ?? "",
+          clinical: cd
+            ? {
+                gallbladderRemoved: cd.gallbladderRemoved,
+                menopause: cd.menopause,
+                currentlyTraining: cd.currentlyTraining,
+                trainingTime: cd.trainingTime,
+                diabetes: cd.diabetes,
+                hypertension: cd.hypertension,
+              }
+            : null,
+        },
+        extraMeals,
+      ),
     [
       bc?.weight,
       cd?.weight,
@@ -95,8 +100,10 @@ function SuccessPage() {
       cd?.hypertension,
       analysis?.primaryProfile,
       dietCustomization,
+      extraMeals,
     ],
   );
+
 
   // Acesso direto sem dados → volta para a home
   useEffect(() => {
