@@ -13,6 +13,15 @@ import {
   type DietBlockKey,
   type DietCustomization,
 } from "@/lib/diet-customization";
+import {
+  MAX_EXTRA_MEALS,
+  MAX_EXTRA_MEAL_ITEMS,
+  MAX_EXTRA_MEAL_NAME,
+  newExtraMealId,
+  normalizeExtraMeals,
+  type ExtraMeal,
+} from "@/lib/extra-meals";
+
 
 export type UploadedFile = {
   name: string;
