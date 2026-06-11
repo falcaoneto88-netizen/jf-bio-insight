@@ -71,6 +71,7 @@ function ReviewPage() {
   const navigate = useNavigate();
   const { file, bodyComposition, clinicalData, previousExam } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
+  const extraMeals = useReportStore((s) => s.extraMeals);
 
   const bc = bodyComposition;
   const cd = clinicalData;
@@ -82,21 +83,25 @@ function ReviewPage() {
 
   const diet = useMemo(
     () =>
-      adjustDiet(applyDietCustomization(DIETA_BASE_DR_JOAO, dietCustomization), {
-        weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
-        profile: analysis?.primaryProfile ?? null,
-        mainGoal: cd?.mainGoal ?? "",
-        clinical: cd
-          ? {
-              gallbladderRemoved: cd.gallbladderRemoved,
-              menopause: cd.menopause,
-              currentlyTraining: cd.currentlyTraining,
-              trainingTime: cd.trainingTime,
-              diabetes: cd.diabetes,
-              hypertension: cd.hypertension,
-            }
-          : null,
-      }),
+      adjustDiet(
+        applyDietCustomization(DIETA_BASE_DR_JOAO, dietCustomization),
+        {
+          weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
+          profile: analysis?.primaryProfile ?? null,
+          mainGoal: cd?.mainGoal ?? "",
+          clinical: cd
+            ? {
+                gallbladderRemoved: cd.gallbladderRemoved,
+                menopause: cd.menopause,
+                currentlyTraining: cd.currentlyTraining,
+                trainingTime: cd.trainingTime,
+                diabetes: cd.diabetes,
+                hypertension: cd.hypertension,
+              }
+            : null,
+        },
+        extraMeals,
+      ),
     [
       bc?.weight,
       cd?.weight,
@@ -109,8 +114,10 @@ function ReviewPage() {
       cd?.hypertension,
       analysis?.primaryProfile,
       dietCustomization,
+      extraMeals,
     ],
   );
+
 
   const prescription = useReportStore((s) => s.prescription);
   const reportOptions = useReportStore((s) => s.reportOptions);
