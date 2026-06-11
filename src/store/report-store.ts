@@ -400,7 +400,7 @@ export const useReportStore = create<ReportState>()(
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
-      version: 4,
+      version: 5,
       migrate: (_persistedState, version) => {
         if (version < 1) {
           return {
@@ -411,6 +411,7 @@ export const useReportStore = create<ReportState>()(
             prescription: null,
             reportOptions: normalizeReportOptions(null),
             dietCustomization: {},
+            extraMeals: [],
           };
         }
         const s = (_persistedState ?? {}) as Partial<ReportState>;
@@ -419,6 +420,7 @@ export const useReportStore = create<ReportState>()(
           prescription: s.prescription ?? null,
           reportOptions: normalizeReportOptions(s.reportOptions),
           dietCustomization: normalizeDietCustomization(s.dietCustomization),
+          extraMeals: normalizeExtraMeals(s.extraMeals),
         };
       },
       partialize: (state) => ({
@@ -429,6 +431,7 @@ export const useReportStore = create<ReportState>()(
         prescription: state.prescription,
         reportOptions: state.reportOptions,
         dietCustomization: state.dietCustomization,
+        extraMeals: state.extraMeals,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -437,7 +440,9 @@ export const useReportStore = create<ReportState>()(
           }
           state.reportOptions = normalizeReportOptions(state.reportOptions);
           state.dietCustomization = normalizeDietCustomization(state.dietCustomization);
+          state.extraMeals = normalizeExtraMeals(state.extraMeals);
         }
+
       },
     },
   ),
