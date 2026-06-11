@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, RotateCcw, UtensilsCrossed, X } from "lucide-react";
+import { Plus, RotateCcw, Trash2, UtensilsCrossed, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,13 @@ import {
   newCustomItemId,
   type DietBlockKey,
 } from "@/lib/diet-customization";
+import {
+  MAX_EXTRA_MEALS,
+  MAX_EXTRA_MEAL_NAME,
+  newExtraItemId,
+} from "@/lib/extra-meals";
 import { useReportStore } from "@/store/report-store";
+
 
 export function DietEditorCard() {
   const customization = useReportStore((s) => s.dietCustomization);
