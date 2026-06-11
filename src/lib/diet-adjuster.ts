@@ -291,6 +291,38 @@ export function adjustDiet(
     return { ...meal, blocks };
   });
 
+  const extraMeals: AdjustedMeal[] = (extras ?? [])
+    .filter((e) => e.items.length > 0 || e.name.trim() || e.time.trim())
+    .map((e, idx) => {
+      const options: AdjustedFoodOption[] = e.items.map((item) => ({
+        id: item.id,
+        label: item.label,
+        baseGrams: null,
+        unit: "g",
+        scalable: false,
+        category: "free",
+        adjustedGrams: null,
+        adjustedDisplay: item.label,
+      }));
+      const ordinal = base.meals.length + idx + 1;
+      return {
+        id: e.id,
+        name: e.name.trim() || `${ordinal}ª Refeição`,
+        time: e.time.trim() || "—",
+        required: true as const,
+        isExtra: true,
+        blocks: [
+          {
+            id: "itens",
+            title: "Itens",
+            required: false,
+            pick: "free" as const,
+            options,
+          },
+        ],
+      };
+    });
+
   const generalRules = buildGeneralRules(base, key, ctx.clinical);
   const supplementation = buildSupplementation(key, ctx.clinical);
   const alerts = buildAlerts(key, ctx.clinical);
@@ -299,13 +331,14 @@ export function adjustDiet(
   return {
     base,
     targets,
-    meals,
+    meals: [...meals, ...extraMeals],
     generalRules,
     supplementation,
     alerts,
     digestiveNotes,
   };
 }
+
 
 function adjustOption(
   opt: FoodOption,
