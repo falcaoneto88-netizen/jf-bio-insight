@@ -261,6 +261,7 @@ export const useReportStore = create<ReportState>()(
       prescription: null,
       reportOptions: normalizeReportOptions(null),
       dietCustomization: {},
+      extraMeals: [],
       setFile: (file) => set({ file }),
       setBodyComposition: (data) => set({ bodyComposition: data }),
       setClinicalData: (data) => set({ clinicalData: data }),
@@ -329,7 +330,60 @@ export const useReportStore = create<ReportState>()(
           };
         });
       },
-      resetAllDietCustomization: () => set({ dietCustomization: {} }),
+      resetAllDietCustomization: () =>
+        set({ dietCustomization: {}, extraMeals: [] }),
+      addExtraMeal: () =>
+        set((s) => {
+          if (s.extraMeals.length >= MAX_EXTRA_MEALS) return s;
+          return {
+            extraMeals: [
+              ...s.extraMeals,
+              { id: newExtraMealId(), name: "", time: "", items: [] },
+            ],
+          };
+        }),
+      removeExtraMeal: (id) =>
+        set((s) => ({ extraMeals: s.extraMeals.filter((m) => m.id !== id) })),
+      updateExtraMeal: (id, patch) =>
+        set((s) => ({
+          extraMeals: s.extraMeals.map((m) => {
+            if (m.id !== id) return m;
+            const next = { ...m };
+            if (patch.name !== undefined) {
+              next.name = patch.name.slice(0, MAX_EXTRA_MEAL_NAME);
+            }
+            if (patch.time !== undefined) {
+              next.time = patch.time;
+            }
+            return next;
+          }),
+        })),
+      addExtraMealItem: (id, item) => {
+        const label = item.label.trim();
+        if (!label) return;
+        set((s) => ({
+          extraMeals: s.extraMeals.map((m) => {
+            if (m.id !== id) return m;
+            if (m.items.length >= MAX_EXTRA_MEAL_ITEMS) return m;
+            return {
+              ...m,
+              items: [
+                ...m.items,
+                { id: item.id, label: label.slice(0, 60) },
+              ],
+            };
+          }),
+        }));
+      },
+      removeExtraMealItem: (id, itemId) =>
+        set((s) => ({
+          extraMeals: s.extraMeals.map((m) =>
+            m.id === id
+              ? { ...m, items: m.items.filter((i) => i.id !== itemId) }
+              : m,
+          ),
+        })),
+      clearExtraMeals: () => set({ extraMeals: [] }),
       reset: () =>
         set({
           file: null,
@@ -339,7 +393,9 @@ export const useReportStore = create<ReportState>()(
           prescription: null,
           reportOptions: normalizeReportOptions(null),
           dietCustomization: {},
+          extraMeals: [],
         }),
+
     }),
     {
       name: "jf-bioreport-draft",
