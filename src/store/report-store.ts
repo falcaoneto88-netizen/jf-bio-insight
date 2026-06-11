@@ -197,6 +197,7 @@ type ReportState = {
   prescription: PrescriptionData | null;
   reportOptions: ReportOptions;
   dietCustomization: DietCustomization;
+  extraMeals: ExtraMeal[];
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
   setClinicalData: (data: ClinicalData) => void;
@@ -212,8 +213,18 @@ type ReportState = {
   removeDietItem: (blockKey: DietBlockKey, itemId: string) => void;
   addDietItem: (blockKey: DietBlockKey, item: CustomFoodItem) => void;
   resetAllDietCustomization: () => void;
+  addExtraMeal: () => void;
+  removeExtraMeal: (id: string) => void;
+  updateExtraMeal: (
+    id: string,
+    patch: Partial<Pick<ExtraMeal, "name" | "time">>,
+  ) => void;
+  addExtraMealItem: (id: string, item: CustomFoodItem) => void;
+  removeExtraMealItem: (id: string, itemId: string) => void;
+  clearExtraMeals: () => void;
   reset: () => void;
 };
+
 
 function normalizeBodyComposition(
   bc: BodyCompositionData | null | undefined,
