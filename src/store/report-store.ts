@@ -9,10 +9,13 @@ import {
 import {
   emptyOverride,
   normalizeDietCustomization,
+  normalizeMealTimeOverrides,
   type CustomFoodItem,
   type DietBlockKey,
   type DietCustomization,
+  type MealTimeOverrides,
 } from "@/lib/diet-customization";
+import { isValidTime } from "@/lib/extra-meals";
 import {
   MAX_EXTRA_MEALS,
   MAX_EXTRA_MEAL_ITEMS,
