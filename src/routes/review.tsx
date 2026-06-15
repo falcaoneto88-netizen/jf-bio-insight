@@ -14,7 +14,7 @@ import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
-import { applyDietCustomization } from "@/lib/diet-customization";
+import { applyDietCustomization, applyMealTimeOverrides } from "@/lib/diet-customization";
 import { adjustDiet, getDietBaseForGoal } from "@/lib/diet-adjuster";
 import { addReportToHistory } from "@/lib/report-history";
 import {
