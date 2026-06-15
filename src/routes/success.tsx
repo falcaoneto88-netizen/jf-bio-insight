@@ -7,7 +7,7 @@ import { BrandHeader } from "@/components/BrandHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
-import { applyDietCustomization } from "@/lib/diet-customization";
+import { applyDietCustomization, applyMealTimeOverrides } from "@/lib/diet-customization";
 import { adjustDiet, getDietBaseForGoal } from "@/lib/diet-adjuster";
 import { useReportStore, type MainGoal } from "@/store/report-store";
 
