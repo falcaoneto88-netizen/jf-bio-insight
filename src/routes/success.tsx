@@ -7,9 +7,8 @@ import { BrandHeader } from "@/components/BrandHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
-import { DIETA_BASE_DR_JOAO } from "@/lib/diet-base";
 import { applyDietCustomization } from "@/lib/diet-customization";
-import { adjustDiet } from "@/lib/diet-adjuster";
+import { adjustDiet, getDietBaseForGoal } from "@/lib/diet-adjuster";
 import { useReportStore, type MainGoal } from "@/store/report-store";
 
 const GOAL_LABELS: Record<MainGoal, string> = {
@@ -68,7 +67,10 @@ function SuccessPage() {
   const diet = useMemo(
     () =>
       adjustDiet(
-        applyDietCustomization(DIETA_BASE_DR_JOAO, dietCustomization),
+        applyDietCustomization(
+          getDietBaseForGoal(cd?.mainGoal ?? ""),
+          dietCustomization,
+        ),
         {
           weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
           profile: analysis?.primaryProfile ?? null,
@@ -123,11 +125,8 @@ function SuccessPage() {
         import("@/lib/pdf/ReportDocument"),
       ]);
       console.log(
-        "[PDF] m1.proteina options:",
-        diet.meals
-          .find((m) => m.id === "m1")
-          ?.blocks.find((b) => b.id === "proteina")
-          ?.options.map((o) => o.label),
+        "[PDF] meals:",
+        diet.meals.map((m) => m.id),
       );
       console.log("[PDF] options.sections:", JSON.stringify(reportOptions?.sections));
       console.log("[PDF] patientNotes len:", reportOptions?.patientNotes?.length ?? 0);
