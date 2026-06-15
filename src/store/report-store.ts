@@ -198,6 +198,7 @@ type ReportState = {
   prescription: PrescriptionData | null;
   reportOptions: ReportOptions;
   dietCustomization: DietCustomization;
+  mealTimeOverrides: MealTimeOverrides;
   extraMeals: ExtraMeal[];
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
@@ -213,6 +214,8 @@ type ReportState = {
   resetReportOptions: () => void;
   removeDietItem: (blockKey: DietBlockKey, itemId: string) => void;
   addDietItem: (blockKey: DietBlockKey, item: CustomFoodItem) => void;
+  setMealTime: (mealId: string, time: string) => void;
+  resetMealTime: (mealId: string) => void;
   resetAllDietCustomization: () => void;
   addExtraMeal: () => void;
   removeExtraMeal: (id: string) => void;
