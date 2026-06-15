@@ -335,8 +335,28 @@ export const useReportStore = create<ReportState>()(
           };
         });
       },
+      setMealTime: (mealId, time) =>
+        set((s) => {
+          if (!mealId) return s;
+          if (time === "" || !isValidTime(time)) {
+            if (!(mealId in s.mealTimeOverrides)) return s;
+            const next = { ...s.mealTimeOverrides };
+            delete next[mealId];
+            return { mealTimeOverrides: next };
+          }
+          return {
+            mealTimeOverrides: { ...s.mealTimeOverrides, [mealId]: time },
+          };
+        }),
+      resetMealTime: (mealId) =>
+        set((s) => {
+          if (!(mealId in s.mealTimeOverrides)) return s;
+          const next = { ...s.mealTimeOverrides };
+          delete next[mealId];
+          return { mealTimeOverrides: next };
+        }),
       resetAllDietCustomization: () =>
-        set({ dietCustomization: {}, extraMeals: [] }),
+        set({ dietCustomization: {}, mealTimeOverrides: {}, extraMeals: [] }),
       addExtraMeal: () =>
         set((s) => {
           if (s.extraMeals.length >= MAX_EXTRA_MEALS) return s;
