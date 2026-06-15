@@ -1,75 +1,65 @@
 ## Objetivo
 
-Permitir que o usuário acrescente até **3 refeições adicionais opcionais** além das 3 fixas (1ª/2ª/3ª Refeição). Cada extra é **vazia, editável** (nome, horário e itens livres) e entra no plano alimentar visualizado em `/review` **e no PDF final**, sendo persistida junto com o relatório.
+Reduzir os objetivos para 3 e fazer com que **a dieta gerada mude automaticamente conforme o objetivo selecionado** no formulário clínico.
 
-## Comportamento
+| Objetivo selecionado | Template de dieta carregado |
+|---|---|
+| Jejum Intermitente | 3 refeições (Quebra do jejum + 2) |
+| Alta Performance | 6 refeições (Pré, Pós, Almoço, Lanche, Jantar, Ceia) |
+| Recomposição Corporal | 5 refeições (Café, Lanche manhã, Almoço, Lanche tarde, Jantar) |
 
-- Botão **"+ Adicionar refeição"** no card "Editar itens da dieta" (`DietEditorCard`), abaixo das 3 refeições base.
-- Limite: até 3 extras (botão desabilita ao atingir).
-- Cada extra renderiza um sub-card com:
-  - Campo **Nome** (texto, ex.: "Lanche da tarde", até 40 caracteres)
-  - Campo **Horário** (input `time`, formato HH:MM)
-  - Bloco único de itens livres com chips removíveis + input "Adicionar item..." (mesmo padrão do editor atual)
-  - Botão **Remover refeição** (lixeira no topo do card)
-- As extras aparecem **após** a 3ª refeição tanto no `DietPlanCard` (visualização) quanto no PDF.
-- Nada de gramatura/escalonamento — itens são exibidos como rótulo livre (categoria `free`).
+Edição manual de itens, adição de refeições extras, escalonamento por peso, PDF e histórico continuam funcionando exatamente como hoje.
 
-## Mudanças por arquivo
+## Abordagem
+
+**Templates como dados estáticos**, não skills de IA. Cada objetivo vira um arquivo `DietBase` em `src/lib/diet/`. O `adjustDiet` lê o `mainGoal` e escolhe o template — o motor de escalonamento (peso, gordura visceral, baixa massa, etc.) é o mesmo de hoje.
+
+## Mudanças
 
 ### 1. `src/store/report-store.ts`
-- Adicionar tipo `ExtraMeal = { id: string; name: string; time: string; items: CustomFoodItem[] }`.
-- Novo campo no estado: `extraMeals: ExtraMeal[]` (default `[]`).
-- Constante `MAX_EXTRA_MEALS = 3`.
-- Ações:
-  - `addExtraMeal()` — push de meal vazia (`name: ""`, `time: ""`, `items: []`) se `< MAX`.
-  - `removeExtraMeal(id)`
-  - `updateExtraMeal(id, patch: Partial<Pick<ExtraMeal,"name"|"time">>)`
-  - `addExtraMealItem(id, item)` / `removeExtraMealItem(id, itemId)`
-- Persistir em `partialize`, normalizar no `migrate`/`onRehydrateStorage` (bump `version` para 5; migração trata ausência como `[]`).
-- Incluir no `reset()`.
+- `MainGoal` passa a `"" | "jejum_intermitente" | "alta_performance" | "recomposicao"`.
+- `migrate` (bump `version` → 6): `emagrecimento` / `manutencao` → `recomposicao`; `ganho_massa` → `alta_performance`.
 
-### 2. `src/lib/diet-customization.ts` (ou novo `extra-meals.ts`)
-- Helper `normalizeExtraMeals(raw): ExtraMeal[]` — valida tipos, limita 3 itens, trunca labels (60), trunca nome (40), valida `time` no padrão `HH:MM`.
-- Helper `newExtraMealId()`.
+### 2. `src/routes/clinical-form.tsx`
+- `<Select>` de objetivo com 3 itens: Jejum Intermitente, Alta Performance, Recomposição Corporal.
 
-### 3. `src/lib/diet-adjuster.ts`
-- Após construir `meals: AdjustedMeal[]`, anexar extras convertidas em `AdjustedMeal` com um único bloco `{ id: "itens", title: "Itens", pick: "free", options: items como AdjustedFoodOption não-escalonáveis }`.
-- Assinatura nova: `adjustDiet(base, ctx, extras?: ExtraMeal[])`.
-- IDs das extras: `extra-1`, `extra-2`, `extra-3` (não colidem com `m1/m2/m3`). Renderização ignora bloco vazio.
+### 3. Novos arquivos em `src/lib/diet/`
+- `shared-foods.ts` — opções reutilizáveis (frango, tilápia, patinho, arroz, batata-doce, aveia, banana, whey, ovos, iogurte, brócolis, tomate, abobrinha, azeite, etc.) com `baseGrams`/densidades.
+- `diet-jejum.ts` — 3 refeições conforme template enviado. Inclui campos `protocol` (default 16/8) e `eatingWindow` (default 12:00–20:00).
+- `diet-recomposicao.ts` — 5 refeições. Almoço com bloco carboidrato `pick: "multi"` (escolher 2).
+- `diet-alta-performance.ts` — 6 refeições. Horários de pré/pós derivados de `trainingTime` quando preenchido. Hidratação 45–50 ml/kg.
 
-### 4. `src/routes/review.tsx`
-- Ler `extraMeals` do store e passar para `adjustDiet`.
-- Já é o passo que dispara a renderização do `DietPlanCard` e a geração do PDF — sem outras mudanças.
+Todos exportam `DietBase` no mesmo formato já consumido pelo `DietEditorCard`, `DietPlanCard` e `ReportDocument`.
 
-### 5. `src/components/DietEditorCard.tsx`
-- Nova seção "Refeições adicionais" abaixo das 3 fixas:
-  - Lista de extras (componente `ExtraMealEditor`)
-  - Botão `+ Adicionar refeição` (disabled se `length >= 3`)
-- `ExtraMealEditor`:
-  - Inputs `name` e `time` ligados ao store
-  - Reaproveita o padrão visual do `BlockEditor` para os itens
-  - Botão remover (ícone `Trash2`) no header
-- `resetAllDietCustomization` deve também limpar `extraMeals` (ou adicionar botão próprio "Remover refeições adicionais"). Decisão: o reset existente passa a chamar também `clearExtraMeals()`.
+### 4. `src/lib/diet-base.ts`
+- Vira reexport fino para compatibilidade: `DIETA_BASE_DR_JOAO` aponta para `diet-recomposicao` (snapshots antigos do histórico continuam carregando).
+- Adiciona `PickMode = "one" | "all" | "free" | "multi"` e `pickCount?: number` em `MealBlock`.
+- `Meal.id` passa de `"m1"|"m2"|"m3"` para `string` (suportar `pre_treino`, `pos_treino`, `cafe`, etc.).
 
-### 6. `src/components/DietPlanCard.tsx`
-- Nenhuma mudança estrutural — itera `diet.meals` e já renderiza qualquer meal extra anexada pelo `adjustDiet`. Validar que `block.pick === "free"` mostra rótulo "(livre)" (já implementado em `pickLabel`).
+### 5. `src/lib/diet-adjuster.ts`
+- Nova `getDietBaseForGoal(goal: MainGoal): DietBase` (default → recomposição).
+- `adjustDiet(ctx, extras?)` lê `ctx.mainGoal` e escolhe o template automaticamente.
+- Mesmo motor de escalonamento — sem mudança de fórmula.
 
-### 7. `src/lib/pdf/ReportDocument.tsx`
-- Nenhuma mudança — a página do plano alimentar itera `diet.meals` e renderiza extras automaticamente. Refeições sem itens ficam ocultas pela checagem `options.length > 0` (a adicionar caso já não exista) para não imprimir cards vazios.
+### 6. `src/components/DietEditorCard.tsx` e `DietPlanCard.tsx`
+- Iteram `diet.meals` — sem mudança estrutural.
+- Suporte ao `pick: "multi"`: renderizar checkboxes (em vez de radio) com validação leve "escolher N".
 
-### 8. `src/lib/report-history.ts`
-- Incluir `extraMeals` no snapshot salvo do relatório, junto com `dietCustomization`, para que o histórico reflita o plano realmente gerado.
+### 7. `src/routes/review.tsx` e `src/routes/success.tsx`
+- Passam `mainGoal` para `adjustDiet`. Sem outras mudanças.
 
-## Validação
+### 8. Sub-objetivo do jejum (Emagrecimento / Recomposição / Manutenção) + protocolo (12/12…18/6)
+- Editáveis dentro do `DietEditorCard` **apenas quando** `mainGoal = jejum_intermitente`.
+- Persistidos em `dietCustomization.jejum = { subGoal, protocol, windowStart, windowEnd }`.
+- Não adiciona campos no formulário clínico.
 
-- `name`: trim, máx 40 chars
-- `time`: regex `^([01]?\d|2[0-3]):[0-5]\d$` (string vazia permitida até o usuário preencher; refeição sem horário exibe apenas o nome)
-- `items[].label`: trim, máx 60 chars (mesmo `MAX_CUSTOM_ITEM_LABEL`)
-- Máximo 3 refeições extras; máximo 20 itens por refeição extra.
+## Compatibilidade
 
-## Fora de escopo
+- Histórico antigo: snapshots salvam o `diet` final, não o template — continua válido.
+- Objetivos removidos do `<Select>` são migrados no rehydrate, sem perda de dados.
 
-- Sem escalonamento automático de gramas nas extras (são itens livres).
-- Sem reordenação/drag-and-drop entre refeições.
-- Sem alterar layout das 3 refeições fixas.
-- Sem mudanças em autenticação, backend ou RLS.
+## Não inclui
+
+- Skills de IA por objetivo (templates são determinísticos).
+- Campos novos no formulário clínico.
+- Mudanças em PDF, auth, upload de bioimpedância, histórico.

@@ -30,23 +30,16 @@ type Desire = "down" | "up" | "any";
 
 function desireFor(key: string, goal: MainGoal): Desire {
   switch (goal) {
-    case "emagrecimento":
-      if (key === "weight" || key === "bodyFatPercentage" || key === "visceralFat" || key === "bmi") return "down";
-      if (key === "skeletalMuscleMass") return "any";
-      return "any";
     case "recomposicao":
       if (key === "bodyFatPercentage" || key === "visceralFat") return "down";
       if (key === "skeletalMuscleMass") return "up";
       return "any";
-    case "ganho_massa":
-      if (key === "skeletalMuscleMass" || key === "weight") return "up";
-      if (key === "visceralFat") return "down";
-      return "any";
-    case "manutencao":
-      return "any";
     case "alta_performance":
       if (key === "skeletalMuscleMass") return "up";
       if (key === "visceralFat" || key === "bodyFatPercentage") return "down";
+      return "any";
+    case "jejum_intermitente":
+      if (key === "weight" || key === "bodyFatPercentage" || key === "visceralFat" || key === "bmi") return "down";
       return "any";
     default:
       return "any";

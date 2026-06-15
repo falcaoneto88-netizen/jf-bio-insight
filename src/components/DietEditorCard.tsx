@@ -4,7 +4,7 @@ import { Plus, RotateCcw, Trash2, UtensilsCrossed, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DIETA_BASE_DR_JOAO } from "@/lib/diet-base";
+import { getDietBaseForGoal } from "@/lib/diet-adjuster";
 import {
   applyDietCustomization,
   MAX_CUSTOM_ITEM_LABEL,
@@ -33,10 +33,12 @@ export function DietEditorCard() {
   const updateExtraMeal = useReportStore((s) => s.updateExtraMeal);
   const addExtraMealItem = useReportStore((s) => s.addExtraMealItem);
   const removeExtraMealItem = useReportStore((s) => s.removeExtraMealItem);
+  const mainGoal = useReportStore((s) => s.clinicalData?.mainGoal ?? "");
 
+  const base = useMemo(() => getDietBaseForGoal(mainGoal), [mainGoal]);
   const merged = useMemo(
-    () => applyDietCustomization(DIETA_BASE_DR_JOAO, customization),
-    [customization],
+    () => applyDietCustomization(base, customization),
+    [base, customization],
   );
 
   const hasAnyOverride =
