@@ -68,6 +68,7 @@ function ReviewPage() {
   const navigate = useNavigate();
   const { file, bodyComposition, clinicalData, previousExam } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
+  const mealTimeOverrides = useReportStore((s) => s.mealTimeOverrides);
   const extraMeals = useReportStore((s) => s.extraMeals);
 
   const bc = bodyComposition;
@@ -81,9 +82,12 @@ function ReviewPage() {
   const diet = useMemo(
     () =>
       adjustDiet(
-        applyDietCustomization(
-          getDietBaseForGoal(cd?.mainGoal ?? ""),
-          dietCustomization,
+        applyMealTimeOverrides(
+          applyDietCustomization(
+            getDietBaseForGoal(cd?.mainGoal ?? ""),
+            dietCustomization,
+          ),
+          mealTimeOverrides,
         ),
         {
           weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
@@ -114,6 +118,7 @@ function ReviewPage() {
       cd?.hypertension,
       analysis?.primaryProfile,
       dietCustomization,
+      mealTimeOverrides,
       extraMeals,
     ],
   );
