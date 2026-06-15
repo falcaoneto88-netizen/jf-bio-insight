@@ -9,6 +9,7 @@
 // ativa simplesmente são ignorados).
 
 import type { DietBase, FoodOption, Meal, MealBlock } from "@/lib/diet-base";
+import { isValidTime } from "@/lib/extra-meals";
 
 export const MAX_CUSTOM_ITEM_LABEL = 60;
 
@@ -104,6 +105,35 @@ export function applyDietCustomization(
       return { ...block, options: [...kept, ...added] };
     });
     return { ...meal, blocks };
+  });
+  return { ...base, meals };
+}
+
+export type MealTimeOverrides = Record<string, string>;
+
+export function normalizeMealTimeOverrides(raw: unknown): MealTimeOverrides {
+  const out: MealTimeOverrides = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof k !== "string" || !k) continue;
+    if (typeof v !== "string" || !isValidTime(v) || v === "") continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * Substitui `meal.time` por override válido ("HH:MM"). Não muta a base.
+ */
+export function applyMealTimeOverrides(
+  base: DietBase,
+  overrides: MealTimeOverrides | null | undefined,
+): DietBase {
+  const o = overrides ?? {};
+  const meals: Meal[] = base.meals.map((meal) => {
+    const t = o[meal.id];
+    if (t && isValidTime(t) && t !== "") return { ...meal, time: t };
+    return meal;
   });
   return { ...base, meals };
 }

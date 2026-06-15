@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, RotateCcw, Trash2, UtensilsCrossed, X } from "lucide-react";
+import { Plus, RotateCcw, Trash2, Undo2, UtensilsCrossed, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,9 @@ import { useReportStore } from "@/store/report-store";
 
 export function DietEditorCard() {
   const customization = useReportStore((s) => s.dietCustomization);
+  const mealTimeOverrides = useReportStore((s) => s.mealTimeOverrides);
+  const setMealTime = useReportStore((s) => s.setMealTime);
+  const resetMealTime = useReportStore((s) => s.resetMealTime);
   const removeDietItem = useReportStore((s) => s.removeDietItem);
   const addDietItem = useReportStore((s) => s.addDietItem);
   const resetAllDietCustomization = useReportStore(
@@ -44,7 +47,9 @@ export function DietEditorCard() {
   const hasAnyOverride =
     Object.values(customization).some(
       (o) => (o?.removedIds.length ?? 0) > 0 || (o?.added.length ?? 0) > 0,
-    ) || extraMeals.length > 0;
+    ) ||
+    Object.keys(mealTimeOverrides).length > 0 ||
+    extraMeals.length > 0;
 
   const canAddExtra = extraMeals.length < MAX_EXTRA_MEALS;
 
@@ -74,35 +79,64 @@ export function DietEditorCard() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-6">
-        {merged.meals.map((meal) => (
-          <div key={meal.id} className="border-l-2 border-gold/60 pl-4">
-            <h4 className="font-serif text-base text-foreground">
-              {meal.name} <span className="text-gold">– {meal.time}</span>
-            </h4>
-            <div className="mt-3 space-y-4">
-              {meal.blocks.map((block) => {
-                const key = makeBlockKey(meal.id, block.id);
-                if (!key) return null;
-                return (
-                  <BlockEditor
-                    key={block.id}
-                    blockKey={key}
-                    title={block.title}
-                    options={block.options.map((o) => ({
-                      id: o.id,
-                      label: o.label,
-                      isCustom: o.category === "free" && o.id.startsWith("custom_"),
-                    }))}
-                    onRemove={(id) => removeDietItem(key, id)}
-                    onAdd={(label) =>
-                      addDietItem(key, { id: newCustomItemId(), label })
-                    }
+        {merged.meals.map((meal) => {
+          const baseMeal = base.meals.find((m) => m.id === meal.id);
+          const baseTime = baseMeal?.time ?? meal.time;
+          const override = mealTimeOverrides[meal.id];
+          const currentTime = override ?? baseTime;
+          const isOverridden = !!override && override !== baseTime;
+          return (
+            <div key={meal.id} className="border-l-2 border-gold/60 pl-4">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h4 className="font-serif text-base text-foreground">
+                  {meal.name}
+                </h4>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="time"
+                    value={currentTime}
+                    onChange={(e) => setMealTime(meal.id, e.target.value)}
+                    className="h-7 w-[100px] border-gold/40 text-xs font-medium text-gold"
+                    aria-label={`Horário de ${meal.name}`}
                   />
-                );
-              })}
+                  {isOverridden && (
+                    <button
+                      type="button"
+                      onClick={() => resetMealTime(meal.id)}
+                      className="rounded-sm p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label="Restaurar horário base"
+                      title={`Restaurar ${baseTime}`}
+                    >
+                      <Undo2 className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="mt-3 space-y-4">
+                {meal.blocks.map((block) => {
+                  const key = makeBlockKey(meal.id, block.id);
+                  if (!key) return null;
+                  return (
+                    <BlockEditor
+                      key={block.id}
+                      blockKey={key}
+                      title={block.title}
+                      options={block.options.map((o) => ({
+                        id: o.id,
+                        label: o.label,
+                        isCustom: o.category === "free" && o.id.startsWith("custom_"),
+                      }))}
+                      onRemove={(id) => removeDietItem(key, id)}
+                      onAdd={(label) =>
+                        addDietItem(key, { id: newCustomItemId(), label })
+                      }
+                    />
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Refeições adicionais */}
         <div className="space-y-4 border-t border-border/60 pt-5">

@@ -7,7 +7,7 @@ import { BrandHeader } from "@/components/BrandHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
-import { applyDietCustomization } from "@/lib/diet-customization";
+import { applyDietCustomization, applyMealTimeOverrides } from "@/lib/diet-customization";
 import { adjustDiet, getDietBaseForGoal } from "@/lib/diet-adjuster";
 import { useReportStore, type MainGoal } from "@/store/report-store";
 
@@ -47,6 +47,7 @@ function SuccessPage() {
   const navigate = useNavigate();
   const { bodyComposition: bc, clinicalData: cd, reset } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
+  const mealTimeOverrides = useReportStore((s) => s.mealTimeOverrides);
   const extraMeals = useReportStore((s) => s.extraMeals);
   const prescription = useReportStore((s) => s.prescription);
   const reportOptions = useReportStore((s) => s.reportOptions);
@@ -67,9 +68,12 @@ function SuccessPage() {
   const diet = useMemo(
     () =>
       adjustDiet(
-        applyDietCustomization(
-          getDietBaseForGoal(cd?.mainGoal ?? ""),
-          dietCustomization,
+        applyMealTimeOverrides(
+          applyDietCustomization(
+            getDietBaseForGoal(cd?.mainGoal ?? ""),
+            dietCustomization,
+          ),
+          mealTimeOverrides,
         ),
         {
           weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
@@ -100,6 +104,7 @@ function SuccessPage() {
       cd?.hypertension,
       analysis?.primaryProfile,
       dietCustomization,
+      mealTimeOverrides,
       extraMeals,
     ],
   );

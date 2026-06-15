@@ -9,10 +9,13 @@ import {
 import {
   emptyOverride,
   normalizeDietCustomization,
+  normalizeMealTimeOverrides,
   type CustomFoodItem,
   type DietBlockKey,
   type DietCustomization,
+  type MealTimeOverrides,
 } from "@/lib/diet-customization";
+import { isValidTime } from "@/lib/extra-meals";
 import {
   MAX_EXTRA_MEALS,
   MAX_EXTRA_MEAL_ITEMS,
@@ -195,6 +198,7 @@ type ReportState = {
   prescription: PrescriptionData | null;
   reportOptions: ReportOptions;
   dietCustomization: DietCustomization;
+  mealTimeOverrides: MealTimeOverrides;
   extraMeals: ExtraMeal[];
   setFile: (file: UploadedFile | null) => void;
   setBodyComposition: (data: BodyCompositionData) => void;
@@ -210,6 +214,8 @@ type ReportState = {
   resetReportOptions: () => void;
   removeDietItem: (blockKey: DietBlockKey, itemId: string) => void;
   addDietItem: (blockKey: DietBlockKey, item: CustomFoodItem) => void;
+  setMealTime: (mealId: string, time: string) => void;
+  resetMealTime: (mealId: string) => void;
   resetAllDietCustomization: () => void;
   addExtraMeal: () => void;
   removeExtraMeal: (id: string) => void;
@@ -259,6 +265,7 @@ export const useReportStore = create<ReportState>()(
       prescription: null,
       reportOptions: normalizeReportOptions(null),
       dietCustomization: {},
+      mealTimeOverrides: {},
       extraMeals: [],
       setFile: (file) => set({ file }),
       setBodyComposition: (data) => set({ bodyComposition: data }),
@@ -328,8 +335,28 @@ export const useReportStore = create<ReportState>()(
           };
         });
       },
+      setMealTime: (mealId, time) =>
+        set((s) => {
+          if (!mealId) return s;
+          if (time === "" || !isValidTime(time)) {
+            if (!(mealId in s.mealTimeOverrides)) return s;
+            const next = { ...s.mealTimeOverrides };
+            delete next[mealId];
+            return { mealTimeOverrides: next };
+          }
+          return {
+            mealTimeOverrides: { ...s.mealTimeOverrides, [mealId]: time },
+          };
+        }),
+      resetMealTime: (mealId) =>
+        set((s) => {
+          if (!(mealId in s.mealTimeOverrides)) return s;
+          const next = { ...s.mealTimeOverrides };
+          delete next[mealId];
+          return { mealTimeOverrides: next };
+        }),
       resetAllDietCustomization: () =>
-        set({ dietCustomization: {}, extraMeals: [] }),
+        set({ dietCustomization: {}, mealTimeOverrides: {}, extraMeals: [] }),
       addExtraMeal: () =>
         set((s) => {
           if (s.extraMeals.length >= MAX_EXTRA_MEALS) return s;
@@ -391,6 +418,7 @@ export const useReportStore = create<ReportState>()(
           prescription: null,
           reportOptions: normalizeReportOptions(null),
           dietCustomization: {},
+          mealTimeOverrides: {},
           extraMeals: [],
         }),
 
@@ -398,7 +426,7 @@ export const useReportStore = create<ReportState>()(
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
-      version: 6,
+      version: 7,
       migrate: (_persistedState, version) => {
         if (version < 1) {
           return {
@@ -409,6 +437,7 @@ export const useReportStore = create<ReportState>()(
             prescription: null,
             reportOptions: normalizeReportOptions(null),
             dietCustomization: {},
+            mealTimeOverrides: {},
             extraMeals: [],
           };
         }
@@ -431,6 +460,7 @@ export const useReportStore = create<ReportState>()(
           prescription: s.prescription ?? null,
           reportOptions: normalizeReportOptions(s.reportOptions),
           dietCustomization: normalizeDietCustomization(s.dietCustomization),
+          mealTimeOverrides: normalizeMealTimeOverrides(s.mealTimeOverrides),
           extraMeals: normalizeExtraMeals(s.extraMeals),
         };
       },
@@ -442,6 +472,7 @@ export const useReportStore = create<ReportState>()(
         prescription: state.prescription,
         reportOptions: state.reportOptions,
         dietCustomization: state.dietCustomization,
+        mealTimeOverrides: state.mealTimeOverrides,
         extraMeals: state.extraMeals,
       }),
       onRehydrateStorage: () => (state) => {
@@ -451,6 +482,7 @@ export const useReportStore = create<ReportState>()(
           }
           state.reportOptions = normalizeReportOptions(state.reportOptions);
           state.dietCustomization = normalizeDietCustomization(state.dietCustomization);
+          state.mealTimeOverrides = normalizeMealTimeOverrides(state.mealTimeOverrides);
           state.extraMeals = normalizeExtraMeals(state.extraMeals);
         }
 

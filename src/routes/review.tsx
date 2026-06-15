@@ -14,7 +14,7 @@ import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
-import { applyDietCustomization } from "@/lib/diet-customization";
+import { applyDietCustomization, applyMealTimeOverrides } from "@/lib/diet-customization";
 import { adjustDiet, getDietBaseForGoal } from "@/lib/diet-adjuster";
 import { addReportToHistory } from "@/lib/report-history";
 import {
@@ -68,6 +68,7 @@ function ReviewPage() {
   const navigate = useNavigate();
   const { file, bodyComposition, clinicalData, previousExam } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
+  const mealTimeOverrides = useReportStore((s) => s.mealTimeOverrides);
   const extraMeals = useReportStore((s) => s.extraMeals);
 
   const bc = bodyComposition;
@@ -81,9 +82,12 @@ function ReviewPage() {
   const diet = useMemo(
     () =>
       adjustDiet(
-        applyDietCustomization(
-          getDietBaseForGoal(cd?.mainGoal ?? ""),
-          dietCustomization,
+        applyMealTimeOverrides(
+          applyDietCustomization(
+            getDietBaseForGoal(cd?.mainGoal ?? ""),
+            dietCustomization,
+          ),
+          mealTimeOverrides,
         ),
         {
           weightKg: parseKg(bc?.weight) ?? parseKg(cd?.weight),
@@ -114,6 +118,7 @@ function ReviewPage() {
       cd?.hypertension,
       analysis?.primaryProfile,
       dietCustomization,
+      mealTimeOverrides,
       extraMeals,
     ],
   );
