@@ -1,24 +1,18 @@
-// Customização do usuário sobre a Dieta Base Dr. João.
+// Customização do usuário sobre a dieta-base ativa.
 // Permite REMOVER itens originais e ADICIONAR itens livres por bloco,
 // sem mutar a base e sem alterar a lógica de ajuste de gramas.
+//
+// As chaves de bloco são `${mealId}.${blockId}` e variam conforme o objetivo
+// selecionado (cada template tem seu próprio conjunto de refeições/blocos).
+// Por isso `DietBlockKey` é apenas `string` — a validação acontece no
+// `applyDietCustomization` (overrides que não casam com nenhum bloco da base
+// ativa simplesmente são ignorados).
 
 import type { DietBase, FoodOption, Meal, MealBlock } from "@/lib/diet-base";
 
-export const DIET_BLOCK_KEYS = [
-  "m1.proteina",
-  "m1.carboidrato",
-  "m1.vegetais",
-  "m1.liquida_m1",
-  "m2.liquida_m2",
-  "m3.proteina",
-  "m3.carboidrato",
-  "m3.vegetais",
-  "m3.gorduras_boas",
-] as const;
-
-export type DietBlockKey = (typeof DIET_BLOCK_KEYS)[number];
-
 export const MAX_CUSTOM_ITEM_LABEL = 60;
+
+export type DietBlockKey = string;
 
 export type CustomFoodItem = {
   id: string;
@@ -30,24 +24,25 @@ export type DietBlockOverride = {
   added: CustomFoodItem[];
 };
 
-export type DietCustomization = Partial<Record<DietBlockKey, DietBlockOverride>>;
+export type DietCustomization = Record<string, DietBlockOverride>;
 
-export function makeBlockKey(mealId: Meal["id"], blockId: string): DietBlockKey | null {
-  const k = `${mealId}.${blockId}` as DietBlockKey;
-  return (DIET_BLOCK_KEYS as readonly string[]).includes(k) ? k : null;
+export function makeBlockKey(
+  mealId: string,
+  blockId: string,
+): DietBlockKey | null {
+  if (!mealId || !blockId) return null;
+  return `${mealId}.${blockId}`;
 }
 
 export function emptyOverride(): DietBlockOverride {
   return { removedIds: [], added: [] };
 }
 
-export function normalizeDietCustomization(
-  raw: unknown,
-): DietCustomization {
+export function normalizeDietCustomization(raw: unknown): DietCustomization {
   const out: DietCustomization = {};
   if (!raw || typeof raw !== "object") return out;
-  for (const k of DIET_BLOCK_KEYS) {
-    const v = (raw as Record<string, unknown>)[k];
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof k !== "string" || !k.includes(".")) continue;
     if (!v || typeof v !== "object") continue;
     const obj = v as Partial<DietBlockOverride>;
     const removedIds = Array.isArray(obj.removedIds)
@@ -91,8 +86,8 @@ function customToFoodOption(item: CustomFoodItem): FoodOption {
 
 /**
  * Aplica overrides do usuário SEM mutar a base. Clona profundamente cada
- * meal/block antes de filtrar (importante porque VEG_BLOCK e FAT_BLOCK são
- * compartilhados entre M1 e M3 na base).
+ * meal/block antes de filtrar (importante porque blocos compartilhados
+ * — vegetais, gorduras boas — podem aparecer em mais de uma refeição).
  */
 export function applyDietCustomization(
   base: DietBase,
