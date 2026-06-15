@@ -22,6 +22,9 @@ import { useReportStore } from "@/store/report-store";
 
 export function DietEditorCard() {
   const customization = useReportStore((s) => s.dietCustomization);
+  const mealTimeOverrides = useReportStore((s) => s.mealTimeOverrides);
+  const setMealTime = useReportStore((s) => s.setMealTime);
+  const resetMealTime = useReportStore((s) => s.resetMealTime);
   const removeDietItem = useReportStore((s) => s.removeDietItem);
   const addDietItem = useReportStore((s) => s.addDietItem);
   const resetAllDietCustomization = useReportStore(
@@ -44,7 +47,9 @@ export function DietEditorCard() {
   const hasAnyOverride =
     Object.values(customization).some(
       (o) => (o?.removedIds.length ?? 0) > 0 || (o?.added.length ?? 0) > 0,
-    ) || extraMeals.length > 0;
+    ) ||
+    Object.keys(mealTimeOverrides).length > 0 ||
+    extraMeals.length > 0;
 
   const canAddExtra = extraMeals.length < MAX_EXTRA_MEALS;
 
