@@ -44,11 +44,9 @@ export const Route = createFileRoute("/review")({
 });
 
 const GOAL_LABELS: Record<MainGoal, string> = {
-  emagrecimento: "Emagrecimento",
-  recomposicao: "Recomposição corporal",
-  ganho_massa: "Ganho de massa muscular",
-  manutencao: "Manutenção",
+  jejum_intermitente: "Jejum intermitente",
   alta_performance: "Alta performance",
+  recomposicao: "Recomposição corporal",
   "": "—",
 };
 

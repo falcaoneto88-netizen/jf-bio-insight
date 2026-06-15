@@ -13,11 +13,9 @@ import { adjustDiet } from "@/lib/diet-adjuster";
 import { useReportStore, type MainGoal } from "@/store/report-store";
 
 const GOAL_LABELS: Record<MainGoal, string> = {
-  emagrecimento: "Emagrecimento",
-  recomposicao: "Recomposição corporal",
-  ganho_massa: "Ganho de massa muscular",
-  manutencao: "Manutenção",
+  jejum_intermitente: "Jejum intermitente",
   alta_performance: "Alta performance",
+  recomposicao: "Recomposição corporal",
   "": "—",
 };
 

@@ -181,11 +181,9 @@ function ClinicalFormPage() {
                     <SelectValue placeholder="Selecione o objetivo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="emagrecimento">Emagrecimento</SelectItem>
-                    <SelectItem value="recomposicao">Recomposição corporal</SelectItem>
-                    <SelectItem value="ganho_massa">Ganho de massa muscular</SelectItem>
-                    <SelectItem value="manutencao">Manutenção</SelectItem>
+                    <SelectItem value="jejum_intermitente">Jejum intermitente</SelectItem>
                     <SelectItem value="alta_performance">Alta performance</SelectItem>
+                    <SelectItem value="recomposicao">Recomposição corporal</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>

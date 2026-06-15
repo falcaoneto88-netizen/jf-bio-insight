@@ -176,8 +176,8 @@ export function classifyBody(
     primary = "baixa_massa_muscular";
   } else if (lowBodyFat && adequateMuscle) {
     primary = "perfil_atletico";
-  } else if (clinical?.mainGoal === "ganho_massa") {
-    primary = "ganho_massa";
+  } else if (clinical?.mainGoal === "alta_performance") {
+    primary = "perfil_atletico";
   } else {
     primary = "recomposicao";
   }

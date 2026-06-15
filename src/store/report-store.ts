@@ -398,7 +398,7 @@ export const useReportStore = create<ReportState>()(
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
-      version: 5,
+      version: 6,
       migrate: (_persistedState, version) => {
         if (version < 1) {
           return {
@@ -413,6 +413,19 @@ export const useReportStore = create<ReportState>()(
           };
         }
         const s = (_persistedState ?? {}) as Partial<ReportState>;
+        // v6: reduzimos os objetivos para 3 (jejum/alta perf./recomposição).
+        // Mapeia objetivos antigos para o equivalente mais próximo.
+        if (s.clinicalData) {
+          const legacyGoal = (s.clinicalData as unknown as { mainGoal?: string }).mainGoal;
+          if (legacyGoal === "ganho_massa") {
+            s.clinicalData = { ...s.clinicalData, mainGoal: "alta_performance" };
+          } else if (
+            legacyGoal === "emagrecimento" ||
+            legacyGoal === "manutencao"
+          ) {
+            s.clinicalData = { ...s.clinicalData, mainGoal: "recomposicao" };
+          }
+        }
         return {
           ...s,
           prescription: s.prescription ?? null,
