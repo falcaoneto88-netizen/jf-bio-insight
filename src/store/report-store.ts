@@ -265,6 +265,7 @@ export const useReportStore = create<ReportState>()(
       prescription: null,
       reportOptions: normalizeReportOptions(null),
       dietCustomization: {},
+      mealTimeOverrides: {},
       extraMeals: [],
       setFile: (file) => set({ file }),
       setBodyComposition: (data) => set({ bodyComposition: data }),
