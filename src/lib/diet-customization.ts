@@ -9,6 +9,7 @@
 // ativa simplesmente são ignorados).
 
 import type { DietBase, FoodOption, Meal, MealBlock } from "@/lib/diet-base";
+import { isValidTime } from "@/lib/extra-meals";
 
 export const MAX_CUSTOM_ITEM_LABEL = 60;
 
