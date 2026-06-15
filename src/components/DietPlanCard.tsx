@@ -10,9 +10,11 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdjustedDiet, DietAlert } from "@/lib/diet-adjuster";
+import type { PickMode } from "@/lib/diet-base";
 
-function pickLabel(pick: "one" | "all" | "free"): string {
+function pickLabel(pick: PickMode, pickCount?: number): string {
   if (pick === "one") return "escolher 1";
+  if (pick === "multi") return `escolher ${pickCount ?? 2}`;
   if (pick === "free") return "livre";
   return "todos";
 }
@@ -60,7 +62,7 @@ export function DietPlanCard({ diet }: { diet: AdjustedDiet }) {
                   <div key={block.id}>
                     <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gold">
                       {block.title}{" "}
-                      <span className="text-muted-foreground">({pickLabel(block.pick)})</span>
+                      <span className="text-muted-foreground">({pickLabel(block.pick, block.pickCount)})</span>
                     </p>
                     <ul className="mt-1 space-y-0.5">
                       {block.options.map((opt) => (

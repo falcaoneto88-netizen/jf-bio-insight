@@ -7,6 +7,9 @@ import type {
   MealBlock,
 } from "@/lib/diet-base";
 import type { ExtraMeal } from "@/lib/extra-meals";
+import { DIET_JEJUM } from "@/lib/diet/diet-jejum";
+import { DIET_ALTA_PERFORMANCE } from "@/lib/diet/diet-alta-performance";
+import { DIET_RECOMPOSICAO } from "@/lib/diet/diet-recomposicao";
 
 export type DietTargets = {
   proteinGPerKg: number;
@@ -111,17 +114,17 @@ const PROFILE_MATRIX: Record<
     fatMultiplier: 1.0,
     note: "Perfil atlético — suporte à performance.",
   },
-  manutencao: {
-    proteinGPerKg: 1.8,
-    carbMultiplier: 1.0,
-    fatMultiplier: 1.0,
-    note: "Manutenção — equilíbrio energético.",
-  },
   alta_performance: {
     proteinGPerKg: 1.9,
     carbMultiplier: 1.2,
     fatMultiplier: 1.0,
-    note: "Alta performance — suporte energético elevado.",
+    note: "Alta performance — suporte energético elevado, carbo concentrado no peri-treino.",
+  },
+  jejum_intermitente: {
+    proteinGPerKg: 2.0,
+    carbMultiplier: 0.9,
+    fatMultiplier: 1.0,
+    note: "Jejum intermitente — janela alimentar reduzida, proteína alta nas refeições.",
   },
   metabolismo_reduzido: {
     proteinGPerKg: 2.0,
@@ -148,6 +151,22 @@ const PROFILE_MATRIX: Record<
     note: "Padrão.",
   },
 };
+
+/**
+ * Retorna o template oficial conforme o objetivo principal do paciente.
+ * Default seguro: recomposição corporal (template mais completo).
+ */
+export function getDietBaseForGoal(goal: MainGoal | null | undefined): DietBase {
+  switch (goal) {
+    case "jejum_intermitente":
+      return DIET_JEJUM;
+    case "alta_performance":
+      return DIET_ALTA_PERFORMANCE;
+    case "recomposicao":
+    default:
+      return DIET_RECOMPOSICAO;
+  }
+}
 
 function roundTo(n: number, step: number): number {
   return Math.max(step, Math.round(n / step) * step);
@@ -178,7 +197,12 @@ function parseHourToMinutes(hhmm: string): number | null {
   return h * 60 + min;
 }
 
-/** Peso de carbo por refeição conforme horário do treino. */
+// IDs legados do template original (recomposição antiga "Dr. João").
+// Mantidos para compatibilidade do escalonamento por peso/horário do treino.
+const LEGACY_M1 = "m1";
+const LEGACY_M3 = "m3";
+
+/** Peso de carbo por refeição conforme horário do treino (legado m1/m3). */
 function computeCarbWeights(
   key: ProfileKey,
   clinical: ClinicalContext | null,
@@ -221,8 +245,10 @@ export function adjustDiet(
 
   const matrix = PROFILE_MATRIX[key] ?? PROFILE_MATRIX.default;
 
+  // Hidratação alvo: 45 ml/kg em alta performance, 40 ml/kg nos demais.
+  const mlPerKg = ctx.mainGoal === "alta_performance" ? 0.045 : 0.04;
   const water = ctx.weightKg
-    ? Math.max(2.5, Math.round(ctx.weightKg * 0.035 * 10) / 10)
+    ? Math.max(2.5, Math.round(ctx.weightKg * mlPerKg * 10) / 10)
     : 2.5;
 
   const rationale: string[] = ctx.weightKg
@@ -237,7 +263,7 @@ export function adjustDiet(
     rationale,
   };
 
-  // Distribuição proteica diária entre M1 e M3
+  // Distribuição proteica diária entre M1 e M3 (legado).
   let proteinShareM1 = 0.5;
   let proteinShareM3 = 0.5;
   if (key === "emagrecimento" || key === "emagrecimento_metabolico_prioritario") {
@@ -258,20 +284,33 @@ export function adjustDiet(
     );
   }
 
-  // Gordura: vesícula → reduz M3 (e redistribui leve em M1 via aveia se disponível)
+  // Boost de carbo no peri-treino (templates novos com pre/pos treino).
+  const trainingMin = ctx.clinical?.currentlyTraining === "sim"
+    ? parseHourToMinutes(ctx.clinical.trainingTime ?? "")
+    : null;
+
+  // Gordura: vesícula → reduz última refeição com gordura (legado m3)
   const m3FatBonus =
     ctx.clinical?.gallbladderRemoved === "sim" ? 0.6 : 1.0;
   if (m3FatBonus < 1) {
-    rationale.push("Vesícula retirada — gorduras reduzidas na 3ª refeição.");
+    rationale.push("Vesícula retirada — gorduras reduzidas na última refeição.");
   }
 
-  // Visceral elevada: zera carbo da M2 (líquida)
+  // Visceral elevada: zera carbo da M2 (líquida) — legado
   const m2CarbZero = key === "gordura_visceral_elevada";
 
   const meals: AdjustedMeal[] = base.meals.map((meal) => {
-    const carbWeight =
-      meal.id === "m1" ? carbWeights.m1 : meal.id === "m3" ? carbWeights.m3 : 1;
-    const fatWeight = meal.id === "m3" ? m3FatBonus : 1;
+    const isLegacyM1 = meal.id === LEGACY_M1;
+    const isLegacyM3 = meal.id === LEGACY_M3;
+    const isPeriTreino =
+      meal.id === "pre_treino" || meal.id === "pos_treino";
+
+    let carbWeight = 1;
+    if (isLegacyM1) carbWeight = carbWeights.m1;
+    else if (isLegacyM3) carbWeight = carbWeights.m3;
+    else if (isPeriTreino) carbWeight = 1.2;
+
+    const fatWeight = isLegacyM3 ? m3FatBonus : 1;
 
     const blocks: AdjustedMealBlock[] = meal.blocks.map((block) => {
       const options: AdjustedFoodOption[] = block.options.map((opt) =>
@@ -290,6 +329,8 @@ export function adjustDiet(
     });
     return { ...meal, blocks };
   });
+
+  void trainingMin; // reservado para extensões futuras (deslocar horário do pré/pós)
 
   const extraMeals: AdjustedMeal[] = (extras ?? [])
     .filter((e) => e.items.length > 0 || e.name.trim() || e.time.trim())
@@ -343,7 +384,7 @@ export function adjustDiet(
 function adjustOption(
   opt: FoodOption,
   args: {
-    mealId: "m1" | "m2" | "m3";
+    mealId: string;
     targets: DietTargets;
     remainingProtein: number | null;
     proteinShareM1: number;
@@ -372,9 +413,15 @@ function adjustOption(
     };
   }
 
-  // Proteína
-  if (opt.category === "protein" && opt.proteinDensity && remainingProtein !== null) {
-    const share = mealId === "m1" ? proteinShareM1 : proteinShareM3;
+  // Proteína — só escala para o template legado (m1/m3). Nos novos templates
+  // a quantidade-base do alimento já é a recomendação clínica.
+  if (
+    opt.category === "protein" &&
+    opt.proteinDensity &&
+    remainingProtein !== null &&
+    (mealId === LEGACY_M1 || mealId === LEGACY_M3)
+  ) {
+    const share = mealId === LEGACY_M1 ? proteinShareM1 : proteinShareM3;
     const proteinForMeal = remainingProtein * share;
     const grams = (proteinForMeal / opt.proteinDensity) * 100;
     const rounded = clamp(roundTo(grams, 10), 100, 260);
@@ -385,12 +432,12 @@ function adjustOption(
     };
   }
 
-  // Carboidrato (refeições principais)
+  // Carboidrato (todas as refeições principais)
   if (opt.category === "carb") {
     const grams = clamp(
       roundTo(opt.baseGrams * targets.carbMultiplier * carbWeight, 10),
-      60,
-      180,
+      30,
+      220,
     );
     return {
       ...opt,
@@ -399,7 +446,7 @@ function adjustOption(
     };
   }
 
-  // Líquida M2 escalável (aveia)
+  // Líquida M2 escalável (legado — aveia)
   if (opt.category === "liquid") {
     if (m2CarbZero && opt.id === "aveia") {
       return {
@@ -482,7 +529,12 @@ function buildSupplementation(
     },
   ];
 
-  if (key === "recomposicao" || key === "baixa_massa_muscular" || key === "ganho_massa") {
+  if (
+    key === "recomposicao" ||
+    key === "baixa_massa_muscular" ||
+    key === "ganho_massa" ||
+    key === "alta_performance"
+  ) {
     list.push({
       name: "Creatina monohidratada",
       dose: "3–5 g/dia",
