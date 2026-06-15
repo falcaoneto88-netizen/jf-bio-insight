@@ -79,11 +79,9 @@ export type YesNo = "sim" | "nao" | "";
 export type YesNoNA = "sim" | "nao" | "na" | "";
 
 export type MainGoal =
-  | "emagrecimento"
-  | "recomposicao"
-  | "ganho_massa"
-  | "manutencao"
+  | "jejum_intermitente"
   | "alta_performance"
+  | "recomposicao"
   | "";
 
 export type TrainingType =
