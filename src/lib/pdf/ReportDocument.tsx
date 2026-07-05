@@ -842,10 +842,10 @@ function LineChart({
           strokeWidth={0.5}
         />
         {/* Y axis labels */}
-        <SvgText x={padL - 4} y={padT + 3} textAnchor="end" fill={COLORS.mutedSoft} fontSize={7}>
+        <SvgText x={padL - 4} y={padT + 3} textAnchor="end" fill={COLORS.mutedSoft} style={{ fontSize: 7 }}>
           {yMax.toFixed(1).replace(".", ",")}
         </SvgText>
-        <SvgText x={padL - 4} y={padT + plotH} textAnchor="end" fill={COLORS.mutedSoft} fontSize={7}>
+        <SvgText x={padL - 4} y={padT + plotH} textAnchor="end" fill={COLORS.mutedSoft} style={{ fontSize: 7 }}>
           {yMin.toFixed(1).replace(".", ",")}
         </SvgText>
         {/* Area */}
@@ -859,7 +859,7 @@ function LineChart({
           ))}
         </G>
         {/* X axis labels: first + last */}
-        <SvgText x={x(0)} y={height - 6} textAnchor="start" fill={COLORS.mutedSoft} fontSize={7}>
+        <SvgText x={x(0)} y={height - 6} textAnchor="start" fill={COLORS.mutedSoft} style={{ fontSize: 7 }}>
           {safe(points[0].date || "início")}
         </SvgText>
         <SvgText
@@ -867,7 +867,7 @@ function LineChart({
           y={height - 6}
           textAnchor="end"
           fill={COLORS.mutedSoft}
-          fontSize={7}
+          style={{ fontSize: 7 }}
         >
           {safe(points[points.length - 1].date || "atual")}
         </SvgText>
