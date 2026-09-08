@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "sdk_version": "2.0.4",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://afzbbgclqixccgqqlvcu.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "bioreport-studio",
+      "version": "0.1.0",
+      "title": "BioReport Studio"
+    },
+    "tools": [
+      {
+        "name": "list_reports",
+        "title": "Listar relatórios",
+        "description": "Lista os relatórios clínicos gerados, do mais recente para o mais antigo. Opcionalmente filtra por nome do paciente.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "patientName": {
+              "description": "Filtro parcial pelo nome do paciente.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Número máximo de relatórios (1 a 100).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_report",
+        "title": "Detalhe do relatório",
+        "description": "Devolve um relatório completo pelo seu identificador, incluindo composição corporal e dados clínicos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Identificador do relatório (campo id de list_reports)."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

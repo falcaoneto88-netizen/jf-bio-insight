@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as SuccessRouteImport } from './routes/success'
 import { Route as ReviewRouteImport } from './routes/review'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as ClinicalFormRouteImport } from './routes/clinical-form'
 import { Route as BodyCompositionRouteImport } from './routes/body-composition'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
@@ -30,6 +33,11 @@ const SuccessRoute = SuccessRouteImport.update({
 const ReviewRoute = ReviewRouteImport.update({
   id: '/review',
   path: '/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -52,24 +60,41 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
   '/history': typeof HistoryRoute
+  '/mcp': typeof McpRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
   '/history': typeof HistoryRoute
+  '/mcp': typeof McpRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,9 +102,12 @@ export interface FileRoutesById {
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
   '/history': typeof HistoryRoute
+  '/mcp': typeof McpRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,27 +116,36 @@ export interface FileRouteTypes {
     | '/body-composition'
     | '/clinical-form'
     | '/history'
+    | '/mcp'
     | '/review'
     | '/success'
     | '/upload'
+    | '/.well-known/oauth-protected-resource'
+    | '/.lovable/oauth/consent'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/body-composition'
     | '/clinical-form'
     | '/history'
+    | '/mcp'
     | '/review'
     | '/success'
     | '/upload'
+    | '/.well-known/oauth-protected-resource'
+    | '/.lovable/oauth/consent'
   id:
     | '__root__'
     | '/'
     | '/body-composition'
     | '/clinical-form'
     | '/history'
+    | '/mcp'
     | '/review'
     | '/success'
     | '/upload'
+    | '/.well-known/oauth-protected-resource'
+    | '/.lovable/oauth/consent'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -116,9 +153,12 @@ export interface RootRouteChildren {
   BodyCompositionRoute: typeof BodyCompositionRoute
   ClinicalFormRoute: typeof ClinicalFormRoute
   HistoryRoute: typeof HistoryRoute
+  McpRoute: typeof McpRoute
   ReviewRoute: typeof ReviewRoute
   SuccessRoute: typeof SuccessRoute
   UploadRoute: typeof UploadRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -142,6 +182,13 @@ declare module '@tanstack/react-router' {
       path: '/review'
       fullPath: '/review'
       preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -172,6 +219,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -180,9 +241,13 @@ const rootRouteChildren: RootRouteChildren = {
   BodyCompositionRoute: BodyCompositionRoute,
   ClinicalFormRoute: ClinicalFormRoute,
   HistoryRoute: HistoryRoute,
+  McpRoute: McpRoute,
   ReviewRoute: ReviewRoute,
   SuccessRoute: SuccessRoute,
   UploadRoute: UploadRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
