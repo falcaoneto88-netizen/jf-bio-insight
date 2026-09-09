@@ -129,6 +129,16 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== "SIGNED_IN" || !session) return;
+      void claimAdminRole().catch(() => {
+        /* silencioso: a atribuição de administrador não deve bloquear a app */
+      });
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
