@@ -1,31 +1,37 @@
-# Autocrítica das funções do assistente (MCP)
+# Assistente (MCP) + ligação ao GoHighLevel
 
-Hoje o assistente tem apenas duas capacidades: listar relatórios e abrir um relatório pelo identificador. Ambas são só de leitura e exigem login com conta de administrador. Funciona, mas é pouco para o uso diário.
+## Nota importante sobre "modificar o código"
+O assistente ligado à app trabalha com os dados e as ações da app, não com o código-fonte. Alterações ao código continuam a ser feitas aqui no chat, comigo. O que fica possível é ligar a app aos chats da Lovable e ao GoHighLevel.
 
-## O que está bem
-- Só administradores conseguem ler; qualquer outra conta recebe recusa.
-- As duas funções são só de leitura, portanto não há risco de apagar nada por engano.
-- Descrições em português, o que ajuda o assistente a escolher a ferramenta certa.
+## O que vai ser feito
 
-## Pontos fracos identificados
-1. **Listagem sem filtro por datas.** Só dá para filtrar por nome. Perguntas naturais como "relatórios deste mês" obrigam o assistente a puxar tudo e adivinhar.
-2. **Resposta demasiado pesada.** `get_report` devolve o bloco completo de composição corporal e dados clínicos num texto único; em consultas rápidas gasta tempo e dificulta a leitura.
-3. **Sem procura por paciente.** Não existe forma de ver o histórico de um paciente e a sua evolução (peso, massa muscular, gordura) entre exames — que é a pergunta clínica mais útil.
-4. **Sem resumo pronto.** O assistente recebe dados crus e tem de os interpretar sozinho, com risco de errar valores.
-5. **Limite silencioso.** Pedir 500 relatórios devolve 100 sem avisar que ficou truncado.
-6. **Mensagem de recusa pouco clara** quando a conta não é administradora: não explica que basta entrar com a conta autorizada.
+### 1. Ligar a app aos chats da Lovable
+Registar o servidor da app como conector na Lovable, para poder pedir nos chats Lovable coisas como "lista os últimos relatórios" sem sair da plataforma. Usa o mesmo login e a mesma regra: só a sua conta de administrador tem acesso.
 
-## Melhorias propostas (por ordem de valor)
-1. Adicionar filtro por intervalo de datas e aviso de truncagem em "listar relatórios".
-2. Nova função "evolução do paciente": dado um nome, devolve os exames por ordem cronológica com as variações principais (peso, gordura, massa muscular) já calculadas.
-3. Modo resumido em "detalhe do relatório": por omissão devolve os indicadores essenciais; um parâmetro opcional traz tudo.
-4. Mensagens de erro mais claras (não autenticado, sem permissão, relatório inexistente).
+### 2. Ligação ao GoHighLevel nos dois sentidos
+- **Trazer do GHL**: procurar um contacto por nome, email ou telemóvel e preencher automaticamente os dados do paciente (nome, email, telefone e campos disponíveis) no formulário clínico.
+- **Enviar para o GHL**: depois de gerar um relatório, criar ou atualizar o contacto no GHL com os dados principais (objetivo, peso, gordura, massa muscular, data do exame) e registar uma nota com o resumo do relatório.
+
+Na app: um botão "Procurar no GHL" no formulário clínico e um botão "Enviar para o GHL" no ecrã final, com confirmação de sucesso ou erro.
+
+### 3. Novas capacidades para o assistente
+Além de listar e abrir relatórios, o assistente passa a poder:
+- Procurar um contacto no GHL e ver o histórico do paciente na app.
+- Enviar um relatório já gerado para o GHL (com confirmação, nunca automático).
+
+### 4. Melhorias nas funções atuais (da autocrítica)
+- Filtro por intervalo de datas na listagem e aviso quando a lista é cortada.
+- Resposta resumida por omissão no detalhe do relatório, com opção de detalhe completo.
+- Evolução do paciente: exames por ordem cronológica com as variações de peso, gordura e massa muscular.
+- Mensagens de erro mais claras (sem sessão, sem permissão, relatório inexistente).
 
 ## Notas técnicas
-- Alterações restritas a `src/lib/mcp/tools/list-reports.ts`, `get-report.ts` e um novo `patient-evolution.ts`, registado em `src/lib/mcp/index.ts`.
-- Filtro de datas sobre `exam_date`/`generated_at`; evolução calculada a partir de `body_composition`.
-- Todas as funções continuam só de leitura e passam por `requireAdminClient`.
-- Depois das alterações é preciso regenerar o manifesto MCP e publicar de novo.
+- Não existe conector oficial GoHighLevel na Lovable, por isso a ligação é feita diretamente à API v2 do GHL, isolada em `src/lib/ghl/client.server.ts` (pedidos HTTP) e `src/lib/ghl.functions.ts` (funções de servidor `searchGhlContact`, `pushReportToGhl`), protegidas por login de administrador.
+- Credenciais guardadas em cofre: `GHL_API_KEY` e `GHL_LOCATION_ID` — peço-as no formulário seguro no momento de implementar. Nunca vão para o código nem para o browser.
+- Novas ferramentas MCP em `src/lib/mcp/tools/`: `patient-evolution.ts`, `ghl-find-contact.ts`, `ghl-push-report.ts`; registo em `src/lib/mcp/index.ts`; alterações em `list-reports.ts` e `get-report.ts`. `ghl_push_report` marcada como não só-leitura.
+- O conector Lovable é registado com a ferramenta de conectores (servidor próprio da app já publicado).
+- Depois das alterações: regenerar o manifesto MCP e publicar de novo.
 
-## Fora deste âmbito
-Nenhuma função de escrita (criar ou apagar relatórios) pelo assistente.
+## Riscos
+- Enviar dados clínicos para o GHL implica que esses dados passam a existir num sistema externo — o envio é sempre manual e confirmado.
+- Campos personalizados do GHL variam por conta; começo pelos campos padrão e uma nota com o resumo, e afinamos depois com a sua conta real.
