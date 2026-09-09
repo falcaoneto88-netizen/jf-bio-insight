@@ -1,7 +1,7 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 
-import { supabaseForUser } from "../supabase";
+import { requireAdminClient } from "../supabase";
 
 export default defineTool({
   name: "list_reports",
@@ -18,11 +18,12 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ patientName, limit }, ctx) => {
-    if (!ctx.isAuthenticated()) {
-      return { content: [{ type: "text", text: "Não autenticado." }], isError: true };
+    const access = await requireAdminClient(ctx);
+    if (!access.ok) {
+      return { content: [{ type: "text", text: access.message }], isError: true };
     }
     const take = Math.min(Math.max(limit ?? 20, 1), 100);
-    const supabase = supabaseForUser(ctx);
+    const supabase = access.supabase;
     let query = supabase
       .from("reports")
       .select("id, patient_name, exam_date, generated_at, main_goal, body_classification")

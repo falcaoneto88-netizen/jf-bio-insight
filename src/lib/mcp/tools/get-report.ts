@@ -1,7 +1,7 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 
-import { supabaseForUser } from "../supabase";
+import { requireAdminClient } from "../supabase";
 
 export default defineTool({
   name: "get_report",
@@ -13,10 +13,11 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ id }, ctx) => {
-    if (!ctx.isAuthenticated()) {
-      return { content: [{ type: "text", text: "Não autenticado." }], isError: true };
+    const access = await requireAdminClient(ctx);
+    if (!access.ok) {
+      return { content: [{ type: "text", text: access.message }], isError: true };
     }
-    const supabase = supabaseForUser(ctx);
+    const supabase = access.supabase;
     const { data, error } = await supabase
       .from("reports")
       .select(
