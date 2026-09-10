@@ -98,6 +98,8 @@ export type TrainingType =
 export type ClinicalData = {
   // Paciente
   patientName: string;
+  email: string;
+  phone: string;
   sex: Sex;
   age: string;
   height: string;
@@ -134,6 +136,8 @@ export type ClinicalData = {
 
 export const emptyClinicalData: ClinicalData = {
   patientName: "",
+  email: "",
+  phone: "",
   sex: "",
   age: "",
   height: "",

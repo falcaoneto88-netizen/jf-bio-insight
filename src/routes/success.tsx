@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { BrandHeader } from "@/components/BrandHeader";
+import { GhlPushButton } from "@/components/GhlPushButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
@@ -234,6 +235,23 @@ function SuccessPage() {
                 </>
               )}
             </Button>
+
+            <GhlPushButton
+              name={patientName}
+              email={cd?.email}
+              phone={cd?.phone}
+              summary={{
+                patientName,
+                examDate: bc?.examDate ?? "",
+                mainGoal: cd?.mainGoal ?? "",
+                bodyClassification: classification,
+                weight: bc?.weight ?? cd?.weight ?? "",
+                bodyFatPercentage: bc?.bodyFatPercentage ?? "",
+                skeletalMuscleMass: bc?.skeletalMuscleMass ?? "",
+                visceralFatLevel: bc?.visceralFatLevel ?? "",
+                basalMetabolicRate: bc?.basalMetabolicRate ?? "",
+              }}
+            />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Button asChild variant="outline" size="lg">
