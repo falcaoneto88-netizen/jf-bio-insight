@@ -73,7 +73,7 @@ export default defineTool({
       weight: str(bc["weight"]),
       bodyFatPercentage: str(bc["bodyFatPercentage"]),
       skeletalMuscleMass: str(bc["skeletalMuscleMass"]),
-      visceralFatLevel: str(bc["visceralFatLevel"]),
+      visceralFatLevel: str(bc["visceralFat"]),
       basalMetabolicRate: str(bc["basalMetabolicRate"]),
     });
 

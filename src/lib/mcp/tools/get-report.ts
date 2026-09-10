@@ -75,7 +75,7 @@ export default defineTool({
       weight: str(bc["weight"]),
       body_fat_percentage: str(bc["bodyFatPercentage"]),
       skeletal_muscle_mass: str(bc["skeletalMuscleMass"]),
-      visceral_fat_level: str(bc["visceralFatLevel"]),
+      visceral_fat_level: str(bc["visceralFat"]),
       basal_metabolic_rate: str(bc["basalMetabolicRate"]),
       mode: "summary" as const,
       hint: "Use mode: 'full' para os dados clínicos completos.",
