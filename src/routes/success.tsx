@@ -242,13 +242,13 @@ function SuccessPage() {
               phone={cd?.phone}
               summary={{
                 patientName,
-                examDate: bc?.examDate ?? "",
+                examDate: bc?.examDateTime ?? "",
                 mainGoal: cd?.mainGoal ?? "",
                 bodyClassification: classification,
                 weight: bc?.weight ?? cd?.weight ?? "",
                 bodyFatPercentage: bc?.bodyFatPercentage ?? "",
                 skeletalMuscleMass: bc?.skeletalMuscleMass ?? "",
-                visceralFatLevel: bc?.visceralFatLevel ?? "",
+                visceralFatLevel: bc?.visceralFat ?? "",
                 basalMetabolicRate: bc?.basalMetabolicRate ?? "",
               }}
             />
