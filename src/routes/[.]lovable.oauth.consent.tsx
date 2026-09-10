@@ -91,6 +91,10 @@ function ConsentPage() {
       setError(result.error.message);
       return;
     }
+    if ("redirected" in result && result.redirected) {
+      // O browser já está a navegar para o Google — não recarregar a página.
+      return;
+    }
     window.location.reload();
   }
 
