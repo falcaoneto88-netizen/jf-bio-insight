@@ -3,6 +3,12 @@ import { z } from "zod";
 
 import { requireAdminClient } from "../supabase";
 
+function str(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return null;
+}
+
 export default defineTool({
   name: "get_report",
   title: "Detalhe do relatório",
@@ -66,11 +72,11 @@ export default defineTool({
       generated_at: row.generated_at,
       main_goal: row.main_goal,
       body_classification: row.body_classification,
-      weight: bc["weight"] ?? null,
-      body_fat_percentage: bc["bodyFatPercentage"] ?? null,
-      skeletal_muscle_mass: bc["skeletalMuscleMass"] ?? null,
-      visceral_fat_level: bc["visceralFatLevel"] ?? null,
-      basal_metabolic_rate: bc["basalMetabolicRate"] ?? null,
+      weight: str(bc["weight"]),
+      body_fat_percentage: str(bc["bodyFatPercentage"]),
+      skeletal_muscle_mass: str(bc["skeletalMuscleMass"]),
+      visceral_fat_level: str(bc["visceralFatLevel"]),
+      basal_metabolic_rate: str(bc["basalMetabolicRate"]),
       mode: "summary" as const,
       hint: "Use mode: 'full' para os dados clínicos completos.",
     };
