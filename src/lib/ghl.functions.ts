@@ -3,11 +3,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildReportNote, type ReportSummaryInput } from "@/lib/ghl-summary";
 
-async function assertAdmin(context: {
-  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> };
+type AuthedContext = {
+  supabase: { rpc: (...args: never[]) => unknown };
   userId: string;
-}) {
-  const { data, error } = await context.supabase.rpc("has_role", {
+};
+
+async function assertAdmin(context: AuthedContext) {
+  const rpc = context.supabase.rpc as unknown as (
+    fn: "has_role",
+    args: { _user_id: string; _role: "admin" },
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  const { data, error } = await rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
