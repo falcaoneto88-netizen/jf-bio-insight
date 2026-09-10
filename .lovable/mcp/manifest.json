@@ -12,14 +12,14 @@
   "mcp": {
     "server": {
       "name": "bioreport-studio",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "BioReport Studio"
     },
     "tools": [
       {
         "name": "list_reports",
         "title": "Listar relatórios",
-        "description": "Lista os relatórios clínicos gerados, do mais recente para o mais antigo. Opcionalmente filtra por nome do paciente.",
+        "description": "Lista os relatórios clínicos gerados, do mais recente para o mais antigo. Filtros opcionais por nome do paciente e intervalo de datas de geração.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -31,6 +31,14 @@
           "properties": {
             "patientName": {
               "description": "Filtro parcial pelo nome do paciente.",
+              "type": "string"
+            },
+            "generatedAfter": {
+              "description": "Data ISO (AAAA-MM-DD): apenas relatórios gerados nesta data ou depois.",
+              "type": "string"
+            },
+            "generatedBefore": {
+              "description": "Data ISO (AAAA-MM-DD): apenas relatórios gerados nesta data ou antes.",
               "type": "string"
             },
             "limit": {
@@ -46,7 +54,7 @@
       {
         "name": "get_report",
         "title": "Detalhe do relatório",
-        "description": "Devolve um relatório completo pelo seu identificador, incluindo composição corporal e dados clínicos.",
+        "description": "Devolve um relatório pelo seu identificador. Use mode 'summary' (predefinido) para os indicadores principais ou 'full' para incluir toda a composição corporal e dados clínicos.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -59,10 +67,122 @@
             "id": {
               "type": "string",
               "description": "Identificador do relatório (campo id de list_reports)."
+            },
+            "mode": {
+              "description": "'summary' devolve apenas os indicadores principais; 'full' devolve tudo.",
+              "type": "string",
+              "enum": [
+                "summary",
+                "full"
+              ]
             }
           },
           "required": [
             "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "patient_evolution",
+        "title": "Evolução do paciente",
+        "description": "Compara os relatórios de um paciente ao longo do tempo (peso, gordura corporal, massa muscular e gordura visceral) e devolve a variação entre o primeiro e o último exame.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "patientName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Nome (ou parte do nome) do paciente."
+            },
+            "limit": {
+              "description": "Número máximo de relatórios a comparar (1 a 50).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "patientName"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "ghl_find_contact",
+        "title": "Procurar contacto no GoHighLevel",
+        "description": "Procura contactos no GoHighLevel por nome, email ou telefone e devolve id, nome, email e telefone.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Nome, email ou telefone a procurar."
+            },
+            "limit": {
+              "description": "Número máximo de contactos (1 a 25).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "ghl_push_report",
+        "title": "Enviar relatório para o GoHighLevel",
+        "description": "Envia o resumo de um relatório para o GoHighLevel como nota do contacto. Requer confirmação explícita (confirm: true) e um contacto existente ou email/telefone do paciente.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "reportId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Identificador do relatório (list_reports)."
+            },
+            "contactId": {
+              "description": "Id do contacto no GoHighLevel, se já conhecido.",
+              "type": "string"
+            },
+            "email": {
+              "description": "Email do paciente (se não houver contactId).",
+              "type": "string"
+            },
+            "phone": {
+              "description": "Telefone do paciente (se não houver contactId).",
+              "type": "string"
+            },
+            "confirm": {
+              "type": "boolean",
+              "description": "Tem de ser true. Confirme com o utilizador antes de escrever no GoHighLevel."
+            }
+          },
+          "required": [
+            "reportId",
+            "confirm"
           ]
         },
         "outputSchema": null

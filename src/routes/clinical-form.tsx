@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 
 import { BrandHeader } from "@/components/BrandHeader";
+import { GhlContactSearch } from "@/components/GhlContactSearch";
 import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
@@ -121,11 +122,36 @@ function ClinicalFormPage() {
               title="Dados do paciente"
               description="Em breve estes campos serão preenchidos automaticamente pela leitura da bioimpedância."
             >
+              <GhlContactSearch
+                onSelect={(contact) =>
+                  setData((prev) => ({
+                    ...prev,
+                    patientName: contact.name || prev.patientName,
+                    email: contact.email || prev.email,
+                    phone: contact.phone || prev.phone,
+                  }))
+                }
+              />
               <Field label="Nome do paciente" required error={errors.patientName} className="sm:col-span-2">
                 <Input
                   value={data.patientName}
                   onChange={(e) => update("patientName", e.target.value)}
                   placeholder="Nome completo"
+                />
+              </Field>
+              <Field label="Email">
+                <Input
+                  type="email"
+                  value={data.email}
+                  onChange={(e) => update("email", e.target.value)}
+                  placeholder="email@exemplo.com"
+                />
+              </Field>
+              <Field label="Telefone">
+                <Input
+                  value={data.phone}
+                  onChange={(e) => update("phone", e.target.value)}
+                  placeholder="+351 900 000 000"
                 />
               </Field>
               <Field label="Sexo" required error={errors.sex}>
