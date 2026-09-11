@@ -128,7 +128,7 @@ export function computeEvolution(bio: Bio): EvolutionResult {
   return {
     points: ordered,
     ignoredDates,
-    conflicts,
+    ignoredDatesWithValues,
     hasTrend,
     deltaPesoKg,
     deltaMassaMuscularKg,
