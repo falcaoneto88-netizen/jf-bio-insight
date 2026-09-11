@@ -1,10 +1,28 @@
 import { describe, expect, it } from "vitest";
 
 import { computeEvolution } from "./evolution";
-import { dateSortKey, decimalComma, integerValue, isRealDate, needsNumberReview } from "./format";
+import { dateSortKey, decimalComma, integerValue, isRealDate, needsNumberReview, signedDelta } from "./format";
 import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { bioSchema } from "./types";
 import { fixtureAnamnese, fixtureBio, fixtureJourney, fixtureProtocolo } from "./__fixtures__/jornada-sintetica";
+
+describe("variação (delta) com sinal", () => {
+  it("não engole variações pequenas nem inventa sinal no zero", () => {
+    expect(signedDelta(0.3, 1)).toBe("+0,3");
+    expect(signedDelta(-0.3, 1)).toBe("−0,3");
+    expect(signedDelta(0.4, 1)).toBe("+0,4");
+    expect(signedDelta(-0.4, 1)).toBe("−0,4");
+    expect(signedDelta(27.3 - 27, 1)).toBe("+0,3");
+    expect(signedDelta(0.04, 1)).toBe("0,0");
+    expect(signedDelta(-0.04, 1)).toBe("0,0");
+    expect(signedDelta(-0, 1)).toBe("0,0");
+    expect(signedDelta(0, 1)).toBe("0,0");
+    expect(signedDelta(0.04, 2)).toBe("+0,04");
+    expect(signedDelta(0.3, 0)).toBe("0");
+    expect(signedDelta(1.4, 0)).toBe("+1");
+    expect(signedDelta(-1.4, 0)).toBe("−1");
+  });
+});
 
 describe("formatação por campo e unidade", () => {
   it("não transforma milhares em decimais", () => {
