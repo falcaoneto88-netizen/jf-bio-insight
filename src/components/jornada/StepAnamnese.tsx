@@ -40,6 +40,17 @@ export function StepAnamnese({
 }) {
   const [pasted, setPasted] = useState("");
   const [organizing, setOrganizing] = useState(false);
+  /** Falso depois de desmontar (sair da etapa ou trocar de paciente). */
+  const mountedRef = useRef(true);
+  const requestRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestRef.current += 1;
+    };
+  }, []);
 
   const setGroupField = (group: GroupKey, field: string, value: string) => {
     onDraftChange({
@@ -53,9 +64,12 @@ export function StepAnamnese({
       toast.error("Cole primeiro o texto da consulta.");
       return;
     }
+    const requestId = ++requestRef.current;
     setOrganizing(true);
     try {
       const result = await organizarAnamnese({ data: { id: journey.id, texto: pasted } });
+      // Resposta tardia nunca escreve na anamnese de outro atendimento.
+      if (!mountedRef.current || requestId !== requestRef.current) return;
       if (!result.data) {
         toast.error(result.error ?? "Não foi possível organizar a anamnese.");
         return;
@@ -63,11 +77,12 @@ export function StepAnamnese({
       onDraftChange(result.data);
       toast.success("Anamnese organizada. Reveja e ajuste o que for preciso.");
     } catch (err) {
-      toast.error((err as Error).message);
+      if (mountedRef.current && requestId === requestRef.current) toast.error((err as Error).message);
     } finally {
-      setOrganizing(false);
+      if (mountedRef.current && requestId === requestRef.current) setOrganizing(false);
     }
   };
+
 
   return (
     <div className="space-y-6">
