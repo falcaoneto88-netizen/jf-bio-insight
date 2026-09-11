@@ -53,6 +53,12 @@ function statusToStep(journey: Journey): JourneyStep {
 
 function JornadaDetailPage() {
   const { id } = useParams({ from: "/_authenticated/jornada/$id" });
+  // key={id}: mudar de paciente recria o estado interno por completo — nunca
+  // sobra rascunho, etapa ou pré-visualização do atendimento anterior.
+  return <JornadaDetail key={id} id={id} />;
+}
+
+function JornadaDetail({ id }: { id: string }) {
   const obter = useServerFn(obterJornada);
   const guardar = useServerFn(guardarJornada);
   const preview = useServerFn(previewHtml);
@@ -72,6 +78,8 @@ function JornadaDetailPage() {
   const [saving, setSaving] = useState(false);
   const [initialised, setInitialised] = useState(false);
   const [html, setHtml] = useState<string | null>(null);
+  const [htmlHash, setHtmlHash] = useState<string | null>(null);
+  const [htmlVersion, setHtmlVersion] = useState<number | null>(null);
   const [htmlError, setHtmlError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,20 +97,35 @@ function JornadaDetailPage() {
     return (Math.max(natural, step) as JourneyStep);
   }, [journey, step]);
 
+  const journeyVersion = journey?.version ?? null;
+
   useEffect(() => {
-    if (step !== 5 || !journey) return;
+    if (step !== 5 || journeyVersion == null) return;
     let active = true;
+    // Trocar de versão limpa a prévia: nunca se aprova um documento antigo.
     setHtml(null);
+    setHtmlHash(null);
+    setHtmlVersion(null);
     setHtmlError(null);
-    void preview({ data: { id, tipo: "draft" } }).then((result) => {
-      if (!active) return;
-      if (result.html) setHtml(result.html);
-      else setHtmlError(result.error ?? "Não foi possível preparar a pré-visualização.");
-    });
+    void preview({ data: { id, tipo: "candidate" } })
+      .then((result) => {
+        if (!active) return; // resultado de pedido anterior é descartado
+        if (result.html && result.htmlHash) {
+          setHtml(result.html);
+          setHtmlHash(result.htmlHash);
+          setHtmlVersion(result.version);
+        } else {
+          setHtmlError(result.error ?? "Não foi possível preparar o documento.");
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) setHtmlError((err as Error).message);
+      });
     return () => {
       active = false;
     };
-  }, [step, journey?.version, id, preview, journey]);
+  }, [step, journeyVersion, id, preview]);
+
 
   const save = async (patch: Parameters<typeof guardarJornada>[0] extends never ? never : Record<string, unknown>) => {
     if (!journey) return false;
