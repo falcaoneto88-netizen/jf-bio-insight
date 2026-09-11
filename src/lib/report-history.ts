@@ -63,7 +63,7 @@ export async function getReportHistory(): Promise<ReportHistoryEntry[]> {
     .order("generated_at", { ascending: false })
     .limit(200);
   if (error) {
-    console.error("[reports] getReportHistory", error);
+    console.error("[reports] getReportHistory");
     throw error;
   }
   return (data ?? []).map((r) => rowToEntry(r as unknown as ReportRow));
@@ -80,7 +80,7 @@ export async function addReportToHistory(
     )
     .single();
   if (error) {
-    console.error("[reports] addReportToHistory", error);
+    console.error("[reports] addReportToHistory");
     throw error;
   }
   return rowToEntry(data as unknown as ReportRow);
@@ -92,7 +92,7 @@ export async function clearReportHistory(): Promise<void> {
     .delete()
     .not("id", "is", null);
   if (error) {
-    console.error("[reports] clearReportHistory", error);
+    console.error("[reports] clearReportHistory");
     throw error;
   }
 }
