@@ -253,7 +253,10 @@ function JornadaDetail({ id }: { id: string }) {
             journey={journey}
             issues={issues}
             html={html}
+            htmlHash={htmlHash}
+            htmlVersion={htmlVersion}
             htmlError={htmlError}
+
             onBack={() => setStep(4)}
             onApproved={async () => {
               await refetch();
