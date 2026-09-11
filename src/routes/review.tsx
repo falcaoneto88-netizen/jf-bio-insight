@@ -185,9 +185,13 @@ function ReviewPage() {
           bodyComposition: bc,
           clinicalData: cd,
         });
-      } catch (e) {
-        console.error("[reports] failed to save to cloud", e);
-        toast.warning("Relatório gerado, mas não foi guardado na cloud");
+      } catch {
+        console.error("[reports] falha ao guardar no histórico");
+        toast.warning(
+          session.isAdmin
+            ? "Relatório gerado, mas não foi guardado no histórico"
+            : "Relatório gerado. Inicie sessão com a conta da clínica para o guardar no histórico.",
+        );
       }
 
 
@@ -196,7 +200,7 @@ function ReviewPage() {
       });
       navigate({ to: "/success" });
     } catch (err) {
-      console.error(err);
+      console.error("[pdf] falha ao gerar o relatório");
       toast.error("Falha ao gerar o PDF", {
         description: "Tente novamente em alguns instantes.",
       });

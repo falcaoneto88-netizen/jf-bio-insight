@@ -163,7 +163,7 @@ function SuccessPage() {
       setTimeout(() => URL.revokeObjectURL(url), 2000);
       toast.success("Download iniciado");
     } catch (err) {
-      console.error(err);
+      console.error("[pdf] falha ao gerar o relatório");
       const description =
         err instanceof Error && err.message ? err.message : undefined;
       toast.error("Falha ao gerar o PDF", { description });
