@@ -16,7 +16,16 @@ vi.mock("@/integrations/supabase/client.server", () => ({
   },
 }));
 
-import { approveJourney, approvedSnapshotHtml, contentHash, patchJourney } from "./core.server";
+import {
+  DOC_TEMPLATE,
+  approveJourney,
+  approvedSnapshotHtml,
+  contentHash,
+  finalCandidate,
+  getJourney,
+  patchJourney,
+  sha256Hex,
+} from "./core.server";
 import { emptyBio, type Journey } from "./types";
 import { fixtureAnamnese, fixtureBio, fixtureProtocolo } from "./__fixtures__/jornada-sintetica";
 
