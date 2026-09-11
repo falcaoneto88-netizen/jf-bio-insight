@@ -2,6 +2,12 @@
 -- Idempotente: pode ser reaplicada sem efeitos colaterais.
 
 -- 1) Remover políticas públicas antigas de reports, se ainda existirem.
+DROP POLICY IF EXISTS "Public can view reports" ON public.reports;
+DROP POLICY IF EXISTS "Public can insert reports" ON public.reports;
+DROP POLICY IF EXISTS "Public can update reports" ON public.reports;
+DROP POLICY IF EXISTS "Public can delete reports" ON public.reports;
+
+-- Rede de segurança: qualquer outra política com role public/anon.
 DO $$
 DECLARE p record;
 BEGIN

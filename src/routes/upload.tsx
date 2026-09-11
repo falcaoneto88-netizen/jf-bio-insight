@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { extractBioimpedance } from "@/lib/bioimpedance.functions";
 import { cn } from "@/lib/utils";
+import { AccessNotice } from "@/components/AccessNotice";
 import { useAdminSession } from "@/hooks/use-admin-session";
 import { useReportStore, type UploadedFile } from "@/store/report-store";
 
@@ -139,6 +140,21 @@ function UploadPage() {
       <main className="flex-1 px-6 py-10">
         <div className="mx-auto max-w-3xl">
           <Stepper current={1} />
+
+          {!session.loading && !session.isAdmin && (
+            <div className="mt-6">
+              <AccessNotice
+                signedIn={session.signedIn}
+                proximo="/upload"
+                descricao={
+                  session.signedIn
+                    ? "Esta conta não tem permissão clínica: a leitura automática do exame fica indisponível, mas pode preencher os dados manualmente."
+                    : "Sem sessão iniciada a leitura automática do exame fica indisponível. Inicie sessão ou preencha os dados manualmente."
+                }
+              />
+            </div>
+          )}
+
 
           <Card className="mt-10 border-border/80">
             <CardHeader>
