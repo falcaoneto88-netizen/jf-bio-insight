@@ -119,6 +119,15 @@ export async function getJourney(sb: Sb, ownerId: string, id: string): Promise<J
 
 /* ------------------------------ escritas ----------------------------- */
 
+/**
+ * Cliente privilegiado para escrita. O cliente do utilizador não tem (nem deve ter)
+ * permissões de escrita nestas tabelas: cada chamada aqui já validou auth + admin + dono.
+ */
+async function writer(): Promise<Sb> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as unknown as Sb;
+}
+
 export async function createJourney(sb: Sb, ownerId: string, patientName: string): Promise<Journey> {
   const name = patientName.trim();
   if (!name) throw new JourneyError("VALIDATION", "Indique o nome do paciente.");
