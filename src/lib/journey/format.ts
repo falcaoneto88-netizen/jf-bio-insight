@@ -28,20 +28,40 @@ export function decimalComma(value: string | null | undefined): string {
   return raw.replace(".", ",");
 }
 
+const PLAIN_INT = /^[+-]?\d+$/;
+const GROUPED_DOT = /^[+-]?\d{1,3}(\.\d{3})+$/;
+const GROUPED_SPACE = /^[+-]?\d{1,3}( \d{3})+$/;
+
 /**
- * Valor inteiro com unidade contável (TMB em kcal, nível de gordura visceral):
- * nunca vira decimal. 1365 -> "1.365"; "1.365" -> "1.365".
+ * true quando o texto NÃO é reconhecido como inteiro sem ambiguidade
+ * ("1365,0", "≈1400", "ilegível"). Nestes casos o valor é transcrito tal como
+ * foi recebido e sinalizado para revisão humana — nunca reinterpretado.
+ */
+export function needsNumberReview(value: string | null | undefined): boolean {
+  const raw = String(value ?? "").trim();
+  if (!raw) return false;
+  return !(PLAIN_INT.test(raw) || GROUPED_DOT.test(raw) || GROUPED_SPACE.test(raw));
+}
+
+/**
+ * Valor inteiro com unidade contável (TMB em kcal, nível de gordura visceral).
+ * Só formata formatos reconhecidos explicitamente; qualquer outro texto é
+ * transcrito sem alteração. 1365 -> "1.365"; "1.365" -> "1.365";
+ * "1365,0" -> "1365,0" (transcrito, marcado para revisão).
  */
 export function integerValue(value: string | null | undefined): string {
   if (value == null) return "";
   const raw = String(value).trim();
   if (!raw) return "";
-  const digits = raw.replace(/[^\d-]/g, "");
-  if (!digits || !/^-?\d+$/.test(digits)) return raw; // ilegível: transcrito tal como está
-  const negative = digits.startsWith("-");
-  const grouped = digits.replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (GROUPED_DOT.test(raw)) return raw;
+  if (GROUPED_SPACE.test(raw)) return raw.replace(/ /g, ".");
+  if (!PLAIN_INT.test(raw)) return raw; // ambíguo ou ilegível: transcrição literal
+  const negative = raw.startsWith("-");
+  const digits = raw.replace(/^[+-]/, "");
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${negative ? "-" : ""}${grouped}`;
 }
+
 
 /** Formata uma diferença numérica com sinal e vírgula decimal. */
 export function signedDelta(delta: number, digits = 1): string {
