@@ -533,7 +533,11 @@ export async function approveJourney(
 
 /**
  * HTML final = snapshot EXATO aprovado, guardado no momento da aprovação.
- * Nunca é recalculado, para que a data e o conteúdo não mudem entre downloads.
+ * Nunca é recalculado. O servidor confere, antes de servir:
+ * - os dados atuais contra o hash de conteúdo (recalculado agora);
+ * - a coerência entre jornada e registo de aprovação (versão, autor, data, hash);
+ * - os bytes do próprio HTML contra o SHA-256 guardado no snapshot.
+ * Registos antigos sem prova do HTML exigem nova aprovação — nada é fabricado.
  */
 export async function approvedSnapshotHtml(
   sb: Sb,
@@ -546,9 +550,23 @@ export async function approvedSnapshotHtml(
       "O HTML final só fica disponível depois de aprovar a versão atual na aplicação.",
     );
   }
-  if (journey.approvedHash !== journey.contentHash) {
+  const recomputed = await contentHash({
+    patientName: journey.patientName,
+    anamnese: journey.anamnese,
+    bio: journey.bio,
+    protocolo: journey.protocolo,
+  });
+  if (recomputed !== journey.contentHash || journey.approvedHash !== recomputed) {
     throw new JourneyError("CONTEUDO_ALTERADO", "O conteúdo mudou desde a aprovação. Aprove novamente.");
   }
+  if (journey.approvedBy !== ownerId) {
+    throw new JourneyError("NAO_APROVADO", "A aprovação registada não é desta conta. Aprove novamente.");
+  }
+  const journeyApprovedAt = Date.parse(String(journey.approvedAt ?? ""));
+  if (!Number.isFinite(journeyApprovedAt)) {
+    throw new JourneyError("NAO_APROVADO", "Aprovação sem data válida. Aprove novamente.");
+  }
+
   const { data, error } = await sb
     .from("jornada_aprovacoes")
     .select("version, content_hash, approved_by, approved_at, snapshot")
@@ -562,15 +580,21 @@ export async function approvedSnapshotHtml(
   if (!data) throw new JourneyError("NAO_APROVADO", "Registo de aprovação não encontrado.");
 
   const row = data as Record<string, unknown>;
+  if (Number(row["version"]) !== journey.approvedVersion) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "A aprovação registada é de outra versão.");
+  }
   if (String(row["content_hash"]) !== journey.contentHash) {
     throw new JourneyError("CONTEUDO_ALTERADO", "A aprovação registada não corresponde ao conteúdo atual.");
   }
-  if (!row["approved_by"] || !row["approved_at"]) {
-    throw new JourneyError("NAO_APROVADO", "Aprovação sem autor ou data registados.");
+  if (String(row["approved_by"] ?? "") !== ownerId) {
+    throw new JourneyError("NAO_APROVADO", "Autor da aprovação diferente do titular autenticado.");
   }
+  const rowApprovedAt = Date.parse(String(row["approved_at"] ?? ""));
+  if (!Number.isFinite(rowApprovedAt) || rowApprovedAt !== journeyApprovedAt) {
+    throw new JourneyError("NAO_APROVADO", "Data de aprovação inválida ou divergente. Aprove novamente.");
+  }
+
   const snapshot = row["snapshot"] as Record<string, unknown> | null;
-  // O snapshot também é validado por hash no servidor: se o registo de aprovação
-  // for adulterado em base, o conteúdo deixa de corresponder e o HTML não é servido.
   const snapAnamnese = anamneseSchema.safeParse(snapshot?.["anamnese"] ?? {});
   const snapBio = bioSchema.safeParse(snapshot?.["bio"] ?? {});
   const snapProtocolo = snapshot?.["protocolo"] ? protocolSchema.safeParse(snapshot["protocolo"]) : null;
@@ -586,7 +610,30 @@ export async function approvedSnapshotHtml(
   if (snapshotHash !== journey.contentHash) {
     throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado não corresponde ao conteúdo atual.");
   }
-  const html = snapshot && typeof snapshot["html"] === "string" ? (snapshot["html"] as string) : "";
+
+  const meta = (snapshot?.["meta"] ?? null) as Record<string, unknown> | null;
+  const htmlHash = typeof snapshot?.["htmlHash"] === "string" ? String(snapshot["htmlHash"]) : "";
+  if (!meta || !htmlHash) {
+    throw new JourneyError(
+      "NAO_APROVADO",
+      "Esta aprovação é anterior à prova de integridade do documento. Aprove novamente para gerar o final.",
+    );
+  }
+  if (Number(meta["version"]) !== journey.approvedVersion) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado indica outra versão.");
+  }
+  if (String(meta["approvedBy"] ?? "") !== ownerId) {
+    throw new JourneyError("NAO_APROVADO", "O documento aprovado indica outro autor.");
+  }
+  if (String(meta["template"] ?? "") !== DOC_TEMPLATE) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado usa outro modelo. Aprove novamente.");
+  }
+
+  const html = typeof snapshot?.["html"] === "string" ? (snapshot["html"] as string) : "";
   if (!html) throw new JourneyError("NAO_APROVADO", "Snapshot aprovado sem documento.");
+  if ((await sha256Hex(html)) !== htmlHash) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado foi alterado. Aprove novamente.");
+  }
   return html;
 }
+
