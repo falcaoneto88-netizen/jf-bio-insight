@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      jornada_aprovacoes: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          content_hash: string
+          created_at: string
+          id: string
+          jornada_id: string
+          owner_id: string
+          snapshot: Json
+          version: number
+        }
+        Insert: {
+          approved_at?: string
+          approved_by: string
+          content_hash: string
+          created_at?: string
+          id?: string
+          jornada_id: string
+          owner_id: string
+          snapshot: Json
+          version: number
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          content_hash?: string
+          created_at?: string
+          id?: string
+          jornada_id?: string
+          owner_id?: string
+          snapshot?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_aprovacoes_jornada_id_fkey"
+            columns: ["jornada_id"]
+            isOneToOne: false
+            referencedRelation: "jornadas_clinicas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jornadas_clinicas: {
+        Row: {
+          anamnese: Json
+          approved_at: string | null
+          approved_by: string | null
+          approved_hash: string | null
+          approved_version: number | null
+          bio: Json
+          confirmations: Json
+          content_hash: string
+          created_at: string
+          id: string
+          internal_notes: Json
+          owner_id: string
+          patient_name: string
+          protocolo: Json | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          anamnese?: Json
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_hash?: string | null
+          approved_version?: number | null
+          bio?: Json
+          confirmations?: Json
+          content_hash?: string
+          created_at?: string
+          id?: string
+          internal_notes?: Json
+          owner_id: string
+          patient_name?: string
+          protocolo?: Json | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          anamnese?: Json
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_hash?: string | null
+          approved_version?: number | null
+          bio?: Json
+          confirmations?: Json
+          content_hash?: string
+          created_at?: string
+          id?: string
+          internal_notes?: Json
+          owner_id?: string
+          patient_name?: string
+          protocolo?: Json | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           body_classification: string
@@ -79,6 +183,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      aprovar_jornada: {
+        Args: {
+          _content_hash: string
+          _expected_version: number
+          _jornada_id: string
+          _snapshot: Json
+          _user_id: string
+        }
+        Returns: {
+          approved_at: string
+          approved_version: number
+          content_hash: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
