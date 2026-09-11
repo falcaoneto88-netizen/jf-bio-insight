@@ -111,7 +111,7 @@ function HistoryPage() {
                 Início
               </Link>
             </Button>
-            {list.length > 0 && (
+            {session.isAdmin && list.length > 0 && (
               <Button variant="outline" size="sm" onClick={handleClear}>
                 <Trash2 className="h-4 w-4" />
                 Limpar histórico
@@ -124,11 +124,21 @@ function HistoryPage() {
               Histórico de relatórios
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Registros dos relatórios gerados neste dispositivo.
+              Registos dos relatórios gerados, disponíveis apenas com sessão iniciada.
             </p>
           </div>
 
-          {entries === null ? (
+          {!session.loading && !session.isAdmin ? (
+            <AccessNotice
+              signedIn={session.signedIn}
+              proximo="/history"
+              descricao={
+                session.signedIn
+                  ? "Esta conta não tem permissão para consultar o histórico clínico."
+                  : "Inicie sessão com a conta da clínica para consultar o histórico de relatórios."
+              }
+            />
+          ) : entries === null ? (
             <Card className="border-border/80">
               <CardContent className="py-16 text-center text-sm text-muted-foreground">
                 Carregando…
