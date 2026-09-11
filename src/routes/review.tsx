@@ -219,6 +219,21 @@ function ReviewPage() {
         <div className="mx-auto max-w-4xl">
           <Stepper current={4} />
 
+          {!session.loading && !session.isAdmin && (
+            <div className="mt-6">
+              <AccessNotice
+                signedIn={session.signedIn}
+                proximo="/review"
+                descricao={
+                  session.signedIn
+                    ? "Esta conta não tem permissão clínica: o relatório pode ser gerado, mas não fica guardado no histórico."
+                    : "Sem sessão iniciada o relatório pode ser gerado, mas não fica guardado no histórico da clínica."
+                }
+              />
+            </div>
+          )}
+
+
           <div className="mt-6">
             <ReturnVisitBadge />
           </div>
