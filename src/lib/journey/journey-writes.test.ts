@@ -16,7 +16,16 @@ vi.mock("@/integrations/supabase/client.server", () => ({
   },
 }));
 
-import { approveJourney, approvedSnapshotHtml, contentHash, patchJourney } from "./core.server";
+import {
+  DOC_TEMPLATE,
+  approveJourney,
+  approvedSnapshotHtml,
+  contentHash,
+  finalCandidate,
+  getJourney,
+  patchJourney,
+  sha256Hex,
+} from "./core.server";
 import { emptyBio, type Journey } from "./types";
 import { fixtureAnamnese, fixtureBio, fixtureProtocolo } from "./__fixtures__/jornada-sintetica";
 
@@ -147,21 +156,42 @@ describe("escritas apenas pelo backend", () => {
 });
 
 describe("aprovação", () => {
+  async function candidato() {
+    const jornada = await getJourney(userClient(), OWNER, ID);
+    return finalCandidate(jornada);
+  }
+
   it("recusa aprovação com hash forjado", async () => {
-    await expect(approveJourney(userClient(), OWNER, ID, 3, "hash-falso")).rejects.toThrow(/conteúdo mudou/i);
+    const { htmlHash } = await candidato();
+    await expect(approveJourney(userClient(), OWNER, ID, 3, "hash-falso", htmlHash)).rejects.toThrow(
+      /conteúdo mudou/i,
+    );
     expect(adminRpc).not.toHaveBeenCalled();
   });
 
   it("recusa aprovação com versão forjada", async () => {
+    const { htmlHash } = await candidato();
     await expect(
-      approveJourney(userClient(), OWNER, ID, 99, String(journeyRow["content_hash"])),
+      approveJourney(userClient(), OWNER, ID, 99, String(journeyRow["content_hash"]), htmlHash),
     ).rejects.toThrow(/conteúdo mudou/i);
     expect(adminRpc).not.toHaveBeenCalled();
   });
 
-  it("quando aprova, fá-lo pela função de servidor", async () => {
-    await approveJourney(userClient(), OWNER, ID, 3, String(journeyRow["content_hash"]));
-    expect(adminRpc).toHaveBeenCalledWith("aprovar_jornada", expect.objectContaining({ _jornada_id: ID }));
+  it("recusa aprovação de um documento diferente do pré-visualizado", async () => {
+    await expect(
+      approveJourney(userClient(), OWNER, ID, 3, String(journeyRow["content_hash"]), "0".repeat(64)),
+    ).rejects.toThrow(/documento mudou/i);
+    expect(adminRpc).not.toHaveBeenCalled();
+  });
+
+  it("quando aprova, fá-lo pela função de servidor e guarda a prova do documento", async () => {
+    const { htmlHash } = await candidato();
+    await approveJourney(userClient(), OWNER, ID, 3, String(journeyRow["content_hash"]), htmlHash);
+    const args = adminRpc.mock.calls[0]![1] as Row;
+    const snapshot = args["_snapshot"] as Row;
+    expect(args["_jornada_id"]).toBe(ID);
+    expect(snapshot["htmlHash"]).toBe(htmlHash);
+    expect((snapshot["meta"] as Row)["approvedBy"]).toBe(OWNER);
   });
 });
 
@@ -180,14 +210,15 @@ describe("HTML final", () => {
       contentHash: String(journeyRow["content_hash"]),
       approvedVersion: 3,
       approvedAt: "2026-09-11T10:00:00Z",
+      approvedBy: OWNER,
       approvedHash: String(journeyRow["content_hash"]),
       createdAt: "2026-09-01T10:00:00Z",
       updatedAt: "2026-09-11T10:00:00Z",
     } as Journey;
   }
 
-  it("serve o snapshot aprovado quando o hash confere", async () => {
-    approvalRow = {
+  async function aprovacaoValida(html: string) {
+    return {
       version: 3,
       content_hash: journeyRow["content_hash"],
       approved_by: OWNER,
@@ -197,29 +228,77 @@ describe("HTML final", () => {
         anamnese: fixtureAnamnese,
         bio: fixtureBio,
         protocolo: fixtureProtocolo,
-        html: "<!doctype html><html><body>ok</body></html>",
+        html,
+        htmlHash: await sha256Hex(html),
+        meta: {
+          version: 3,
+          approvedBy: OWNER,
+          template: DOC_TEMPLATE,
+          generatedAt: "11/09/2026",
+        },
       },
-    };
-    const html = await approvedSnapshotHtml(userClient(), OWNER, journeyFromRow());
-    expect(html).toContain("ok");
+    } as Row;
+  }
+
+  it("serve exatamente o documento aprovado, byte a byte, em downloads repetidos", async () => {
+    const { html } = await finalCandidate(journeyFromRow());
+    approvalRow = await aprovacaoValida(html);
+    const a = await approvedSnapshotHtml(userClient(), OWNER, journeyFromRow());
+    const b = await approvedSnapshotHtml(userClient(), OWNER, journeyFromRow());
+    expect(a).toBe(html);
+    expect(b).toBe(html);
   });
 
-  it("recusa snapshot adulterado em base", async () => {
-    approvalRow = {
-      version: 3,
-      content_hash: journeyRow["content_hash"],
-      approved_by: OWNER,
-      approved_at: "2026-09-11T10:00:00Z",
-      snapshot: {
-        patientName: "Outro Paciente",
-        anamnese: fixtureAnamnese,
-        bio: fixtureBio,
-        protocolo: fixtureProtocolo,
-        html: "<!doctype html><html><body>adulterado</body></html>",
-      },
-    };
+  it("recusa HTML alterado isoladamente, com todos os outros campos intactos", async () => {
+    const { html } = await finalCandidate(journeyFromRow());
+    approvalRow = await aprovacaoValida(html);
+    const snap = (approvalRow!["snapshot"] as Row);
+    snap["html"] = html.replace("</body>", "<p>injetado</p></body>");
+    await expect(approvedSnapshotHtml(userClient(), OWNER, journeyFromRow())).rejects.toThrow(
+      /foi alterado/i,
+    );
+  });
+
+  it("recusa dados atuais alterados com hash antigo mantido", async () => {
+    const { html } = await finalCandidate(journeyFromRow());
+    approvalRow = await aprovacaoValida(html);
+    const adulterada = { ...journeyFromRow(), patientName: "Outro Paciente Sintético" };
+    await expect(approvedSnapshotHtml(userClient(), OWNER, adulterada)).rejects.toThrow(/conteúdo mudou/i);
+  });
+
+  it("recusa autor de aprovação diferente do titular autenticado", async () => {
+    const { html } = await finalCandidate(journeyFromRow());
+    approvalRow = await aprovacaoValida(html);
+    (approvalRow as Row)["approved_by"] = "outro-autor";
+    await expect(approvedSnapshotHtml(userClient(), OWNER, journeyFromRow())).rejects.toThrow(/autor/i);
+  });
+
+  it("recusa data de aprovação inválida", async () => {
+    const { html } = await finalCandidate(journeyFromRow());
+    approvalRow = await aprovacaoValida(html);
+    (approvalRow as Row)["approved_at"] = "data-invalida";
+    await expect(approvedSnapshotHtml(userClient(), OWNER, journeyFromRow())).rejects.toThrow(/data/i);
+  });
+
+  it("pede nova aprovação quando o registo é antigo e não tem prova do documento", async () => {
+    const { html } = await finalCandidate(journeyFromRow());
+    approvalRow = await aprovacaoValida(html);
+    const snap = (approvalRow!["snapshot"] as Row);
+    delete snap["htmlHash"];
+    delete snap["meta"];
+    await expect(approvedSnapshotHtml(userClient(), OWNER, journeyFromRow())).rejects.toThrow(
+      /aprove novamente|anterior à prova/i,
+    );
+  });
+
+  it("recusa snapshot de dados adulterado em base", async () => {
+    const { html } = await finalCandidate(journeyFromRow());
+    approvalRow = await aprovacaoValida(html);
+    const snap = (approvalRow!["snapshot"] as Row);
+    snap["patientName"] = "Outro Paciente";
     await expect(approvedSnapshotHtml(userClient(), OWNER, journeyFromRow())).rejects.toThrow(
       /não corresponde/i,
     );
   });
 });
+

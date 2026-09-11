@@ -23,6 +23,8 @@ export type EvolutionPoint = {
 export type EvolutionResult = {
   points: EvolutionPoint[];
   ignoredDates: string[];
+  /** Datas inválidas cujas linhas TÊM valores — perda silenciosa se ignoradas. */
+  ignoredDatesWithValues: string[];
   /** Conflitos entre linhas da mesma data — nunca resolvidos em silêncio. */
   conflicts: string[];
   hasTrend: boolean;
@@ -60,15 +62,23 @@ function toPoint(row: BioHistoryRow): EvolutionPoint | null {
 
 export function computeEvolution(bio: Bio): EvolutionResult {
   const ignoredDates: string[] = [];
+  const ignoredDatesWithValues: string[] = [];
   const conflicts: string[] = [];
   const byDate = new Map<string, EvolutionPoint>();
 
   for (const row of bio.historico ?? []) {
     const point = toPoint(row);
     if (!point) {
-      if (row.data?.trim()) ignoredDates.push(row.data.trim());
+      if (row.data?.trim()) {
+        ignoredDates.push(row.data.trim());
+        const temValores = [row.peso, row.massaMuscularEsqueletica, row.pgc].some((v) =>
+          String(v ?? "").trim(),
+        );
+        if (temValores) ignoredDatesWithValues.push(row.data.trim());
+      }
       continue;
     }
+
     const existing = byDate.get(point.sortKey);
     if (!existing) {
       byDate.set(point.sortKey, point);
@@ -118,6 +128,7 @@ export function computeEvolution(bio: Bio): EvolutionResult {
   return {
     points: ordered,
     ignoredDates,
+    ignoredDatesWithValues,
     conflicts,
     hasTrend,
     deltaPesoKg,

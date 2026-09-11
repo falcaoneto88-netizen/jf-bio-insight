@@ -277,6 +277,7 @@ export type Journey = {
   contentHash: string;
   approvedVersion: number | null;
   approvedAt: string | null;
+  approvedBy: string | null;
   approvedHash: string | null;
   createdAt: string;
   updatedAt: string;

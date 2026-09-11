@@ -52,21 +52,26 @@ function renderBlock(block: ProtocolBlock): string {
       return `<ul class="block">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
     }
     case "table": {
-      const cols = block.columns.filter((c) => c.trim().length > 0);
-      const rows = block.rows.filter((r) => r.some((c) => c.trim().length > 0));
-      if (!cols.length || !rows.length) return "";
+      // Colunas sem cabeçalho são removidas COM as células correspondentes:
+      // o alinhamento é feito pelo índice original, nunca por posição relativa.
+      const kept = block.columns
+        .map((c, i) => ({ label: c, index: i }))
+        .filter((c) => c.label.trim().length > 0);
+      const rows = block.rows.filter((r) => kept.some((c) => String(r[c.index] ?? "").trim().length > 0));
+      if (!kept.length || !rows.length) return "";
       return `<table class="block">
-  <thead><tr>${cols.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>
+  <thead><tr>${kept.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
   <tbody>
 ${rows
   .map(
     (row) =>
-      `    <tr>${cols.map((_, i) => tableCell(row[i] ?? "", i === 0)).join("")}</tr>`,
+      `    <tr>${kept.map((c, pos) => tableCell(row[c.index] ?? "", pos === 0)).join("")}</tr>`,
   )
   .join("\n")}
   </tbody>
 </table>`;
     }
+
     case "patientNote":
       return block.text.trim()
         ? `<div class="patient-note block">${paragraphs(block.text)}</div>`
@@ -76,7 +81,28 @@ ${rows
   }
 }
 
+/** Secções do protocolo já renderizadas (vazias são omitidas). */
+export function renderProtocolSections(protocolo: Protocolo): string {
+  return protocolo.sections
+    .map((section) => {
+      const body = section.blocks.map(renderBlock).filter(Boolean).join("\n");
+      if (!body) return "";
+      return `<section>
+  <h2>${escapeHtml(section.title)}</h2>
+${body}
+</section>`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** true só quando o protocolo produz conteúdo mesmo visível no documento. */
+export function protocoloTemConteudoRenderizavel(protocolo: Protocolo): boolean {
+  return renderProtocolSections(protocolo).trim().length > 0;
+}
+
 function definitionList(entries: [string, string][]): string {
+
   const filled = entries.filter(([, v]) => String(v ?? "").trim().length > 0);
   if (!filled.length) return "";
   return `<dl class="fields">${filled
@@ -304,17 +330,8 @@ export function renderProtocolHtml(input: RenderHtmlInput): string {
           .join("")}</ul>`
       : "";
 
-  const sectionsHtml = input.protocolo.sections
-    .map((section) => {
-      const body = section.blocks.map(renderBlock).filter(Boolean).join("\n");
-      if (!body) return "";
-      return `<section>
-  <h2>${escapeHtml(section.title)}</h2>
-${body}
-</section>`;
-    })
-    .filter(Boolean)
-    .join("\n");
+  const sectionsHtml = renderProtocolSections(input.protocolo);
+
 
   const parts = [
     anamneseHtml && `<section><h2>Anamnese</h2>\n${anamneseHtml}</section>`,

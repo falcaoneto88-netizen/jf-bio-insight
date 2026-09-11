@@ -5,8 +5,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { computeEvolution } from "./evolution";
-import { renderProtocolHtml } from "./html";
-import { sameIdentity, todayBr } from "./format";
+import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
+import { needsNumberReview, sameIdentity, todayBr } from "./format";
 import {
   anamneseSchema,
   bioSchema,
@@ -85,6 +85,7 @@ export function rowToJourney(row: Record<string, unknown>): Journey {
     contentHash: String(row["content_hash"] ?? ""),
     approvedVersion: row["approved_version"] == null ? null : Number(row["approved_version"]),
     approvedAt: row["approved_at"] == null ? null : String(row["approved_at"]),
+    approvedBy: row["approved_by"] == null ? null : String(row["approved_by"]),
     approvedHash: row["approved_hash"] == null ? null : String(row["approved_hash"]),
     createdAt: String(row["created_at"] ?? ""),
     updatedAt: String(row["updated_at"] ?? ""),
@@ -184,9 +185,8 @@ export async function patchJourney(
 
   const changedAnamnese = patch.anamnese !== undefined;
   const changedBio = patch.bio !== undefined;
-  const changedProtocolo = patch.protocolo !== undefined;
   const changedName = patch.patientName !== undefined && patch.patientName.trim() !== current.patientName;
-  const contentChanged = changedAnamnese || changedBio || changedProtocolo || changedName;
+
 
   const patientName = (patch.patientName ?? current.patientName).trim();
   const anamnese = patch.anamnese ?? current.anamnese;
@@ -216,14 +216,17 @@ export async function patchJourney(
   };
   if (patch.internalNotes !== undefined) update["internal_notes"] = patch.internalNotes;
   if (patch.status !== undefined) update["status"] = patch.status;
-  if (contentChanged) {
-    // Qualquer edição posterior invalida a aprovação em vigor.
-    update["approved_version"] = null;
-    update["approved_at"] = null;
-    update["approved_by"] = null;
-    update["approved_hash"] = null;
-    if (current.status === "aprovado") update["status"] = patch.status ?? "protocolo";
+  // A versão aumenta SEMPRE nesta atualização, portanto a aprovação em vigor
+  // deixa de corresponder ao que a pessoa aprovou — é limpa sem exceção
+  // (inclui notas internas, confirmações e mudança de estado).
+  update["approved_version"] = null;
+  update["approved_at"] = null;
+  update["approved_by"] = null;
+  update["approved_hash"] = null;
+  if (current.status === "aprovado" && (patch.status === undefined || patch.status === "aprovado")) {
+    update["status"] = "protocolo";
   }
+
 
   const db = await writer();
   const { data, error } = await db
@@ -294,7 +297,26 @@ export function reviewIssues(journey: Journey): JourneyIssues {
     if (evolution.ignoredDates.length) {
       warnings.push(`Datas ilegíveis no histórico: ${evolution.ignoredDates.join(", ")}.`);
     }
+    // Valores diferentes na MESMA data nunca são escolhidos em silêncio.
+    for (const conflito of evolution.conflicts) blocking.push(`Conflito no histórico — ${conflito}`);
+    if (evolution.ignoredDatesWithValues.length) {
+      blocking.push(
+        `Datas inválidas com valores registados (corrija ou remova): ${evolution.ignoredDatesWithValues.join(", ")}.`,
+      );
+    }
+    for (const campo of [
+      ["Taxa metabólica basal (kcal)", journey.bio.taxaMetabolicaBasalKcal],
+      ["Nível de gordura visceral", journey.bio.nivelGorduraVisceral],
+    ] as const) {
+      if (needsNumberReview(campo[1])) {
+        warnings.push(`${campo[0]}: valor "${campo[1]}" transcrito tal como está e por rever.`);
+      }
+    }
     for (const duvida of journey.bio.duvidas) warnings.push(`Dúvida na extração: ${duvida}`);
+  }
+
+  if (journey.protocolo && journey.protocolo.sections.length > 0 && !protocoloTemConteudoRenderizavel(journey.protocolo)) {
+    blocking.push("O protocolo tem secções, mas nenhum conteúdo que apareça no documento.");
   }
 
   return { blocking, warnings };
@@ -302,7 +324,26 @@ export function reviewIssues(journey: Journey): JourneyIssues {
 
 /* -------------------------------- HTML -------------------------------- */
 
-export function buildHtml(journey: Journey, kind: "draft" | "final"): string {
+/** SHA-256 dos bytes exatos de um texto (UTF-8). */
+export async function sha256Hex(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Data do documento: estável para a versão (derivada de updated_at), nunca "hoje".
+ * Assim a pré-visualização aprovada e o ficheiro final coincidem sempre.
+ */
+export function stableDocDate(journey: Journey): string {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(journey.updatedAt ?? ""));
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return todayBr();
+}
+
+export const DOC_TEMPLATE = "documento-clinico-v1";
+
+export function buildHtml(journey: Journey, kind: "draft" | "candidate" | "final"): string {
   const protocolo = journey.protocolo ?? emptyProtocolo;
   if (kind === "final") {
     if (journey.approvedVersion == null || journey.approvedVersion !== journey.version) {
@@ -322,9 +363,20 @@ export function buildHtml(journey: Journey, kind: "draft" | "final"): string {
     bio: journey.bio,
     protocolo,
     draft: kind === "draft",
+    generatedAt: stableDocDate(journey),
     version: journey.version,
   });
 }
+
+/**
+ * Documento candidato a final: exatamente o que a pessoa vê antes de aprovar.
+ * A aprovação fica ligada a este hash.
+ */
+export async function finalCandidate(journey: Journey): Promise<{ html: string; htmlHash: string }> {
+  const html = buildHtml(journey, "candidate");
+  return { html, htmlHash: await sha256Hex(html) };
+}
+
 
 export function htmlFileName(journey: Journey, kind: "draft" | "final"): string {
   const slug =
@@ -377,15 +429,33 @@ export function bioResumoTexto(bio: Bio): string {
 
 /* ------------------------------ aprovação ----------------------------- */
 
-/** Só o servidor aprova, e só com a versão + hash exatos que o humano viu. */
+/**
+ * Só o servidor aprova, e só com a versão, o hash de conteúdo e o hash do
+ * DOCUMENTO que a pessoa viu na pré-visualização.
+ */
 export async function approveJourney(
   sb: Sb,
   ownerId: string,
   id: string,
   expectedVersion: number,
   expectedHash: string,
+  expectedHtmlHash: string,
 ): Promise<Journey> {
   const current = await getJourney(sb, ownerId, id);
+  // O hash guardado é reconferido contra os dados atuais: um content_hash antigo
+  // deixado para trás não pode validar dados alterados.
+  const recomputed = await contentHash({
+    patientName: current.patientName,
+    anamnese: current.anamnese,
+    bio: current.bio,
+    protocolo: current.protocolo,
+  });
+  if (recomputed !== current.contentHash) {
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "Os dados desta jornada não correspondem ao registo de integridade. Guarde novamente antes de aprovar.",
+    );
+  }
   if (current.version !== expectedVersion || current.contentHash !== expectedHash) {
     throw new JourneyError(
       "CONTEUDO_ALTERADO",
@@ -416,15 +486,31 @@ export async function approveJourney(
       "Escolha um objetivo com modelo disponível antes de aprovar (o modelo de emagrecimento ainda está por definir).",
     );
   }
-  const temConteudo = current.protocolo.sections.some((sec) => sec.blocks.length > 0);
-  if (!temConteudo) throw new JourneyError("BLOQUEADO", "O protocolo está vazio.");
+  if (!protocoloTemConteudoRenderizavel(current.protocolo)) {
+    throw new JourneyError("BLOQUEADO", "O protocolo não produz conteúdo visível no documento.");
+  }
+
+  const { html, htmlHash } = await finalCandidate(current);
+  if (htmlHash !== expectedHtmlHash) {
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "O documento mudou desde a pré-visualização que reviu. Recarregue a pré-visualização e aprove novamente.",
+    );
+  }
 
   const snapshot = {
     patientName: current.patientName,
     anamnese: current.anamnese,
     bio: current.bio,
     protocolo: current.protocolo,
-    html: buildHtml({ ...current, approvedVersion: current.version, approvedHash: current.contentHash }, "final"),
+    html,
+    htmlHash,
+    meta: {
+      version: current.version,
+      approvedBy: ownerId,
+      template: DOC_TEMPLATE,
+      generatedAt: stableDocDate(current),
+    },
   };
 
   const db = await writer();
@@ -444,9 +530,14 @@ export async function approveJourney(
   return getJourney(sb, ownerId, id);
 }
 
+
 /**
  * HTML final = snapshot EXATO aprovado, guardado no momento da aprovação.
- * Nunca é recalculado, para que a data e o conteúdo não mudem entre downloads.
+ * Nunca é recalculado. O servidor confere, antes de servir:
+ * - os dados atuais contra o hash de conteúdo (recalculado agora);
+ * - a coerência entre jornada e registo de aprovação (versão, autor, data, hash);
+ * - os bytes do próprio HTML contra o SHA-256 guardado no snapshot.
+ * Registos antigos sem prova do HTML exigem nova aprovação — nada é fabricado.
  */
 export async function approvedSnapshotHtml(
   sb: Sb,
@@ -459,9 +550,23 @@ export async function approvedSnapshotHtml(
       "O HTML final só fica disponível depois de aprovar a versão atual na aplicação.",
     );
   }
-  if (journey.approvedHash !== journey.contentHash) {
+  const recomputed = await contentHash({
+    patientName: journey.patientName,
+    anamnese: journey.anamnese,
+    bio: journey.bio,
+    protocolo: journey.protocolo,
+  });
+  if (recomputed !== journey.contentHash || journey.approvedHash !== recomputed) {
     throw new JourneyError("CONTEUDO_ALTERADO", "O conteúdo mudou desde a aprovação. Aprove novamente.");
   }
+  if (journey.approvedBy !== ownerId) {
+    throw new JourneyError("NAO_APROVADO", "A aprovação registada não é desta conta. Aprove novamente.");
+  }
+  const journeyApprovedAt = Date.parse(String(journey.approvedAt ?? ""));
+  if (!Number.isFinite(journeyApprovedAt)) {
+    throw new JourneyError("NAO_APROVADO", "Aprovação sem data válida. Aprove novamente.");
+  }
+
   const { data, error } = await sb
     .from("jornada_aprovacoes")
     .select("version, content_hash, approved_by, approved_at, snapshot")
@@ -475,15 +580,21 @@ export async function approvedSnapshotHtml(
   if (!data) throw new JourneyError("NAO_APROVADO", "Registo de aprovação não encontrado.");
 
   const row = data as Record<string, unknown>;
+  if (Number(row["version"]) !== journey.approvedVersion) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "A aprovação registada é de outra versão.");
+  }
   if (String(row["content_hash"]) !== journey.contentHash) {
     throw new JourneyError("CONTEUDO_ALTERADO", "A aprovação registada não corresponde ao conteúdo atual.");
   }
-  if (!row["approved_by"] || !row["approved_at"]) {
-    throw new JourneyError("NAO_APROVADO", "Aprovação sem autor ou data registados.");
+  if (String(row["approved_by"] ?? "") !== ownerId) {
+    throw new JourneyError("NAO_APROVADO", "Autor da aprovação diferente do titular autenticado.");
   }
+  const rowApprovedAt = Date.parse(String(row["approved_at"] ?? ""));
+  if (!Number.isFinite(rowApprovedAt) || rowApprovedAt !== journeyApprovedAt) {
+    throw new JourneyError("NAO_APROVADO", "Data de aprovação inválida ou divergente. Aprove novamente.");
+  }
+
   const snapshot = row["snapshot"] as Record<string, unknown> | null;
-  // O snapshot também é validado por hash no servidor: se o registo de aprovação
-  // for adulterado em base, o conteúdo deixa de corresponder e o HTML não é servido.
   const snapAnamnese = anamneseSchema.safeParse(snapshot?.["anamnese"] ?? {});
   const snapBio = bioSchema.safeParse(snapshot?.["bio"] ?? {});
   const snapProtocolo = snapshot?.["protocolo"] ? protocolSchema.safeParse(snapshot["protocolo"]) : null;
@@ -499,7 +610,30 @@ export async function approvedSnapshotHtml(
   if (snapshotHash !== journey.contentHash) {
     throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado não corresponde ao conteúdo atual.");
   }
-  const html = snapshot && typeof snapshot["html"] === "string" ? (snapshot["html"] as string) : "";
+
+  const meta = (snapshot?.["meta"] ?? null) as Record<string, unknown> | null;
+  const htmlHash = typeof snapshot?.["htmlHash"] === "string" ? String(snapshot["htmlHash"]) : "";
+  if (!meta || !htmlHash) {
+    throw new JourneyError(
+      "NAO_APROVADO",
+      "Esta aprovação é anterior à prova de integridade do documento. Aprove novamente para gerar o final.",
+    );
+  }
+  if (Number(meta["version"]) !== journey.approvedVersion) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado indica outra versão.");
+  }
+  if (String(meta["approvedBy"] ?? "") !== ownerId) {
+    throw new JourneyError("NAO_APROVADO", "O documento aprovado indica outro autor.");
+  }
+  if (String(meta["template"] ?? "") !== DOC_TEMPLATE) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado usa outro modelo. Aprove novamente.");
+  }
+
+  const html = typeof snapshot?.["html"] === "string" ? (snapshot["html"] as string) : "";
   if (!html) throw new JourneyError("NAO_APROVADO", "Snapshot aprovado sem documento.");
+  if ((await sha256Hex(html)) !== htmlHash) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado foi alterado. Aprove novamente.");
+  }
   return html;
 }
+

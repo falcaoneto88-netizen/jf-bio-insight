@@ -239,6 +239,8 @@ export const aprovarJornada = createServerFn({ method: "POST" })
         id: z.string().uuid(),
         expectedVersion: z.number().int().min(1),
         expectedHash: z.string().min(16).max(128),
+        // Hash do documento efetivamente pré-visualizado pela pessoa.
+        expectedHtmlHash: z.string().length(64),
         // Confirmação humana explícita, digitada na aplicação.
         confirmacao: z.literal("APROVAR"),
       })
@@ -254,6 +256,7 @@ export const aprovarJornada = createServerFn({ method: "POST" })
       data.id,
       data.expectedVersion,
       data.expectedHash,
+      data.expectedHtmlHash,
     );
     return { jornada, issues: reviewIssues(jornada) };
   });
@@ -261,23 +264,42 @@ export const aprovarJornada = createServerFn({ method: "POST" })
 export const previewHtml = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ id: z.string().uuid(), tipo: z.enum(["draft", "final"]) }).parse(input),
+    z.object({ id: z.string().uuid(), tipo: z.enum(["draft", "candidate", "final"]) }).parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    const { getJourney, buildHtml, htmlFileName, approvedSnapshotHtml } = await core();
+    const { getJourney, buildHtml, htmlFileName, approvedSnapshotHtml, finalCandidate, sha256Hex } =
+      await core();
     const jornada = await getJourney(context.supabase, context.userId, data.id);
     try {
+      let html: string;
+      let htmlHash: string;
+      if (data.tipo === "final") {
+        html = await approvedSnapshotHtml(context.supabase, context.userId, jornada);
+        htmlHash = await sha256Hex(html);
+      } else if (data.tipo === "candidate") {
+        ({ html, htmlHash } = await finalCandidate(jornada));
+      } else {
+        html = buildHtml(jornada, "draft");
+        htmlHash = await sha256Hex(html);
+      }
       return {
-        html:
-          data.tipo === "final"
-            ? await approvedSnapshotHtml(context.supabase, context.userId, jornada)
-            : buildHtml(jornada, "draft"),
-        fileName: htmlFileName(jornada, data.tipo),
+        html,
+        htmlHash,
+        fileName: htmlFileName(jornada, data.tipo === "draft" ? "draft" : "final"),
         version: jornada.version,
+        contentHash: jornada.contentHash,
         error: null as string | null,
       };
     } catch (err) {
-      return { html: null, fileName: null, version: jornada.version, error: (err as Error).message };
+      return {
+        html: null,
+        htmlHash: null,
+        fileName: null,
+        version: jornada.version,
+        contentHash: jornada.contentHash,
+        error: (err as Error).message,
+      };
     }
   });
+

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { computeEvolution } from "./evolution";
-import { dateSortKey, decimalComma, integerValue, isRealDate } from "./format";
-import { renderProtocolHtml } from "./html";
+import { dateSortKey, decimalComma, integerValue, isRealDate, needsNumberReview } from "./format";
+import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { bioSchema } from "./types";
 import { fixtureAnamnese, fixtureBio, fixtureJourney, fixtureProtocolo } from "./__fixtures__/jornada-sintetica";
 
@@ -117,5 +117,63 @@ describe("HTML do paciente", () => {
   it("mostra a TMB como número inteiro", () => {
     expect(html).toContain("1.365");
     expect(html).not.toContain("1,365");
+  });
+});
+
+describe("valores ambíguos e alinhamento de tabelas", () => {
+  it("nunca multiplica a TMB por dez ao encontrar um decimal", () => {
+    expect(integerValue("1365,0")).not.toBe("13.650");
+    expect(integerValue("1365,0")).toBe("1365,0");
+    expect(integerValue("1365.0")).toBe("1365.0");
+    expect(needsNumberReview("1365,0")).toBe(true);
+    expect(needsNumberReview("1365")).toBe(false);
+  });
+
+  it("remove colunas sem cabeçalho SEM deslocar as células", () => {
+    const html = renderProtocolHtml({
+      patientName: "Paciente Sintético Um",
+      objetivo: fixtureProtocolo.objetivo,
+      anamnese: fixtureAnamnese,
+      bio: fixtureBio,
+      protocolo: {
+        ...fixtureProtocolo,
+        sections: [
+          {
+            title: "Tabela",
+            blocks: [
+              {
+                type: "table",
+                columns: ["Substância", "", "Dose"],
+                rows: [["Substância Sintética X", "ignorar", "1000 UI"]],
+              },
+            ],
+          },
+        ],
+      } as never,
+      draft: false,
+      generatedAt: "11/09/2026",
+      version: 1,
+    });
+    const linha = /Substância Sintética X<\/strong><\/td><td>([^<]*)<\/td>/.exec(html);
+    expect(linha?.[1]).toBe("1000 UI");
+    expect(html).not.toContain("ignorar");
+  });
+
+  it("protocolo sem conteúdo renderizável é detetado", () => {
+    expect(
+      protocoloTemConteudoRenderizavel({
+        ...fixtureProtocolo,
+        sections: [{ title: "Vazia", blocks: [] }],
+      } as never),
+    ).toBe(false);
+    expect(protocoloTemConteudoRenderizavel(fixtureProtocolo)).toBe(true);
+  });
+
+  it("datas inválidas com valores são sinalizadas para correção explícita", () => {
+    const result = computeEvolution({
+      ...fixtureBio,
+      historico: [{ data: "31/02/2026", peso: "80,0", massaMuscularEsqueletica: "", pgc: "" }],
+    } as never);
+    expect(result.ignoredDatesWithValues).toContain("31/02/2026");
   });
 });

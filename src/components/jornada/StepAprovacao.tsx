@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,6 +13,8 @@ export function StepAprovacao({
   journey,
   issues,
   html,
+  htmlHash,
+  htmlVersion,
   htmlError,
   onApproved,
   onBack,
@@ -20,6 +22,8 @@ export function StepAprovacao({
   journey: Journey;
   issues: { blocking: string[]; warnings: string[] };
   html: string | null;
+  htmlHash: string | null;
+  htmlVersion: number | null;
   htmlError: string | null;
   onApproved: () => void;
   onBack: () => void;
@@ -28,7 +32,15 @@ export function StepAprovacao({
   const [busy, setBusy] = useState(false);
   const aprovado = journey.approvedVersion === journey.version;
 
+  // Mudou a versão: a confirmação escrita deixa de valer.
+  useEffect(() => {
+    setConfirmacao("");
+  }, [journey.version, journey.id]);
+
+  const previewAtual = Boolean(html && htmlHash) && htmlVersion === journey.version && !htmlError;
+
   const aprovar = async () => {
+    if (!htmlHash || !previewAtual) return;
     setBusy(true);
     try {
       await aprovarJornada({
@@ -36,6 +48,7 @@ export function StepAprovacao({
           id: journey.id,
           expectedVersion: journey.version,
           expectedHash: journey.contentHash,
+          expectedHtmlHash: htmlHash,
           confirmacao: "APROVAR",
         },
       });
@@ -53,26 +66,27 @@ export function StepAprovacao({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="font-serif text-xl">Pré-visualização exata</CardTitle>
+          <CardTitle className="font-serif text-xl">Documento a aprovar</CardTitle>
           <CardDescription>
-            Este é o conteúdo que será entregue. Versão {journey.version}.
+            Este é exatamente o documento final que será entregue. Versão {journey.version}.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {htmlError ? (
             <p className="text-sm text-destructive">{htmlError}</p>
-          ) : html ? (
+          ) : html && previewAtual ? (
             <iframe
-              title="Pré-visualização do protocolo"
+              title="Documento a aprovar"
               sandbox=""
               srcDoc={html}
               className="h-[70vh] w-full rounded-md border border-border bg-white"
             />
           ) : (
-            <p className="text-sm text-muted-foreground">A preparar a pré-visualização…</p>
+            <p className="text-sm text-muted-foreground">A preparar o documento…</p>
           )}
         </CardContent>
       </Card>
+
 
       {(issues.blocking.length > 0 || issues.warnings.length > 0 || (journey.protocolo?.pendencias.length ?? 0) > 0) && (
         <Card className={issues.blocking.length ? "border-destructive/60" : "border-gold/60"}>
@@ -130,10 +144,23 @@ export function StepAprovacao({
             <Button
               size="lg"
               onClick={aprovar}
-              disabled={busy || aprovado || confirmacao !== "APROVAR" || issues.blocking.length > 0}
+              disabled={
+                busy ||
+                aprovado ||
+                !previewAtual ||
+                confirmacao !== "APROVAR" ||
+                issues.blocking.length > 0
+              }
             >
-              {aprovado ? "Versão aprovada" : busy ? "A aprovar…" : "Aprovar esta versão"}
+              {aprovado
+                ? "Versão aprovada"
+                : busy
+                  ? "A aprovar…"
+                  : !previewAtual
+                    ? "A preparar o documento…"
+                    : "Aprovar esta versão"}
             </Button>
+
           </div>
         </CardContent>
       </Card>

@@ -91,6 +91,7 @@ export const fixtureJourney: Journey = {
   contentHash: "hash-sintetico",
   approvedVersion: null,
   approvedAt: null,
+  approvedBy: null,
   approvedHash: null,
   createdAt: "2026-05-12T09:30:00.000Z",
   updatedAt: "2026-05-12T09:30:00.000Z",
