@@ -36,7 +36,7 @@ export function AccessNotice({ signedIn, proximo, descricao }: Props) {
         </div>
         {!signedIn && (
           <Button asChild>
-            <Link to="/auth" search={proximo ? { proximo } : undefined}>
+            <Link to="/auth" search={{ proximo: proximo ?? "/" }}>
               Iniciar sessão
             </Link>
           </Button>
