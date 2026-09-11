@@ -62,9 +62,10 @@ export const organizarAnamneseTool = defineTool({
   handler: async ({ jornadaId, texto }, ctx) => {
     const access = await requireJourneyAccess(ctx);
     if (!access.ok) return toolError(access.message);
-    const { getJourney, patchJourney } = await import("@/lib/journey/core.server");
+    const { getJourney, patchJourney, consumeAiQuota } = await import("@/lib/journey/core.server");
     const { organizarAnamneseTexto } = await import("@/lib/journey/agent.server");
     try {
+      await consumeAiQuota(access.userId);
       const jornada = await getJourney(access.supabase, access.userId, jornadaId);
       const result = await organizarAnamneseTexto(texto, jornada.patientName);
       if (!result.data) return toolError(result.error ?? "Não foi possível organizar a anamnese.");
@@ -107,7 +108,9 @@ export const extrairBioimpedanciaTool = defineTool({
 
     const { getJourney, patchJourney } = await import("@/lib/journey/core.server");
     const { extrairBioimpedanciaSource } = await import("@/lib/journey/agent.server");
+    const { consumeAiQuota } = await import("@/lib/journey/core.server");
     try {
+      await consumeAiQuota(access.userId);
       const jornada = await getJourney(access.supabase, access.userId, jornadaId);
       const result = await extrairBioimpedanciaSource(
         fileBase64 && mimeType
