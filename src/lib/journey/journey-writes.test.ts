@@ -81,7 +81,7 @@ const adminClient = {
 
 async function baseRow(): Promise<Row> {
   const hash = await contentHash({
-    patientName: "Paciente Sintético",
+    patientName: "Paciente Sintético Um",
     anamnese: fixtureAnamnese,
     bio: fixtureBio,
     protocolo: fixtureProtocolo,
@@ -89,7 +89,7 @@ async function baseRow(): Promise<Row> {
   return {
     id: ID,
     owner_id: OWNER,
-    patient_name: "Paciente Sintético",
+    patient_name: "Paciente Sintético Um",
     status: "aprovado",
     version: 3,
     anamnese: fixtureAnamnese,
@@ -116,12 +116,12 @@ beforeEach(async () => {
 
 describe("escritas apenas pelo backend", () => {
   it("a edição usa service_role e nunca o cliente do utilizador", async () => {
-    await patchJourney(userClient(), OWNER, ID, 3, { patientName: "Paciente Sintético B" });
+    await patchJourney(userClient(), OWNER, ID, 3, { patientName: "Paciente Sintético Um B" });
     expect(adminUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("uma edição invalida a aprovação em vigor", async () => {
-    const updated = await patchJourney(userClient(), OWNER, ID, 3, { patientName: "Paciente Sintético B" });
+    const updated = await patchJourney(userClient(), OWNER, ID, 3, { patientName: "Paciente Sintético Um B" });
     const values = adminUpdate.mock.calls[0]![0] as Row;
     expect(values["approved_version"]).toBeNull();
     expect(values["approved_hash"]).toBeNull();
@@ -140,7 +140,7 @@ describe("escritas apenas pelo backend", () => {
 
   it("recusa edição com versão desatualizada", async () => {
     await expect(patchJourney(userClient(), OWNER, ID, 2, { patientName: "X" })).rejects.toThrow(
-      /alterada entretanto|VERSAO/i,
+      /alterada/i,
     );
     expect(adminUpdate).not.toHaveBeenCalled();
   });
