@@ -144,10 +144,23 @@ export function StepAprovacao({
             <Button
               size="lg"
               onClick={aprovar}
-              disabled={busy || aprovado || confirmacao !== "APROVAR" || issues.blocking.length > 0}
+              disabled={
+                busy ||
+                aprovado ||
+                !previewAtual ||
+                confirmacao !== "APROVAR" ||
+                issues.blocking.length > 0
+              }
             >
-              {aprovado ? "Versão aprovada" : busy ? "A aprovar…" : "Aprovar esta versão"}
+              {aprovado
+                ? "Versão aprovada"
+                : busy
+                  ? "A aprovar…"
+                  : !previewAtual
+                    ? "A preparar o documento…"
+                    : "Aprovar esta versão"}
             </Button>
+
           </div>
         </CardContent>
       </Card>
