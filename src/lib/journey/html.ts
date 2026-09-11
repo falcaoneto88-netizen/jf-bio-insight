@@ -52,21 +52,26 @@ function renderBlock(block: ProtocolBlock): string {
       return `<ul class="block">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
     }
     case "table": {
-      const cols = block.columns.filter((c) => c.trim().length > 0);
-      const rows = block.rows.filter((r) => r.some((c) => c.trim().length > 0));
-      if (!cols.length || !rows.length) return "";
+      // Colunas sem cabeçalho são removidas COM as células correspondentes:
+      // o alinhamento é feito pelo índice original, nunca por posição relativa.
+      const kept = block.columns
+        .map((c, i) => ({ label: c, index: i }))
+        .filter((c) => c.label.trim().length > 0);
+      const rows = block.rows.filter((r) => kept.some((c) => String(r[c.index] ?? "").trim().length > 0));
+      if (!kept.length || !rows.length) return "";
       return `<table class="block">
-  <thead><tr>${cols.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>
+  <thead><tr>${kept.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
   <tbody>
 ${rows
   .map(
     (row) =>
-      `    <tr>${cols.map((_, i) => tableCell(row[i] ?? "", i === 0)).join("")}</tr>`,
+      `    <tr>${kept.map((c, pos) => tableCell(row[c.index] ?? "", pos === 0)).join("")}</tr>`,
   )
   .join("\n")}
   </tbody>
 </table>`;
     }
+
     case "patientNote":
       return block.text.trim()
         ? `<div class="patient-note block">${paragraphs(block.text)}</div>`
