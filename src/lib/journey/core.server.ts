@@ -482,6 +482,23 @@ export async function approvedSnapshotHtml(
     throw new JourneyError("NAO_APROVADO", "Aprovação sem autor ou data registados.");
   }
   const snapshot = row["snapshot"] as Record<string, unknown> | null;
+  // O snapshot também é validado por hash no servidor: se o registo de aprovação
+  // for adulterado em base, o conteúdo deixa de corresponder e o HTML não é servido.
+  const snapAnamnese = anamneseSchema.safeParse(snapshot?.["anamnese"] ?? {});
+  const snapBio = bioSchema.safeParse(snapshot?.["bio"] ?? {});
+  const snapProtocolo = snapshot?.["protocolo"] ? protocolSchema.safeParse(snapshot["protocolo"]) : null;
+  if (!snapAnamnese.success || !snapBio.success || snapProtocolo?.success === false) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O registo de aprovação está inválido. Aprove novamente.");
+  }
+  const snapshotHash = await contentHash({
+    patientName: String(snapshot?.["patientName"] ?? ""),
+    anamnese: snapAnamnese.data,
+    bio: snapBio.data,
+    protocolo: snapProtocolo ? snapProtocolo.data : null,
+  });
+  if (snapshotHash !== journey.contentHash) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado não corresponde ao conteúdo atual.");
+  }
   const html = snapshot && typeof snapshot["html"] === "string" ? (snapshot["html"] as string) : "";
   if (!html) throw new JourneyError("NAO_APROVADO", "Snapshot aprovado sem documento.");
   return html;
