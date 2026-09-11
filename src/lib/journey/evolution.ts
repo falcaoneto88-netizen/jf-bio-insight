@@ -23,6 +23,8 @@ export type EvolutionPoint = {
 export type EvolutionResult = {
   points: EvolutionPoint[];
   ignoredDates: string[];
+  /** Datas inválidas cujas linhas TÊM valores — perda silenciosa se ignoradas. */
+  ignoredDatesWithValues: string[];
   /** Conflitos entre linhas da mesma data — nunca resolvidos em silêncio. */
   conflicts: string[];
   hasTrend: boolean;
