@@ -187,7 +187,7 @@ export async function patchJourney(
   const changedBio = patch.bio !== undefined;
   const changedProtocolo = patch.protocolo !== undefined;
   const changedName = patch.patientName !== undefined && patch.patientName.trim() !== current.patientName;
-  const contentChanged = changedAnamnese || changedBio || changedProtocolo || changedName;
+  void changedProtocolo;
 
   const patientName = (patch.patientName ?? current.patientName).trim();
   const anamnese = patch.anamnese ?? current.anamnese;
