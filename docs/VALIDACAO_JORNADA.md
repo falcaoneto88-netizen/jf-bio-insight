@@ -78,3 +78,28 @@ nomes públicos e para os quatro nomes `Administrators ...` antes de os recriar,
 `PUBLIC`/`anon` e grants mínimos para `authenticated` e `service_role`. Nenhum registo é alterado
 e nenhuma permissão pública é recriada; o administrador existente e as ferramentas MCP mantêm o
 acesso através de `service_role` e de `has_role(auth.uid(),'admin')`.
+
+## 11/09/2026 — Permissões de escrita da jornada
+
+Achado: `jornadas_clinicas` e `jornada_aprovacoes` tinham grants amplos (anon/authenticated)
+e policy de UPDATE ao dono, permitindo forjar `approved_version`/`approved_hash` pelo REST.
+
+Correção codificada em migration idempotente:
+- `REVOKE ALL` em ambas as tabelas para `PUBLIC`, `anon`, `authenticated`; apenas `GRANT SELECT`
+  a `authenticated` (RLS admin + dono). Escrita exclusiva de `service_role`.
+- Removidas policies de INSERT/UPDATE/DELETE do cliente nessas tabelas.
+- `REVOKE TRUNCATE, REFERENCES, TRIGGER ON public.reports FROM authenticated`.
+- `aprovar_jornada` e `consume_ai_quota` continuam com EXECUTE apenas para `service_role`.
+
+Verificado em base (aclexplode): sem privilégios `anon`/`PUBLIC`; `authenticated` só com SELECT nas
+duas tabelas da jornada; `reports` sem TRUNCATE/REFERENCES/TRIGGER para `authenticated`.
+
+Servidor:
+- Todo INSERT/UPDATE passa por `core.server.ts` após auth + admin + dono + `expectedVersion`.
+- Qualquer edição limpa `approved_version/hash/by/at` e faz recuar o estado de "aprovado".
+- `approvedSnapshotHtml` valida no servidor versão, hash da jornada, hash recalculado do snapshot
+  e presença de autor/data antes de servir o HTML final.
+
+Testes (`src/lib/journey/journey-writes.test.ts`, 9 casos): escrita direta pelo cliente é recusada,
+aprovação com versão/hash forjados é recusada, edição invalida a aprovação, snapshot adulterado em
+base não é servido. Suite total: 22 testes verdes; typecheck limpo. Sem publicação.
