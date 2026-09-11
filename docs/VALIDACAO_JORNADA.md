@@ -97,9 +97,27 @@ duas tabelas da jornada; `reports` sem TRUNCATE/REFERENCES/TRIGGER para `authent
 Servidor:
 - Todo INSERT/UPDATE passa por `core.server.ts` após auth + admin + dono + `expectedVersion`.
 - Qualquer edição limpa `approved_version/hash/by/at` e faz recuar o estado de "aprovado".
-- `approvedSnapshotHtml` valida no servidor versão, hash da jornada, hash recalculado do snapshot
-  e presença de autor/data antes de servir o HTML final.
+- A aprovação recalcula o hash do conteúdo atual e exige o SHA-256 do documento efetivamente
+  pré-visualizado (`expectedHtmlHash`); documento diferente do revisto é recusado.
+- O documento é gerado com data estável da versão (não "hoje"), por isso prévia e ficheiro final
+  coincidem byte a byte.
+- `approvedSnapshotHtml` valida versão, hash recalculado da jornada e do snapshot, autor igual ao
+  titular autenticado, data válida e coerente, metadados (versão/autor/modelo) e o SHA-256 dos bytes
+  exatos do HTML guardado. Aprovações antigas sem essa prova exigem nova aprovação — nada é
+  fabricado retroativamente.
+- Conflitos de valores na mesma data e datas inválidas com valores bloqueiam a aprovação.
 
-Testes (`src/lib/journey/journey-writes.test.ts`, 9 casos): escrita direta pelo cliente é recusada,
-aprovação com versão/hash forjados é recusada, edição invalida a aprovação, snapshot adulterado em
-base não é servido. Suite total: 22 testes verdes; typecheck limpo. Sem publicação.
+### Natureza de cada teste (importante)
+
+- **Unitários com mocks** (`journey-writes.test.ts`, 15 casos): usam um cliente falso que recusa
+  escritas, para verificar o *caminho de código* — escrita só por service-role, aprovação forjada
+  recusada, edição invalida aprovação, HTML alterado isoladamente recusado, download repetido
+  idêntico. **Não** são prova das permissões SQL reais.
+- **Verificação real de permissões**: feita por consulta direta ao catálogo da base
+  (`aclexplode`), registada na secção acima. É essa consulta, e não os testes unitários, que
+  comprova os grants.
+- **Unitários puros** (`journey.test.ts`, 17 casos): formatação, datas, evolução, alinhamento de
+  tabelas e estrutura do HTML.
+
+Suite total: 32 testes verdes; typecheck limpo. Sem publicação.
+
