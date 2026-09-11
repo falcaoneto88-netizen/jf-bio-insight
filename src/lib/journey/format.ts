@@ -65,10 +65,15 @@ export function integerValue(value: string | null | undefined): string {
 
 /** Formata uma diferença numérica com sinal e vírgula decimal. */
 export function signedDelta(delta: number, digits = 1): string {
-  const fixed = Math.abs(delta).toFixed(digits).replace(".", ",");
-  if (Math.abs(delta) < Number(`0.${"0".repeat(digits - 1)}5`)) return `0,${"0".repeat(digits)}`;
+  if (!Number.isFinite(delta)) return "";
+  // Arredonda à precisão pedida e só depois decide o sinal: assim 0,3 não vira 0,0
+  // e -0 nunca aparece com sinal. Isto vale APENAS para o delta, nunca para a transcrição.
+  const rounded = Number(Math.abs(delta).toFixed(digits));
+  const fixed = rounded.toFixed(digits).replace(".", ",");
+  if (rounded === 0) return fixed;
   return `${delta > 0 ? "+" : "−"}${fixed}`;
 }
+
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const BR_DATE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
