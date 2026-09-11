@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
