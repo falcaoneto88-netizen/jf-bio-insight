@@ -18,7 +18,24 @@ import {
 } from "@/lib/journey/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type Ctx = { supabase: any; userId: string };
+type Ctx = { supabase: any; userId: string; claims?: Record<string, unknown> };
+
+/**
+ * A aprovação é um ato humano na aplicação autenticada.
+ * Tokens emitidos a clientes OAuth delegados (assistentes/MCP) são recusados.
+ */
+function assertHumanSession(claims: Record<string, unknown> | undefined) {
+  const c = claims ?? {};
+  const delegado =
+    typeof c["client_id"] === "string" ||
+    typeof c["azp"] === "string" ||
+    typeof c["scope"] === "string" ||
+    Array.isArray(c["scopes"]) ||
+    c["aud"] !== "authenticated";
+  if (delegado) {
+    throw new Error("A aprovação só pode ser feita por uma pessoa, dentro da aplicação.");
+  }
+}
 
 async function assertAdmin(context: Ctx) {
   const { data, error } = await context.supabase.rpc("has_role", {
@@ -225,6 +242,7 @@ export const aprovarJornada = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    assertHumanSession(context.claims as Record<string, unknown> | undefined);
     await assertAdmin(context as Ctx);
     const { approveJourney, reviewIssues } = await core();
     const jornada = await approveJourney(
