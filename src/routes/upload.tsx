@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { extractBioimpedance } from "@/lib/bioimpedance.functions";
 import { cn } from "@/lib/utils";
+import { AccessNotice } from "@/components/AccessNotice";
 import { useAdminSession } from "@/hooks/use-admin-session";
 import { useReportStore, type UploadedFile } from "@/store/report-store";
 
