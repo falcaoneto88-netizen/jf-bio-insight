@@ -217,14 +217,17 @@ export async function patchJourney(
   };
   if (patch.internalNotes !== undefined) update["internal_notes"] = patch.internalNotes;
   if (patch.status !== undefined) update["status"] = patch.status;
-  if (contentChanged) {
-    // Qualquer edição posterior invalida a aprovação em vigor.
-    update["approved_version"] = null;
-    update["approved_at"] = null;
-    update["approved_by"] = null;
-    update["approved_hash"] = null;
-    if (current.status === "aprovado") update["status"] = patch.status ?? "protocolo";
+  // A versão aumenta SEMPRE nesta atualização, portanto a aprovação em vigor
+  // deixa de corresponder ao que a pessoa aprovou — é limpa sem exceção
+  // (inclui notas internas, confirmações e mudança de estado).
+  update["approved_version"] = null;
+  update["approved_at"] = null;
+  update["approved_by"] = null;
+  update["approved_hash"] = null;
+  if (current.status === "aprovado" && (patch.status === undefined || patch.status === "aprovado")) {
+    update["status"] = "protocolo";
   }
+
 
   const db = await writer();
   const { data, error } = await db
