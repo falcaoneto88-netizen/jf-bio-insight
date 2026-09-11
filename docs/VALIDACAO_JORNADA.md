@@ -69,3 +69,12 @@ fixo de páginas.
 Consultas de confirmação: `pg_policies` (zero políticas `public`/`anon`) e `pg_class.relacl`
 (sem `anon` em `reports`, `user_roles`, `jornadas_clinicas`, `jornada_aprovacoes`,
 `journey_ai_usage`).
+
+## Migração de permissões codificada — 11/09/2026
+
+`supabase/migrations/20260911131740_67befdec-0a83-485f-8ca2-4a029bceba1f.sql` reproduz de forma
+idempotente a transação já aplicada no banco: `DROP POLICY IF EXISTS` explícito para os quatro
+nomes públicos e para os quatro nomes `Administrators ...` antes de os recriar, `REVOKE ALL` de
+`PUBLIC`/`anon` e grants mínimos para `authenticated` e `service_role`. Nenhum registo é alterado
+e nenhuma permissão pública é recriada; o administrador existente e as ferramentas MCP mantêm o
+acesso através de `service_role` e de `has_role(auth.uid(),'admin')`.
