@@ -337,6 +337,24 @@ export function htmlFileName(journey: Journey, kind: "draft" | "final"): string 
   return `protocolo-${slug}-v${journey.version}${kind === "draft" ? "-rascunho" : ""}.html`;
 }
 
+/** Limite de pedidos ao agente por utilizador e por hora, contado no servidor. */
+export const AI_LIMITE_HORA = 40;
+
+export async function consumeAiQuota(userId: string): Promise<void> {
+  const db = await writer();
+  const { data, error } = await db.rpc("consume_ai_quota", {
+    _user_id: userId,
+    _limit: AI_LIMITE_HORA,
+  });
+  if (error) throw new JourneyError("DB", "Não foi possível validar o limite de utilização.");
+  if (data === false) {
+    throw new JourneyError(
+      "LIMITE",
+      "Limite de pedidos ao agente atingido nesta hora. Tente novamente mais tarde.",
+    );
+  }
+}
+
 /** Resumo da bioimpedância partilhado pela interface e pelo MCP (whitelist idêntica). */
 export function bioResumoTexto(bio: Bio): string {
   if (bio.semExame) return "";

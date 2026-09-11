@@ -151,13 +151,14 @@ export const prepararProtocoloTool = defineTool({
   handler: async ({ jornadaId, objetivo, instrucoes }, ctx) => {
     const access = await requireJourneyAccess(ctx);
     if (!access.ok) return toolError(access.message);
-    const { getJourney, patchJourney, reviewIssues, bioResumoTexto } = await import(
+    const { getJourney, patchJourney, reviewIssues, bioResumoTexto, consumeAiQuota } = await import(
       "@/lib/journey/core.server"
     );
     const { prepararProtocoloRascunho, anamneseParaTexto } = await import("@/lib/journey/agent.server");
     const { computeEvolution } = await import("@/lib/journey/evolution");
     const { protocolSchema } = await import("@/lib/journey/types");
     try {
+      await consumeAiQuota(access.userId);
       const jornada = await getJourney(access.supabase, access.userId, jornadaId);
       if (!jornada.confirmations.revisao) {
         return toolError("O profissional ainda não confirmou a revisão dos dados desta jornada.");
