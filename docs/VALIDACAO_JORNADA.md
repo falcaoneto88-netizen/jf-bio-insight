@@ -116,8 +116,31 @@ Servidor:
 - **Verificação real de permissões**: feita por consulta direta ao catálogo da base
   (`aclexplode`), registada na secção acima. É essa consulta, e não os testes unitários, que
   comprova os grants.
-- **Unitários puros** (`journey.test.ts`, 17 casos): formatação, datas, evolução, alinhamento de
+- **Unitários puros** (`journey.test.ts`, 18 casos): formatação, datas, evolução, alinhamento de
   tabelas e estrutura do HTML.
 
-Suite total: 32 testes verdes; typecheck limpo. Sem publicação.
+Suite total: 33 testes verdes; typecheck limpo. Sem publicação.
+
+### Verificação independente do revisor (registada, não é a nossa suite)
+
+- Reexecução independente dos 32 testes no commit `cfdfb1c`: verdes.
+- Prova externa à suite: 1 caso válido + 8 adulterações (HTML alterado isoladamente, dados atuais
+  alterados, autor/data/versão/snapshot/hash em falta) — todas bloqueadas; downloads válidos
+  idênticos byte a byte.
+- Render visual com WeasyPrint 70 sobre fixture sintético: 7 páginas A4, sem texto fora da página.
+- Estes resultados são verificação externa do revisor. Não substituem, nem se confundem com, a
+  verificação real de grants por consulta SQL ao catálogo, registada acima.
+
+### Isolamento de sessão e de estado de ecrã
+
+- `/_authenticated` monta uma fronteira de sessão: ao terminar sessão ou trocar de utilizador,
+  cancela pedidos em curso, limpa todo o cache de consultas (incluindo `["jornada", id]` e listas)
+  e remonta a árvore com `key` da sessão, descartando rascunhos e prévias em memória; no logout
+  redireciona para `/auth`. Nada clínico é guardado localmente.
+- `/jornada/$id` já remonta por `key={id}`; prévias são limpas por versão e respostas obsoletas
+  ignoradas.
+- `StepAnamnese` e `StepBio` ignoram respostas tardias após desmontagem/troca e libertam o estado
+  ocupado ao cancelar.
+- `StepHtml` limpa prévia e invalida pedidos pendentes ao mudar de atendimento, de versão ou ao
+  desmontar, e mostra o erro de forma visível no ecrã.
 

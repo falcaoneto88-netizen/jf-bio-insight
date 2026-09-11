@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Copy, Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,59 +11,98 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
   const aprovado = journey.approvedVersion === journey.version;
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  const fetchHtml = async () => {
-    const result = await previewHtml({ data: { id: journey.id, tipo: aprovado ? "final" : "draft" } });
-    if (!result.html) {
-      toast.error(result.error ?? "Não foi possível gerar o HTML.");
+  /** Falso depois de desmontar: resposta tardia não toca no ecrã. */
+  const mountedRef = useRef(true);
+  const requestRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestRef.current += 1;
+    };
+  }, []);
+
+  // Mudar de atendimento ou de versão descarta prévia e pedidos pendentes:
+  // nunca se mostra ou descarrega o documento de outro paciente/versão.
+  useEffect(() => {
+    requestRef.current += 1;
+    setPreview(null);
+    setErro(null);
+    setBusy(false);
+  }, [journey.id, journey.version]);
+
+  /** Devolve null quando o pedido ficou obsoleto ou falhou (erro já visível). */
+  const fetchHtml = async (requestId: number) => {
+    try {
+      const result = await previewHtml({
+        data: { id: journey.id, tipo: aprovado ? "final" : "draft" },
+      });
+      if (!mountedRef.current || requestId !== requestRef.current) return null;
+      if (!result.html) {
+        const msg = result.error ?? "Não foi possível gerar o HTML.";
+        setErro(msg);
+        toast.error(msg);
+        return null;
+      }
+      setErro(null);
+      return result;
+    } catch (err) {
+      if (mountedRef.current && requestId === requestRef.current) {
+        const msg = (err as Error).message;
+        setErro(msg);
+        toast.error(msg);
+      }
       return null;
     }
-    return result;
   };
 
-  const baixar = async () => {
+  const run = async (action: (result: { html: string; fileName?: string | null }) => Promise<void> | void) => {
+    const requestId = ++requestRef.current;
     setBusy(true);
+    setErro(null);
     try {
-      const result = await fetchHtml();
+      const result = await fetchHtml(requestId);
       if (!result?.html) return;
-      const blob = new Blob([result.html], { type: "text/html;charset=utf-8" });
+      if (!mountedRef.current || requestId !== requestRef.current) return;
+      await action({ html: result.html, fileName: result.fileName });
+    } finally {
+      if (mountedRef.current && requestId === requestRef.current) setBusy(false);
+    }
+  };
+
+  const baixar = () =>
+    run(({ html, fileName }) => {
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = result.fileName ?? "protocolo.html";
+      link.download = fileName ?? "protocolo.html";
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
       toast.success("HTML descarregado.");
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
 
-  const copiar = async () => {
-    setBusy(true);
-    try {
-      const result = await fetchHtml();
-      if (!result?.html) return;
-      await navigator.clipboard.writeText(result.html);
-      toast.success("HTML copiado.");
-    } catch {
-      toast.error("Não foi possível copiar. Use o download.");
-    } finally {
-      setBusy(false);
-    }
-  };
+  const copiar = () =>
+    run(async ({ html }) => {
+      try {
+        await navigator.clipboard.writeText(html);
+        toast.success("HTML copiado.");
+      } catch {
+        const msg = "Não foi possível copiar. Use o download.";
+        setErro(msg);
+        toast.error(msg);
+      }
+    });
 
-  const visualizar = async () => {
-    setBusy(true);
-    try {
-      const result = await fetchHtml();
-      if (result?.html) setPreview(result.html);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const visualizar = () =>
+    run(({ html }) => {
+      setPreview(html);
+    });
 
   return (
     <div className="space-y-6">
@@ -77,13 +116,13 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Button size="lg" onClick={baixar} disabled={busy}>
+          <Button size="lg" onClick={() => void baixar()} disabled={busy}>
             <Download className="mr-1 h-4 w-4" /> Baixar HTML completo
           </Button>
-          <Button variant="outline" onClick={copiar} disabled={busy}>
+          <Button variant="outline" onClick={() => void copiar()} disabled={busy}>
             <Copy className="mr-1 h-4 w-4" /> Copiar HTML
           </Button>
-          <Button variant="outline" onClick={visualizar} disabled={busy}>
+          <Button variant="outline" onClick={() => void visualizar()} disabled={busy}>
             <Eye className="mr-1 h-4 w-4" /> Visualizar
           </Button>
           <Button variant="ghost" onClick={onBack}>
@@ -91,6 +130,14 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
           </Button>
         </CardContent>
       </Card>
+
+      {erro && (
+        <Card className="border-destructive/40">
+          <CardContent className="pt-6">
+            <p className="text-sm text-destructive">{erro}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {preview && (
         <Card>
