@@ -118,6 +118,33 @@ export type Database = {
         }
         Relationships: []
       }
+      journey_ai_usage: {
+        Row: {
+          count: number
+          created_at: string
+          hour_bucket: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          hour_bucket: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          hour_bucket?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           body_classification: string
@@ -196,6 +223,10 @@ export type Database = {
           approved_version: number
           content_hash: string
         }[]
+      }
+      consume_ai_quota: {
+        Args: { _limit: number; _user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
