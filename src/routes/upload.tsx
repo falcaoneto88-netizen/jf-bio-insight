@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { extractBioimpedance } from "@/lib/bioimpedance.functions";
 import { cn } from "@/lib/utils";
+import { useAdminSession } from "@/hooks/use-admin-session";
 import { useReportStore, type UploadedFile } from "@/store/report-store";
 
 export const Route = createFileRoute("/upload")({
@@ -54,6 +55,7 @@ function UploadPage() {
   const navigate = useNavigate();
   const { file, setFile, setBodyComposition } = useReportStore();
   const extract = useServerFn(extractBioimpedance);
+  const session = useAdminSession();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,15 @@ function UploadPage() {
   const [extractError, setExtractError] = useState<string | null>(null);
 
   const runExtraction = async (f: File) => {
+    if (!session.loading && !session.isAdmin) {
+      setExtractError(
+        session.signedIn
+          ? "Esta conta não tem permissão para a leitura automática do exame. Preencha os dados manualmente."
+          : "Inicie sessão com a conta da clínica para a leitura automática do exame. Também pode preencher os dados manualmente.",
+      );
+      setStatus("error");
+      return;
+    }
     setStatus("extracting");
     setExtractError(null);
     try {
@@ -79,9 +90,13 @@ function UploadPage() {
       }
       setBodyComposition(result.data);
       setStatus("done");
-    } catch (err) {
-      console.error(err);
-      setExtractError("Erro inesperado ao analisar o exame.");
+    } catch {
+      console.error("[bioimpedance] falha na leitura automática");
+      setExtractError(
+        session.isAdmin
+          ? "Erro inesperado ao analisar o exame."
+          : "Sessão necessária para a leitura automática do exame. Inicie sessão ou preencha os dados manualmente.",
+      );
       setStatus("error");
     }
   };

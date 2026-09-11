@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
 import {
   emptyBodyComposition,
   type BodyCompositionData,
@@ -146,8 +148,18 @@ function mapToBodyComposition(raw: any): BodyCompositionData {
 }
 
 export const extractBioimpedance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => inputSchema.parse(data))
-  .handler(async ({ data }): Promise<ExtractionResult> => {
+  .handler(async ({ data, context }): Promise<ExtractionResult> => {
+    // Fluxo legado, mas exige sessão iniciada com papel de administrador.
+    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (roleError || !isAdmin) {
+      return { data: null, error: "Acesso restrito a administradores autenticados." };
+    }
+
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) {
       return { data: null, error: "Serviço de IA indisponível no momento." };
@@ -207,8 +219,7 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
         };
       }
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        console.error("Lovable AI error", res.status, text);
+        console.error("[bioimpedance] AI gateway status", res.status);
         return { data: null, error: "Não foi possível analisar o exame. Tente novamente." };
       }
 
@@ -236,7 +247,7 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
         return typeof v === "string" && v.trim() !== "";
       });
       if (!hasAnyValue) {
-        console.warn("extractBioimpedance: empty extraction", { fileName: data.fileName, mimeType: data.mimeType });
+        console.warn("[bioimpedance] extração sem campos reconhecidos");
         return {
           data: null,
           error: isPdf
@@ -246,7 +257,7 @@ export const extractBioimpedance = createServerFn({ method: "POST" })
       }
       return { data: mapped, error: null };
     } catch (err) {
-      console.error("extractBioimpedance failed", err);
+      console.error("[bioimpedance] falha ao processar o exame");
       return { data: null, error: "Falha ao processar o exame. Verifique sua conexão e tente novamente." };
     }
   });

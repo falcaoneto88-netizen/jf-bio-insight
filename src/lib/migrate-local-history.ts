@@ -33,13 +33,13 @@ export async function migrateLocalHistoryToCloud(): Promise<number> {
       .from("reports")
       .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
     if (error) {
-      console.error("[reports] migration failed", error);
+      console.error("[reports] migration failed");
       return 0;
     }
     window.localStorage.setItem(MIGRATED_FLAG, "true");
     return rows.length;
   } catch (err) {
-    console.error("[reports] migration error", err);
+    console.error("[reports] migration error");
     return 0;
   }
 }

@@ -72,3 +72,28 @@ O MCP **não aprova**; pode exportar um rascunho identificado ou o final já apr
 | Ferramentas MCP | `src/lib/mcp/tools/journey-tools.ts` |
 | Interface | `src/routes/_authenticated/jornada/`, `src/components/jornada/` |
 | Fixture sintético | `src/lib/journey/__fixtures__/jornada-sintetica.ts` |
+
+## Achado de segurança e correção — 11/09/2026
+
+**Achado.** A tabela `public.reports` tinha (num estado anterior) quatro políticas
+`Public can view/insert/update/delete reports` com `roles={public}` e `USING/WITH CHECK true`,
+permitindo ler, criar, alterar e apagar dados clínicos sem qualquer sessão.
+
+**Correção (apenas permissões, nenhum dado tocado).** Migração idempotente que:
+
+- remove qualquer política com role `public`/`anon` em `public.reports`;
+- garante RLS ativa e as quatro políticas limitadas a `authenticated` com
+  `has_role(auth.uid(),'admin')`;
+- `REVOKE ALL ... FROM PUBLIC, anon` em `reports`, `user_roles` e nas tabelas da jornada;
+- `user_roles` fica só de leitura para o cliente (escrita apenas pelo backend autorizado);
+- `service_role` mantém a operação normal do backend e do MCP.
+
+**Confirmado no banco.** `relacl` sem `anon`, zero políticas públicas, e chamadas REST com a
+chave pública devolvem `401 / 42501` em leitura, inserção e eliminação. Os 18 relatórios
+existentes foram preservados e nenhuma conta recebeu papel de administrador.
+
+**Aplicação.** A extração antiga por IA (`extractBioimpedance`) passou a exigir sessão iniciada
+com papel de administrador; sem isso devolve uma mensagem clara e o preenchimento manual
+continua disponível. Histórico, revisão e envio de exame mostram um aviso de sessão explícito
+em vez de falharem em silêncio. Os registos de consola deixaram de incluir respostas brutas da
+IA, objetos de erro do banco ou conteúdo de relatórios. Nenhum envio ao GHL foi executado.
