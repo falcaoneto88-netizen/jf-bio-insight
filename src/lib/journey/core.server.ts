@@ -15,6 +15,7 @@ import {
   emptyBio,
   emptyProtocolo,
   protocolSchema,
+  OBJETIVOS,
   type Anamnese,
   type Bio,
   type Confirmations,
@@ -355,9 +356,30 @@ export async function approveJourney(
   }
   const issues = reviewIssues(current);
   if (issues.blocking.length) throw new JourneyError("BLOQUEADO", issues.blocking.join(" "));
+
+  // Dependências essenciais: confirmadas no servidor, não apenas avisadas na interface.
+  if (!current.confirmations.anamnese) {
+    throw new JourneyError("BLOQUEADO", "Confirme a anamnese antes de aprovar.");
+  }
+  if (!current.bio.semExame && !current.confirmations.bio) {
+    throw new JourneyError("BLOQUEADO", "Confirme os dados da bioimpedância antes de aprovar.");
+  }
+  if (!current.confirmations.revisao) {
+    throw new JourneyError("BLOQUEADO", "Confirme a revisão dos dados antes de aprovar.");
+  }
   if (!current.protocolo || current.protocolo.sections.length === 0) {
     throw new JourneyError("BLOQUEADO", "Não há protocolo para aprovar.");
   }
+  const objetivo = current.protocolo.objetivo;
+  const modelo = OBJETIVOS.find((o) => o.value === objetivo);
+  if (!modelo || !modelo.available) {
+    throw new JourneyError(
+      "BLOQUEADO",
+      "Escolha um objetivo com modelo disponível antes de aprovar (o modelo de emagrecimento ainda está por definir).",
+    );
+  }
+  const temConteudo = current.protocolo.sections.some((sec) => sec.blocks.length > 0);
+  if (!temConteudo) throw new JourneyError("BLOQUEADO", "O protocolo está vazio.");
 
   const snapshot = {
     patientName: current.patientName,
@@ -382,4 +404,47 @@ export async function approveJourney(
     throw new JourneyError("DB", error.message);
   }
   return getJourney(sb, ownerId, id);
+}
+
+/**
+ * HTML final = snapshot EXATO aprovado, guardado no momento da aprovação.
+ * Nunca é recalculado, para que a data e o conteúdo não mudem entre downloads.
+ */
+export async function approvedSnapshotHtml(
+  sb: Sb,
+  ownerId: string,
+  journey: Journey,
+): Promise<string> {
+  if (journey.approvedVersion == null || journey.approvedVersion !== journey.version) {
+    throw new JourneyError(
+      "NAO_APROVADO",
+      "O HTML final só fica disponível depois de aprovar a versão atual na aplicação.",
+    );
+  }
+  if (journey.approvedHash !== journey.contentHash) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O conteúdo mudou desde a aprovação. Aprove novamente.");
+  }
+  const { data, error } = await sb
+    .from("jornada_aprovacoes")
+    .select("version, content_hash, approved_by, approved_at, snapshot")
+    .eq("jornada_id", journey.id)
+    .eq("owner_id", ownerId)
+    .eq("version", journey.approvedVersion)
+    .order("approved_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new JourneyError("DB", error.message);
+  if (!data) throw new JourneyError("NAO_APROVADO", "Registo de aprovação não encontrado.");
+
+  const row = data as Record<string, unknown>;
+  if (String(row["content_hash"]) !== journey.contentHash) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "A aprovação registada não corresponde ao conteúdo atual.");
+  }
+  if (!row["approved_by"] || !row["approved_at"]) {
+    throw new JourneyError("NAO_APROVADO", "Aprovação sem autor ou data registados.");
+  }
+  const snapshot = row["snapshot"] as Record<string, unknown> | null;
+  const html = snapshot && typeof snapshot["html"] === "string" ? (snapshot["html"] as string) : "";
+  if (!html) throw new JourneyError("NAO_APROVADO", "Snapshot aprovado sem documento.");
+  return html;
 }
