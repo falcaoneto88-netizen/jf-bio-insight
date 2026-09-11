@@ -140,6 +140,21 @@ function UploadPage() {
         <div className="mx-auto max-w-3xl">
           <Stepper current={1} />
 
+          {!session.loading && !session.isAdmin && (
+            <div className="mt-6">
+              <AccessNotice
+                signedIn={session.signedIn}
+                proximo="/upload"
+                descricao={
+                  session.signedIn
+                    ? "Esta conta não tem permissão clínica: a leitura automática do exame fica indisponível, mas pode preencher os dados manualmente."
+                    : "Sem sessão iniciada a leitura automática do exame fica indisponível. Inicie sessão ou preencha os dados manualmente."
+                }
+              />
+            </div>
+          )}
+
+
           <Card className="mt-10 border-border/80">
             <CardHeader>
               <CardTitle className="font-serif text-2xl">Envio do exame</CardTitle>
