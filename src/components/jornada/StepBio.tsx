@@ -134,7 +134,7 @@ export function StepBio({
               <Button
                 variant="ghost"
                 onClick={() => {
-                  requestRef.current += 1;
+                  cancelPending();
                   onDraftChange({ ...emptyBio });
                   toast.info("Arquivo removido e transcrição anterior apagada.");
                 }}
@@ -142,6 +142,7 @@ export function StepBio({
                 <Trash2 className="mr-1 h-4 w-4" /> Remover arquivo
               </Button>
             )}
+
           </div>
           {draft.arquivoNome && (
             <p className="text-xs text-muted-foreground">Arquivo atual: {draft.arquivoNome}</p>
