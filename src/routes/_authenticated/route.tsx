@@ -48,7 +48,7 @@ function SessionBoundary() {
         void purge().then(() => {
           if (!active) return;
           setSessionKey("signed-out");
-          void navigate({ to: "/auth", replace: true });
+          void navigate({ to: "/auth", search: { proximo: undefined }, replace: true });
         });
         return;
       }
