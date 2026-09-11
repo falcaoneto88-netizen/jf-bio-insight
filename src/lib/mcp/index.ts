@@ -5,15 +5,22 @@ import ghlFindContactTool from "./tools/ghl-find-contact";
 import ghlPushReportTool from "./tools/ghl-push-report";
 import listReportsTool from "./tools/list-reports";
 import patientEvolutionTool from "./tools/patient-evolution";
+import {
+  consultarJornadaTool,
+  exportarProtocoloHtmlTool,
+  extrairBioimpedanciaTool,
+  organizarAnamneseTool,
+  prepararProtocoloTool,
+} from "./tools/journey-tools";
 
 const projectRef = import.meta.env["VITE_SUPABASE_PROJECT_ID"] ?? "project-ref-unset";
 
 export default defineMcp({
   name: "bioreport-studio",
   title: "BioReport Studio",
-  version: "0.2.0",
+  version: "0.3.0",
   instructions:
-    "Ferramentas clínicas do BioReport Studio (apenas administradores). Use `list_reports` para encontrar relatórios de bioimpedância (filtros por nome e datas), `get_report` para o detalhe de um relatório, `patient_evolution` para comparar a evolução de um paciente, `ghl_find_contact` para procurar contactos no GoHighLevel e `ghl_push_report` para enviar o resumo de um relatório para o GoHighLevel — esta última escreve dados e exige confirmação explícita do utilizador.",
+    "Ferramentas clínicas do BioReport Studio (apenas administradores). Relatórios antigos: `list_reports`, `get_report`, `patient_evolution`. GoHighLevel: `ghl_find_contact` e `ghl_push_report` (escreve dados, exige confirmação explícita). Nova jornada clínica do Dr. João Falcão: `consultar_jornada`, `organizar_anamnese`, `extrair_bioimpedancia`, `preparar_protocolo` e `exportar_protocolo_html`. O assistente NUNCA aprova um protocolo: a aprovação é exclusivamente humana, feita na aplicação; o HTML final só existe depois dessa aprovação.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
@@ -24,5 +31,10 @@ export default defineMcp({
     patientEvolutionTool,
     ghlFindContactTool,
     ghlPushReportTool,
+    consultarJornadaTool,
+    organizarAnamneseTool,
+    extrairBioimpedanciaTool,
+    prepararProtocoloTool,
+    exportarProtocoloHtmlTool,
   ],
 });
