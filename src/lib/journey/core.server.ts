@@ -429,15 +429,33 @@ export function bioResumoTexto(bio: Bio): string {
 
 /* ------------------------------ aprovação ----------------------------- */
 
-/** Só o servidor aprova, e só com a versão + hash exatos que o humano viu. */
+/**
+ * Só o servidor aprova, e só com a versão, o hash de conteúdo e o hash do
+ * DOCUMENTO que a pessoa viu na pré-visualização.
+ */
 export async function approveJourney(
   sb: Sb,
   ownerId: string,
   id: string,
   expectedVersion: number,
   expectedHash: string,
+  expectedHtmlHash: string,
 ): Promise<Journey> {
   const current = await getJourney(sb, ownerId, id);
+  // O hash guardado é reconferido contra os dados atuais: um content_hash antigo
+  // deixado para trás não pode validar dados alterados.
+  const recomputed = await contentHash({
+    patientName: current.patientName,
+    anamnese: current.anamnese,
+    bio: current.bio,
+    protocolo: current.protocolo,
+  });
+  if (recomputed !== current.contentHash) {
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "Os dados desta jornada não correspondem ao registo de integridade. Guarde novamente antes de aprovar.",
+    );
+  }
   if (current.version !== expectedVersion || current.contentHash !== expectedHash) {
     throw new JourneyError(
       "CONTEUDO_ALTERADO",
@@ -468,15 +486,31 @@ export async function approveJourney(
       "Escolha um objetivo com modelo disponível antes de aprovar (o modelo de emagrecimento ainda está por definir).",
     );
   }
-  const temConteudo = current.protocolo.sections.some((sec) => sec.blocks.length > 0);
-  if (!temConteudo) throw new JourneyError("BLOQUEADO", "O protocolo está vazio.");
+  if (!protocoloTemConteudoRenderizavel(current.protocolo)) {
+    throw new JourneyError("BLOQUEADO", "O protocolo não produz conteúdo visível no documento.");
+  }
+
+  const { html, htmlHash } = await finalCandidate(current);
+  if (htmlHash !== expectedHtmlHash) {
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "O documento mudou desde a pré-visualização que reviu. Recarregue a pré-visualização e aprove novamente.",
+    );
+  }
 
   const snapshot = {
     patientName: current.patientName,
     anamnese: current.anamnese,
     bio: current.bio,
     protocolo: current.protocolo,
-    html: buildHtml({ ...current, approvedVersion: current.version, approvedHash: current.contentHash }, "final"),
+    html,
+    htmlHash,
+    meta: {
+      version: current.version,
+      approvedBy: ownerId,
+      template: DOC_TEMPLATE,
+      generatedAt: stableDocDate(current),
+    },
   };
 
   const db = await writer();
@@ -495,6 +529,7 @@ export async function approveJourney(
   }
   return getJourney(sb, ownerId, id);
 }
+
 
 /**
  * HTML final = snapshot EXATO aprovado, guardado no momento da aprovação.
