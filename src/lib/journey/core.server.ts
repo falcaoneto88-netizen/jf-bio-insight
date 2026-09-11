@@ -5,8 +5,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { computeEvolution } from "./evolution";
-import { renderProtocolHtml } from "./html";
-import { sameIdentity, todayBr } from "./format";
+import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
+import { needsNumberReview, sameIdentity, todayBr } from "./format";
 import {
   anamneseSchema,
   bioSchema,
