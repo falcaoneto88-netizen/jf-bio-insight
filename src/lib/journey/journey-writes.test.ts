@@ -180,6 +180,7 @@ describe("HTML final", () => {
       contentHash: String(journeyRow["content_hash"]),
       approvedVersion: 3,
       approvedAt: "2026-09-11T10:00:00Z",
+      approvedBy: OWNER,
       approvedHash: String(journeyRow["content_hash"]),
       createdAt: "2026-09-01T10:00:00Z",
       updatedAt: "2026-09-11T10:00:00Z",
