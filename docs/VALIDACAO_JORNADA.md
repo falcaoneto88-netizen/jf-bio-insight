@@ -54,3 +54,18 @@ fixo de páginas.
 - Limite de 40 pedidos de IA por utilizador e por hora.
 - O aviso do linter sobre funções `SECURITY DEFINER` executáveis refere-se a `has_role`, que
   precisa de continuar acessível às políticas de acesso; é intencional e já registado.
+
+## Teste de permissões — 11/09/2026
+
+| Cenário | Resultado |
+| --- | --- |
+| Anónimo lê relatórios (REST, chave pública) | 401 `permission denied for table reports` |
+| Anónimo insere relatório | 401, nenhuma linha criada |
+| Anónimo apaga relatórios | 401, os 18 registos existentes mantêm-se |
+| Conta autenticada sem papel admin | RLS não devolve linhas e a interface mostra aviso de acesso restrito |
+| Conta administradora existente | Acesso ao histórico mantido, sem alterações de papéis |
+| Extração antiga por IA sem sessão | Recusada com mensagem clara; preenchimento manual disponível |
+
+Consultas de confirmação: `pg_policies` (zero políticas `public`/`anon`) e `pg_class.relacl`
+(sem `anon` em `reports`, `user_roles`, `jornadas_clinicas`, `jornada_aprovacoes`,
+`journey_ai_usage`).
