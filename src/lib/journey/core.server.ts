@@ -133,7 +133,8 @@ export async function createJourney(sb: Sb, ownerId: string, patientName: string
   if (!name) throw new JourneyError("VALIDATION", "Indique o nome do paciente.");
   const anamnese: Anamnese = { ...emptyAnamnese, header: { ...emptyAnamnese.header, paciente: name, dataConsulta: todayBr() } };
   const hash = await contentHash({ patientName: name, anamnese, bio: emptyBio, protocolo: null });
-  const { data, error } = await sb
+  const db = await writer();
+  const { data, error } = await db
     .from(TABLE)
     .insert({
       owner_id: ownerId,
@@ -223,7 +224,8 @@ export async function patchJourney(
     if (current.status === "aprovado") update["status"] = patch.status ?? "protocolo";
   }
 
-  const { data, error } = await sb
+  const db = await writer();
+  const { data, error } = await db
     .from(TABLE)
     .update(update)
     .eq("id", id)
@@ -242,7 +244,9 @@ export async function patchJourney(
 }
 
 export async function deleteJourney(sb: Sb, ownerId: string, id: string): Promise<void> {
-  const { error } = await sb.from(TABLE).delete().eq("id", id).eq("owner_id", ownerId);
+  await getJourney(sb, ownerId, id); // confirma que o registo é mesmo do dono
+  const db = await writer();
+  const { error } = await db.from(TABLE).delete().eq("id", id).eq("owner_id", ownerId);
   if (error) throw new JourneyError("DB", error.message);
 }
 
@@ -363,8 +367,8 @@ export async function approveJourney(
     html: buildHtml({ ...current, approvedVersion: current.version, approvedHash: current.contentHash }, "final"),
   };
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { error } = await (supabaseAdmin as unknown as Sb).rpc("aprovar_jornada", {
+  const db = await writer();
+  const { error } = await db.rpc("aprovar_jornada", {
     _jornada_id: id,
     _user_id: ownerId,
     _expected_version: expectedVersion,
