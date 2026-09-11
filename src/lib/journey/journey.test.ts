@@ -166,6 +166,22 @@ describe("valores ambíguos e alinhamento de tabelas", () => {
         sections: [{ title: "Vazia", blocks: [] }],
       } as never),
     ).toBe(false);
+    // Blocos existem, mas estão todos em branco: não conta como conteúdo.
+    expect(
+      protocoloTemConteudoRenderizavel({
+        ...fixtureProtocolo,
+        sections: [
+          {
+            title: "Só em branco",
+            blocks: [
+              { type: "paragraph", text: "   " },
+              { type: "list", items: ["", "  "] },
+              { type: "table", columns: ["", ""], rows: [["", ""]] },
+            ],
+          },
+        ],
+      } as never),
+    ).toBe(false);
     expect(protocoloTemConteudoRenderizavel(fixtureProtocolo)).toBe(true);
   });
 
