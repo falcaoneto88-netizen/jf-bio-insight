@@ -7,7 +7,7 @@ Estado: **implementação completa em revisão**. Nada foi publicado.
 | Verificação | Comando | Resultado |
 | --- | --- | --- |
 | Tipos | `bunx tsgo --noEmit` | passa |
-| Testes da jornada | `bunx vitest run` | 13 testes, todos a passar |
+| Testes da jornada | `bunx vitest run` | 32 testes, todos a passar |
 | HTML do fixture | `bun run scripts/export-jornada-html.ts /tmp/jornada-sintetica.html` | 12.469 bytes gerados |
 
 ### Achados da revisão anterior, agora cobertos por teste
