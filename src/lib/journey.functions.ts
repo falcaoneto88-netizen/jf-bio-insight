@@ -179,21 +179,8 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
     const { prepararProtocoloRascunho, anamneseParaTexto } = await import("@/lib/journey/agent.server");
     const { computeEvolution } = await import("@/lib/journey/evolution");
     const evolution = computeEvolution(jornada.bio);
-    const bioResumo = jornada.bio.semExame
-      ? ""
-      : [
-          `Altura (m): ${jornada.bio.alturaM}`,
-          `Idade: ${jornada.bio.idadeAnos}`,
-          `Sexo: ${jornada.bio.sexo}`,
-          `Data do exame: ${jornada.bio.dataHoraExame}`,
-          `TMB (kcal): ${jornada.bio.taxaMetabolicaBasalKcal}`,
-          `Gordura visceral: ${jornada.bio.nivelGorduraVisceral}`,
-          ...jornada.bio.historico.map(
-            (h) => `Histórico ${h.data}: peso ${h.peso} kg | músculo ${h.massaMuscularEsqueletica} kg | PGC ${h.pgc} %`,
-          ),
-        ]
-          .filter((l) => !l.endsWith(": "))
-          .join("\n");
+    const { bioResumoTexto } = await core();
+    const bioResumo = bioResumoTexto(jornada.bio);
 
     const result = await prepararProtocoloRascunho({
       objetivo: data.objetivo,
@@ -257,11 +244,14 @@ export const previewHtml = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    const { getJourney, buildHtml, htmlFileName } = await core();
+    const { getJourney, buildHtml, htmlFileName, approvedSnapshotHtml } = await core();
     const jornada = await getJourney(context.supabase, context.userId, data.id);
     try {
       return {
-        html: buildHtml(jornada, data.tipo),
+        html:
+          data.tipo === "final"
+            ? await approvedSnapshotHtml(context.supabase, context.userId, jornada)
+            : buildHtml(jornada, "draft"),
         fileName: htmlFileName(jornada, data.tipo),
         version: jornada.version,
         error: null as string | null,

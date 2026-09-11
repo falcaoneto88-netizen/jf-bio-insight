@@ -337,6 +337,26 @@ export function htmlFileName(journey: Journey, kind: "draft" | "final"): string 
   return `protocolo-${slug}-v${journey.version}${kind === "draft" ? "-rascunho" : ""}.html`;
 }
 
+/** Resumo da bioimpedância partilhado pela interface e pelo MCP (whitelist idêntica). */
+export function bioResumoTexto(bio: Bio): string {
+  if (bio.semExame) return "";
+  return [
+    `Paciente: ${bio.paciente}`,
+    `Altura (m): ${bio.alturaM}`,
+    `Idade: ${bio.idadeAnos}`,
+    `Sexo: ${bio.sexo}`,
+    `Data do exame: ${bio.dataHoraExame}`,
+    `TMB (kcal): ${bio.taxaMetabolicaBasalKcal}`,
+    `Gordura visceral: ${bio.nivelGorduraVisceral}`,
+    ...(bio.historico ?? []).map(
+      (h) =>
+        `Histórico ${h.data}: peso ${h.peso} kg | músculo ${h.massaMuscularEsqueletica} kg | PGC ${h.pgc} %`,
+    ),
+  ]
+    .filter((line) => !line.endsWith(": "))
+    .join("\n");
+}
+
 /* ------------------------------ aprovação ----------------------------- */
 
 /** Só o servidor aprova, e só com a versão + hash exatos que o humano viu. */

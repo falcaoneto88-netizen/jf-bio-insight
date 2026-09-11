@@ -151,7 +151,9 @@ export const prepararProtocoloTool = defineTool({
   handler: async ({ jornadaId, objetivo, instrucoes }, ctx) => {
     const access = await requireJourneyAccess(ctx);
     if (!access.ok) return toolError(access.message);
-    const { getJourney, patchJourney, reviewIssues } = await import("@/lib/journey/core.server");
+    const { getJourney, patchJourney, reviewIssues, bioResumoTexto } = await import(
+      "@/lib/journey/core.server"
+    );
     const { prepararProtocoloRascunho, anamneseParaTexto } = await import("@/lib/journey/agent.server");
     const { computeEvolution } = await import("@/lib/journey/evolution");
     const { protocolSchema } = await import("@/lib/journey/types");
@@ -161,11 +163,7 @@ export const prepararProtocoloTool = defineTool({
         return toolError("O profissional ainda não confirmou a revisão dos dados desta jornada.");
       }
       const evolution = computeEvolution(jornada.bio);
-      const bioResumo = jornada.bio.semExame
-        ? ""
-        : jornada.bio.historico
-            .map((h) => `${h.data}: peso ${h.peso} kg | músculo ${h.massaMuscularEsqueletica} kg | PGC ${h.pgc} %`)
-            .join("\n");
+      const bioResumo = bioResumoTexto(jornada.bio);
       const result = await prepararProtocoloRascunho({
         objetivo,
         instrucoes: instrucoes ?? "",
@@ -213,11 +211,16 @@ export const exportarProtocoloHtmlTool = defineTool({
   handler: async ({ jornadaId, tipo }, ctx) => {
     const access = await requireJourneyAccess(ctx);
     if (!access.ok) return toolError(access.message);
-    const { getJourney, buildHtml, htmlFileName } = await import("@/lib/journey/core.server");
+    const { getJourney, buildHtml, htmlFileName, approvedSnapshotHtml } = await import(
+      "@/lib/journey/core.server"
+    );
     try {
       const jornada = await getJourney(access.supabase, access.userId, jornadaId);
       const kind = tipo === "final" ? "final" : "draft";
-      const html = buildHtml(jornada, kind);
+      const html =
+        kind === "final"
+          ? await approvedSnapshotHtml(access.supabase, access.userId, jornada)
+          : buildHtml(jornada, "draft");
       return toolJson({
         id: jornada.id,
         version: jornada.version,
