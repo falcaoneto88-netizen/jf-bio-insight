@@ -41,6 +41,23 @@ export function StepBio({
   const inputRef = useRef<HTMLInputElement>(null);
   /** Protege contra respostas assíncronas antigas a sobrescrever um arquivo novo. */
   const requestRef = useRef(0);
+  /** Falso depois de desmontar: nenhuma resposta tardia toca no estado. */
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      // Sair da etapa (ou trocar de paciente) invalida tudo o que estiver a decorrer.
+      mountedRef.current = false;
+      requestRef.current += 1;
+    };
+  }, []);
+
+  /** Invalida leituras/extrações em curso e liberta o botão de confirmação. */
+  const cancelPending = () => {
+    requestRef.current += 1;
+    setBusy(false);
+  };
 
   const runExtraction = async (payload: {
     texto?: string;
@@ -52,7 +69,7 @@ export function StepBio({
     setBusy(true);
     try {
       const result = await extrairBioimpedancia({ data: { id: journey.id, ...payload } });
-      if (requestId !== requestRef.current) return; // resposta obsoleta: ignorada
+      if (!mountedRef.current || requestId !== requestRef.current) return; // resposta obsoleta
       if (!result.data) {
         toast.error(result.error ?? "Não foi possível ler o exame.");
         return;
@@ -60,21 +77,34 @@ export function StepBio({
       onDraftChange(result.data);
       toast.success("Exame transcrito. Reveja cada campo antes de confirmar.");
     } catch (err) {
-      if (requestId === requestRef.current) toast.error((err as Error).message);
+      if (mountedRef.current && requestId === requestRef.current) toast.error((err as Error).message);
     } finally {
-      if (requestId === requestRef.current) setBusy(false);
+      if (mountedRef.current && requestId === requestRef.current) setBusy(false);
     }
   };
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     // Substituir arquivo limpa a extração anterior e invalida a confirmação.
-    requestRef.current += 1;
+    const requestId = ++requestRef.current;
+    setBusy(true);
     onDraftChange({ ...emptyBio, arquivoNome: file.name });
-    const base64 = await fileToBase64(file);
+    let base64: string;
+    try {
+      base64 = await fileToBase64(file);
+    } catch (err) {
+      if (mountedRef.current && requestId === requestRef.current) {
+        toast.error((err as Error).message);
+        setBusy(false);
+      }
+      return;
+    }
+    // A leitura do ficheiro também pode terminar tarde demais.
+    if (!mountedRef.current || requestId !== requestRef.current) return;
     const mime = file.type as "application/pdf" | "image/png" | "image/jpeg";
     await runExtraction({ fileBase64: base64, mimeType: mime, fileName: file.name });
   };
+
 
   const setField = (field: keyof Bio, value: string) => onDraftChange({ ...draft, [field]: value } as Bio);
 
