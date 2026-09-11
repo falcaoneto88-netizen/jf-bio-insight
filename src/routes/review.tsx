@@ -140,12 +140,6 @@ function ReviewPage() {
         import("@react-pdf/renderer"),
         import("@/lib/pdf/ReportDocument"),
       ]);
-      console.log(
-        "[PDF] meals:",
-        diet.meals.map((m) => m.id),
-      );
-      console.log("[PDF] options.sections:", JSON.stringify(reportOptions?.sections));
-      console.log("[PDF] patientNotes len:", reportOptions?.patientNotes?.length ?? 0);
       const blob = await pdf(
         <ReportDocument
           bodyComposition={bc}
