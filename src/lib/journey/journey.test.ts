@@ -154,7 +154,7 @@ describe("valores ambíguos e alinhamento de tabelas", () => {
       generatedAt: "11/09/2026",
       version: 1,
     });
-    const linha = /Substância Sintética X</strong><\/td><td>([^<]*)<\/td>/.exec(html);
+    const linha = /Substância Sintética X<\/strong><\/td><td>([^<]*)<\/td>/.exec(html);
     expect(linha?.[1]).toBe("1000 UI");
     expect(html).not.toContain("ignorar");
   });
