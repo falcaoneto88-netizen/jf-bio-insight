@@ -297,7 +297,26 @@ export function reviewIssues(journey: Journey): JourneyIssues {
     if (evolution.ignoredDates.length) {
       warnings.push(`Datas ilegíveis no histórico: ${evolution.ignoredDates.join(", ")}.`);
     }
+    // Valores diferentes na MESMA data nunca são escolhidos em silêncio.
+    for (const conflito of evolution.conflicts) blocking.push(`Conflito no histórico — ${conflito}`);
+    if (evolution.ignoredDatesWithValues.length) {
+      blocking.push(
+        `Datas inválidas com valores registados (corrija ou remova): ${evolution.ignoredDatesWithValues.join(", ")}.`,
+      );
+    }
+    for (const campo of [
+      ["Taxa metabólica basal (kcal)", journey.bio.taxaMetabolicaBasalKcal],
+      ["Nível de gordura visceral", journey.bio.nivelGorduraVisceral],
+    ] as const) {
+      if (needsNumberReview(campo[1])) {
+        warnings.push(`${campo[0]}: valor "${campo[1]}" transcrito tal como está e por rever.`);
+      }
+    }
     for (const duvida of journey.bio.duvidas) warnings.push(`Dúvida na extração: ${duvida}`);
+  }
+
+  if (journey.protocolo && journey.protocolo.sections.length > 0 && !protocoloTemConteudoRenderizavel(journey.protocolo)) {
+    blocking.push("O protocolo tem secções, mas nenhum conteúdo que apareça no documento.");
   }
 
   return { blocking, warnings };
@@ -305,7 +324,26 @@ export function reviewIssues(journey: Journey): JourneyIssues {
 
 /* -------------------------------- HTML -------------------------------- */
 
-export function buildHtml(journey: Journey, kind: "draft" | "final"): string {
+/** SHA-256 dos bytes exatos de um texto (UTF-8). */
+export async function sha256Hex(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Data do documento: estável para a versão (derivada de updated_at), nunca "hoje".
+ * Assim a pré-visualização aprovada e o ficheiro final coincidem sempre.
+ */
+export function stableDocDate(journey: Journey): string {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(journey.updatedAt ?? ""));
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return todayBr();
+}
+
+export const DOC_TEMPLATE = "documento-clinico-v1";
+
+export function buildHtml(journey: Journey, kind: "draft" | "candidate" | "final"): string {
   const protocolo = journey.protocolo ?? emptyProtocolo;
   if (kind === "final") {
     if (journey.approvedVersion == null || journey.approvedVersion !== journey.version) {
@@ -325,9 +363,20 @@ export function buildHtml(journey: Journey, kind: "draft" | "final"): string {
     bio: journey.bio,
     protocolo,
     draft: kind === "draft",
+    generatedAt: stableDocDate(journey),
     version: journey.version,
   });
 }
+
+/**
+ * Documento candidato a final: exatamente o que a pessoa vê antes de aprovar.
+ * A aprovação fica ligada a este hash.
+ */
+export async function finalCandidate(journey: Journey): Promise<{ html: string; htmlHash: string }> {
+  const html = buildHtml(journey, "candidate");
+  return { html, htmlHash: await sha256Hex(html) };
+}
+
 
 export function htmlFileName(journey: Journey, kind: "draft" | "final"): string {
   const slug =
