@@ -38,9 +38,9 @@ export function integerValue(value: string | null | undefined): string {
   if (!raw) return "";
   const digits = raw.replace(/[^\d-]/g, "");
   if (!digits || !/^-?\d+$/.test(digits)) return raw; // ilegível: transcrito tal como está
-  const n = Number(digits);
-  if (!Number.isFinite(n)) return raw;
-  return n.toLocaleString("pt-PT").replace(/\u00a0/g, ".");
+  const negative = digits.startsWith("-");
+  const grouped = digits.replace("-", "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${negative ? "-" : ""}${grouped}`;
 }
 
 /** Formata uma diferença numérica com sinal e vírgula decimal. */
