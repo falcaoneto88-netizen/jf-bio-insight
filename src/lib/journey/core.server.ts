@@ -85,6 +85,7 @@ export function rowToJourney(row: Record<string, unknown>): Journey {
     contentHash: String(row["content_hash"] ?? ""),
     approvedVersion: row["approved_version"] == null ? null : Number(row["approved_version"]),
     approvedAt: row["approved_at"] == null ? null : String(row["approved_at"]),
+    approvedBy: row["approved_by"] == null ? null : String(row["approved_by"]),
     approvedHash: row["approved_hash"] == null ? null : String(row["approved_hash"]),
     createdAt: String(row["created_at"] ?? ""),
     updatedAt: String(row["updated_at"] ?? ""),
