@@ -1,4 +1,6 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,5 +16,58 @@ export const Route = createFileRoute("/_authenticated")({
     }
     return { user: data.user };
   },
-  component: () => <Outlet />,
+  component: SessionBoundary,
 });
+
+/**
+ * Fronteira de sessão: nada de um utilizador pode sobreviver ao logout ou à
+ * troca de conta. Ao sair/mudar de utilizador cancelamos pedidos em curso,
+ * limpamos o cache (queries ["jornada", id], listas, prévias) e remontamos a
+ * árvore com key={sessionKey}, o que descarta rascunhos e HTML em memória.
+ * Nada clínico é persistido localmente.
+ */
+function SessionBoundary() {
+  const { user } = Route.useRouteContext();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [sessionKey, setSessionKey] = useState<string>(user.id);
+
+  useEffect(() => {
+    let active = true;
+
+    const purge = async () => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+    };
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      const nextId = session?.user?.id ?? null;
+
+      if (event === "SIGNED_OUT" || !nextId) {
+        void purge().then(() => {
+          if (!active) return;
+          setSessionKey("signed-out");
+          void navigate({ to: "/auth", replace: true });
+        });
+        return;
+      }
+
+      if (nextId !== sessionKey) {
+        // Troca de conta: cache e estado de ecrã do utilizador anterior caem.
+        void purge().then(() => {
+          if (active) setSessionKey(nextId);
+        });
+      }
+    });
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [queryClient, navigate, sessionKey]);
+
+  if (sessionKey === "signed-out") return null;
+
+  return <Outlet key={sessionKey} />;
+}
