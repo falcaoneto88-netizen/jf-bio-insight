@@ -3,6 +3,7 @@ import { ArrowLeft, FileText, Loader2, Pencil, ShieldCheck, Sparkles, Activity }
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { AccessNotice } from "@/components/AccessNotice";
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
 import { DietEditorCard } from "@/components/DietEditorCard";
@@ -13,6 +14,7 @@ import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAdminSession } from "@/hooks/use-admin-session";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
 import { applyDietCustomization, applyMealTimeOverrides } from "@/lib/diet-customization";
 import { adjustDiet, getDietBaseForGoal } from "@/lib/diet-adjuster";
@@ -66,6 +68,7 @@ const TRAINING_TYPE_LABELS: Record<TrainingType, string> = {
 
 function ReviewPage() {
   const navigate = useNavigate();
+  const session = useAdminSession();
   const { file, bodyComposition, clinicalData, previousExam } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
   const mealTimeOverrides = useReportStore((s) => s.mealTimeOverrides);
@@ -199,7 +202,7 @@ function ReviewPage() {
         description: "O download do PDF foi iniciado.",
       });
       navigate({ to: "/success" });
-    } catch (err) {
+    } catch {
       console.error("[pdf] falha ao gerar o relatório");
       toast.error("Falha ao gerar o PDF", {
         description: "Tente novamente em alguns instantes.",
