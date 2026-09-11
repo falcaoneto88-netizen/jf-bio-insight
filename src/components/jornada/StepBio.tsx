@@ -160,10 +160,15 @@ export function StepBio({
             </Button>
             <Button
               variant="ghost"
-              onClick={() => onDraftChange({ ...emptyBio, semExame: !draft.semExame })}
+              onClick={() => {
+                // Mudar de modo cancela qualquer leitura/extração a decorrer.
+                cancelPending();
+                onDraftChange({ ...emptyBio, semExame: !draft.semExame });
+              }}
             >
               {draft.semExame ? "Voltar a usar exame" : "Prosseguir sem exame"}
             </Button>
+
           </div>
           {draft.semExame && (
             <p className="rounded-md border border-gold/50 bg-gold-soft/30 p-3 text-xs text-foreground">
