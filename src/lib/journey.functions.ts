@@ -46,6 +46,21 @@ async function assertAdmin(context: Ctx) {
   if (data !== true) throw new Error("Acesso restrito: apenas administradores.");
 }
 
+/** Limite de uso de IA por utilizador e por hora (contado no servidor). */
+const AI_LIMITE_HORA = 40;
+
+async function assertAiQuota(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await (supabaseAdmin as unknown as { rpc: Function }).rpc("consume_ai_quota", {
+    _user_id: userId,
+    _limit: AI_LIMITE_HORA,
+  });
+  if (error) throw new Error("Não foi possível validar o limite de utilização.");
+  if (data === false) {
+    throw new Error("Limite de pedidos ao agente atingido nesta hora. Tente novamente mais tarde.");
+  }
+}
+
 async function core() {
   return import("@/lib/journey/core.server");
 }
@@ -134,6 +149,7 @@ export const organizarAnamnese = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
+    await assertAiQuota(context.userId);
     const { getJourney } = await core();
     const jornada = await getJourney(context.supabase, context.userId, data.id);
     const { organizarAnamneseTexto } = await import("@/lib/journey/agent.server");
@@ -158,6 +174,7 @@ export const extrairBioimpedancia = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
+    await assertAiQuota(context.userId);
     const { getJourney } = await core();
     const jornada = await getJourney(context.supabase, context.userId, data.id);
     const { extrairBioimpedanciaSource } = await import("@/lib/journey/agent.server");
@@ -187,6 +204,7 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
+    await assertAiQuota(context.userId);
     const { getJourney, patchJourney, reviewIssues } = await core();
     const jornada = await getJourney(context.supabase, context.userId, data.id);
     if (!jornada.confirmations.revisao) {
