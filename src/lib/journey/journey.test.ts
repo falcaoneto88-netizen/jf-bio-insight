@@ -142,7 +142,7 @@ describe("valores ambíguos e alinhamento de tabelas", () => {
             title: "Tabela",
             blocks: [
               {
-                kind: "table",
+                type: "table",
                 columns: ["Substância", "", "Dose"],
                 rows: [["Vitamina D", "ignorar", "1000 UI"]],
               },
@@ -154,7 +154,7 @@ describe("valores ambíguos e alinhamento de tabelas", () => {
       generatedAt: "11/09/2026",
       version: 1,
     });
-    const linha = /<tr><td[^>]*>Vitamina D<\/td><td[^>]*>([^<]*)<\/td>/.exec(html);
+    const linha = /Vitamina D<\/strong><\/td><td>([^<]*)<\/td>/.exec(html);
     expect(linha?.[1]).toBe("1000 UI");
     expect(html).not.toContain("ignorar");
   });
