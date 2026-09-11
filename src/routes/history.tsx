@@ -3,6 +3,7 @@ import { ArrowLeft, FileText, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { AccessNotice } from "@/components/AccessNotice";
 import { BrandHeader } from "@/components/BrandHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import {
   type ReportHistoryEntry,
 } from "@/lib/report-history";
 import { migrateLocalHistoryToCloud } from "@/lib/migrate-local-history";
+import { useAdminSession } from "@/hooks/use-admin-session";
 import { useReportStore } from "@/store/report-store";
 
 
@@ -45,8 +47,10 @@ function formatDateTime(iso: string): string {
 function HistoryPage() {
   const navigate = useNavigate();
   const [entries, setEntries] = useState<ReportHistoryEntry[] | null>(null);
+  const session = useAdminSession();
 
   useEffect(() => {
+    if (session.loading || !session.isAdmin) return;
     let cancelled = false;
     (async () => {
       try {
@@ -63,7 +67,7 @@ function HistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session.loading, session.isAdmin]);
 
   const handleClear = async () => {
     if (!entries || entries.length === 0) return;
