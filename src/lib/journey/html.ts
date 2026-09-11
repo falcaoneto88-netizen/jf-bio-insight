@@ -7,7 +7,7 @@
  *   thead repetível, break-inside controlado).
  */
 import { computeEvolution, evolutionTableRows } from "./evolution";
-import { decimalComma, toBrDate, todayBr } from "./format";
+import { decimalComma, integerValue, toBrDate, todayBr } from "./format";
 import {
   ANAMNESE_FIELD_LABELS,
   ANAMNESE_SECTIONS,
@@ -139,10 +139,10 @@ function renderBio(bio: Bio): string {
     ["Paciente", bio.paciente],
     ["Data e hora do exame", toBrDate(bio.dataHoraExame)],
     ["Sexo", bio.sexo],
-    ["Idade (anos)", decimalComma(bio.idadeAnos)],
+    ["Idade (anos)", integerValue(bio.idadeAnos)],
     ["Altura (m)", decimalComma(bio.alturaM)],
-    ["Taxa metabólica basal (kcal)", decimalComma(bio.taxaMetabolicaBasalKcal)],
-    ["Nível de gordura visceral", decimalComma(bio.nivelGorduraVisceral)],
+    ["Taxa metabólica basal (kcal)", integerValue(bio.taxaMetabolicaBasalKcal)],
+    ["Nível de gordura visceral", integerValue(bio.nivelGorduraVisceral)],
   ]);
   if (fields) parts.push(fields);
 

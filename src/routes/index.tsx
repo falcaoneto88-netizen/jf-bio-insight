@@ -41,21 +41,33 @@ function Home() {
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 px-8 text-base">
-                <Link to="/upload">
-                  Iniciar novo relatório
+                <Link to="/jornada">
+                  Iniciar atendimento
                   <ArrowRight className="ml-1" />
                 </Link>
               </Button>
               <span className="text-xs text-muted-foreground">
-                Aceita PDF, PNG ou JPG do exame
+                Anamnese, exame, protocolo e documento final
               </span>
             </div>
-            <div className="mt-6">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+              <Link
+                to="/jornada"
+                className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              >
+                Atendimentos guardados
+              </Link>
+              <Link
+                to="/upload"
+                className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              >
+                Relatório de bioimpedância (fluxo anterior)
+              </Link>
               <Link
                 to="/history"
                 className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
               >
-                Ver histórico de relatórios
+                Histórico de relatórios
               </Link>
             </div>
           </div>

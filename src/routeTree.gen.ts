@@ -16,8 +16,12 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as ClinicalFormRouteImport } from './routes/clinical-form'
 import { Route as BodyCompositionRouteImport } from './routes/body-composition'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedJornadaIndexRouteImport } from './routes/_authenticated/jornada/index'
+import { Route as AuthenticatedJornadaIdRouteImport } from './routes/_authenticated/jornada/$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
 const UploadRoute = UploadRouteImport.update({
@@ -55,6 +59,15 @@ const BodyCompositionRoute = BodyCompositionRouteImport.update({
   path: '/body-composition',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -66,6 +79,17 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedJornadaIndexRoute =
+  AuthenticatedJornadaIndexRouteImport.update({
+    id: '/jornada/',
+    path: '/jornada/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedJornadaIdRoute = AuthenticatedJornadaIdRouteImport.update({
+  id: '/jornada/$id',
+  path: '/jornada/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
@@ -74,6 +98,7 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
   '/history': typeof HistoryRoute
@@ -83,9 +108,12 @@ export interface FileRoutesByFullPath {
   '/upload': typeof UploadRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/jornada/$id': typeof AuthenticatedJornadaIdRoute
+  '/jornada/': typeof AuthenticatedJornadaIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
   '/history': typeof HistoryRoute
@@ -95,10 +123,14 @@ export interface FileRoutesByTo {
   '/upload': typeof UploadRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/jornada/$id': typeof AuthenticatedJornadaIdRoute
+  '/jornada': typeof AuthenticatedJornadaIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
   '/history': typeof HistoryRoute
@@ -108,11 +140,14 @@ export interface FileRoutesById {
   '/upload': typeof UploadRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/_authenticated/jornada/$id': typeof AuthenticatedJornadaIdRoute
+  '/_authenticated/jornada/': typeof AuthenticatedJornadaIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/body-composition'
     | '/clinical-form'
     | '/history'
@@ -122,9 +157,12 @@ export interface FileRouteTypes {
     | '/upload'
     | '/.well-known/oauth-protected-resource'
     | '/.lovable/oauth/consent'
+    | '/jornada/$id'
+    | '/jornada/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/body-composition'
     | '/clinical-form'
     | '/history'
@@ -134,9 +172,13 @@ export interface FileRouteTypes {
     | '/upload'
     | '/.well-known/oauth-protected-resource'
     | '/.lovable/oauth/consent'
+    | '/jornada/$id'
+    | '/jornada'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
+    | '/auth'
     | '/body-composition'
     | '/clinical-form'
     | '/history'
@@ -146,10 +188,14 @@ export interface FileRouteTypes {
     | '/upload'
     | '/.well-known/oauth-protected-resource'
     | '/.lovable/oauth/consent'
+    | '/_authenticated/jornada/$id'
+    | '/_authenticated/jornada/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   BodyCompositionRoute: typeof BodyCompositionRoute
   ClinicalFormRoute: typeof ClinicalFormRoute
   HistoryRoute: typeof HistoryRoute
@@ -212,6 +258,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BodyCompositionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -226,6 +286,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/jornada/': {
+      id: '/_authenticated/jornada/'
+      path: '/jornada'
+      fullPath: '/jornada/'
+      preLoaderRoute: typeof AuthenticatedJornadaIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/jornada/$id': {
+      id: '/_authenticated/jornada/$id'
+      path: '/jornada/$id'
+      fullPath: '/jornada/$id'
+      preLoaderRoute: typeof AuthenticatedJornadaIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
       path: '/.lovable/oauth/consent'
@@ -236,8 +310,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedJornadaIdRoute: typeof AuthenticatedJornadaIdRoute
+  AuthenticatedJornadaIndexRoute: typeof AuthenticatedJornadaIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedJornadaIdRoute: AuthenticatedJornadaIdRoute,
+  AuthenticatedJornadaIndexRoute: AuthenticatedJornadaIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   BodyCompositionRoute: BodyCompositionRoute,
   ClinicalFormRoute: ClinicalFormRoute,
   HistoryRoute: HistoryRoute,

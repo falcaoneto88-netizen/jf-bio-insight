@@ -2,6 +2,9 @@
  * Evolução corporal: alinhamento por DATA real (nunca por índice de array).
  * Peso em kg; PGC comparado em PONTOS PERCENTUAIS (p.p.).
  * Uma única data não cria tendência.
+ *
+ * A transcrição literal (o que se mostra) é separada dos cálculos (o que se compara):
+ * a tabela imprime exatamente o texto recebido, normalizado apenas na vírgula decimal.
  */
 import { dateSortKey, decimalComma, signedDelta, toBrDate, toNumber } from "./format";
 import type { Bio, BioHistoryRow } from "./types";
@@ -9,6 +12,9 @@ import type { Bio, BioHistoryRow } from "./types";
 export type EvolutionPoint = {
   data: string; // DD/MM/AAAA
   sortKey: string;
+  /** Transcrição literal, tal como fornecida (só a vírgula decimal é normalizada). */
+  literal: { peso: string; massaMuscular: string; pgc: string };
+  /** Apenas para cálculo de variações. */
   peso: number | null;
   massaMuscular: number | null;
   pgc: number | null;
@@ -17,6 +23,8 @@ export type EvolutionPoint = {
 export type EvolutionResult = {
   points: EvolutionPoint[];
   ignoredDates: string[];
+  /** Conflitos entre linhas da mesma data — nunca resolvidos em silêncio. */
+  conflicts: string[];
   hasTrend: boolean;
   deltaPesoKg: number | null;
   deltaMassaMuscularKg: number | null;
@@ -26,12 +34,24 @@ export type EvolutionResult = {
   summaryLines: string[];
 };
 
+const CELLS = [
+  { key: "peso", label: "peso" },
+  { key: "massaMuscular", label: "massa muscular esquelética" },
+  { key: "pgc", label: "PGC" },
+] as const;
+
 function toPoint(row: BioHistoryRow): EvolutionPoint | null {
   const sortKey = dateSortKey(row.data);
   if (!sortKey) return null;
+  const literal = {
+    peso: decimalComma(row.peso),
+    massaMuscular: decimalComma(row.massaMuscularEsqueletica),
+    pgc: decimalComma(row.pgc),
+  };
   return {
     data: toBrDate(row.data),
     sortKey,
+    literal,
     peso: toNumber(row.peso),
     massaMuscular: toNumber(row.massaMuscularEsqueletica),
     pgc: toNumber(row.pgc),
@@ -40,7 +60,8 @@ function toPoint(row: BioHistoryRow): EvolutionPoint | null {
 
 export function computeEvolution(bio: Bio): EvolutionResult {
   const ignoredDates: string[] = [];
-  const points: EvolutionPoint[] = [];
+  const conflicts: string[] = [];
+  const byDate = new Map<string, EvolutionPoint>();
 
   for (const row of bio.historico ?? []) {
     const point = toPoint(row);
@@ -48,12 +69,27 @@ export function computeEvolution(bio: Bio): EvolutionResult {
       if (row.data?.trim()) ignoredDates.push(row.data.trim());
       continue;
     }
-    points.push(point);
+    const existing = byDate.get(point.sortKey);
+    if (!existing) {
+      byDate.set(point.sortKey, point);
+      continue;
+    }
+    // Linhas complementares da mesma data: preenche células vazias sem perder dados.
+    for (const { key, label } of CELLS) {
+      const prev = existing.literal[key];
+      const next = point.literal[key];
+      if (!next) continue;
+      if (!prev) {
+        existing.literal[key] = next;
+        existing[key] = point[key];
+        continue;
+      }
+      if (prev !== next) {
+        conflicts.push(`${point.data}: valores diferentes de ${label} (${prev} e ${next}).`);
+      }
+    }
   }
 
-  // Alinhamento por data real: agrupa por chave de data, mantém a última leitura.
-  const byDate = new Map<string, EvolutionPoint>();
-  for (const point of points) byDate.set(point.sortKey, point);
   const ordered = [...byDate.values()].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
   const first = ordered[0] ?? null;
@@ -82,6 +118,7 @@ export function computeEvolution(bio: Bio): EvolutionResult {
   return {
     points: ordered,
     ignoredDates,
+    conflicts,
     hasTrend,
     deltaPesoKg,
     deltaMassaMuscularKg,
@@ -92,12 +129,7 @@ export function computeEvolution(bio: Bio): EvolutionResult {
   };
 }
 
-/** Linhas prontas para tabela (valores já com vírgula decimal). */
+/** Linhas prontas para tabela — transcrição literal, sem reconversão numérica. */
 export function evolutionTableRows(result: EvolutionResult): string[][] {
-  return result.points.map((p) => [
-    p.data,
-    p.peso == null ? "" : decimalComma(String(p.peso)),
-    p.massaMuscular == null ? "" : decimalComma(String(p.massaMuscular)),
-    p.pgc == null ? "" : decimalComma(String(p.pgc)),
-  ]);
+  return result.points.map((p) => [p.data, p.literal.peso, p.literal.massaMuscular, p.literal.pgc]);
 }

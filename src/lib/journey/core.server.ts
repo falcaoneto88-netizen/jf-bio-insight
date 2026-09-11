@@ -15,6 +15,7 @@ import {
   emptyBio,
   emptyProtocolo,
   protocolSchema,
+  OBJETIVOS,
   type Anamnese,
   type Bio,
   type Confirmations,
@@ -119,12 +120,22 @@ export async function getJourney(sb: Sb, ownerId: string, id: string): Promise<J
 
 /* ------------------------------ escritas ----------------------------- */
 
+/**
+ * Cliente privilegiado para escrita. O cliente do utilizador não tem (nem deve ter)
+ * permissões de escrita nestas tabelas: cada chamada aqui já validou auth + admin + dono.
+ */
+async function writer(): Promise<Sb> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as unknown as Sb;
+}
+
 export async function createJourney(sb: Sb, ownerId: string, patientName: string): Promise<Journey> {
   const name = patientName.trim();
   if (!name) throw new JourneyError("VALIDATION", "Indique o nome do paciente.");
   const anamnese: Anamnese = { ...emptyAnamnese, header: { ...emptyAnamnese.header, paciente: name, dataConsulta: todayBr() } };
   const hash = await contentHash({ patientName: name, anamnese, bio: emptyBio, protocolo: null });
-  const { data, error } = await sb
+  const db = await writer();
+  const { data, error } = await db
     .from(TABLE)
     .insert({
       owner_id: ownerId,
@@ -214,7 +225,8 @@ export async function patchJourney(
     if (current.status === "aprovado") update["status"] = patch.status ?? "protocolo";
   }
 
-  const { data, error } = await sb
+  const db = await writer();
+  const { data, error } = await db
     .from(TABLE)
     .update(update)
     .eq("id", id)
@@ -233,7 +245,9 @@ export async function patchJourney(
 }
 
 export async function deleteJourney(sb: Sb, ownerId: string, id: string): Promise<void> {
-  const { error } = await sb.from(TABLE).delete().eq("id", id).eq("owner_id", ownerId);
+  await getJourney(sb, ownerId, id); // confirma que o registo é mesmo do dono
+  const db = await writer();
+  const { error } = await db.from(TABLE).delete().eq("id", id).eq("owner_id", ownerId);
   if (error) throw new JourneyError("DB", error.message);
 }
 
@@ -323,6 +337,44 @@ export function htmlFileName(journey: Journey, kind: "draft" | "final"): string 
   return `protocolo-${slug}-v${journey.version}${kind === "draft" ? "-rascunho" : ""}.html`;
 }
 
+/** Limite de pedidos ao agente por utilizador e por hora, contado no servidor. */
+export const AI_LIMITE_HORA = 40;
+
+export async function consumeAiQuota(userId: string): Promise<void> {
+  const db = await writer();
+  const { data, error } = await db.rpc("consume_ai_quota", {
+    _user_id: userId,
+    _limit: AI_LIMITE_HORA,
+  });
+  if (error) throw new JourneyError("DB", "Não foi possível validar o limite de utilização.");
+  if (data === false) {
+    throw new JourneyError(
+      "LIMITE",
+      "Limite de pedidos ao agente atingido nesta hora. Tente novamente mais tarde.",
+    );
+  }
+}
+
+/** Resumo da bioimpedância partilhado pela interface e pelo MCP (whitelist idêntica). */
+export function bioResumoTexto(bio: Bio): string {
+  if (bio.semExame) return "";
+  return [
+    `Paciente: ${bio.paciente}`,
+    `Altura (m): ${bio.alturaM}`,
+    `Idade: ${bio.idadeAnos}`,
+    `Sexo: ${bio.sexo}`,
+    `Data do exame: ${bio.dataHoraExame}`,
+    `TMB (kcal): ${bio.taxaMetabolicaBasalKcal}`,
+    `Gordura visceral: ${bio.nivelGorduraVisceral}`,
+    ...(bio.historico ?? []).map(
+      (h) =>
+        `Histórico ${h.data}: peso ${h.peso} kg | músculo ${h.massaMuscularEsqueletica} kg | PGC ${h.pgc} %`,
+    ),
+  ]
+    .filter((line) => !line.endsWith(": "))
+    .join("\n");
+}
+
 /* ------------------------------ aprovação ----------------------------- */
 
 /** Só o servidor aprova, e só com a versão + hash exatos que o humano viu. */
@@ -342,9 +394,30 @@ export async function approveJourney(
   }
   const issues = reviewIssues(current);
   if (issues.blocking.length) throw new JourneyError("BLOQUEADO", issues.blocking.join(" "));
+
+  // Dependências essenciais: confirmadas no servidor, não apenas avisadas na interface.
+  if (!current.confirmations.anamnese) {
+    throw new JourneyError("BLOQUEADO", "Confirme a anamnese antes de aprovar.");
+  }
+  if (!current.bio.semExame && !current.confirmations.bio) {
+    throw new JourneyError("BLOQUEADO", "Confirme os dados da bioimpedância antes de aprovar.");
+  }
+  if (!current.confirmations.revisao) {
+    throw new JourneyError("BLOQUEADO", "Confirme a revisão dos dados antes de aprovar.");
+  }
   if (!current.protocolo || current.protocolo.sections.length === 0) {
     throw new JourneyError("BLOQUEADO", "Não há protocolo para aprovar.");
   }
+  const objetivo = current.protocolo.objetivo;
+  const modelo = OBJETIVOS.find((o) => o.value === objetivo);
+  if (!modelo || !modelo.available) {
+    throw new JourneyError(
+      "BLOQUEADO",
+      "Escolha um objetivo com modelo disponível antes de aprovar (o modelo de emagrecimento ainda está por definir).",
+    );
+  }
+  const temConteudo = current.protocolo.sections.some((sec) => sec.blocks.length > 0);
+  if (!temConteudo) throw new JourneyError("BLOQUEADO", "O protocolo está vazio.");
 
   const snapshot = {
     patientName: current.patientName,
@@ -354,8 +427,8 @@ export async function approveJourney(
     html: buildHtml({ ...current, approvedVersion: current.version, approvedHash: current.contentHash }, "final"),
   };
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { error } = await (supabaseAdmin as unknown as Sb).rpc("aprovar_jornada", {
+  const db = await writer();
+  const { error } = await db.rpc("aprovar_jornada", {
     _jornada_id: id,
     _user_id: ownerId,
     _expected_version: expectedVersion,
@@ -369,4 +442,47 @@ export async function approveJourney(
     throw new JourneyError("DB", error.message);
   }
   return getJourney(sb, ownerId, id);
+}
+
+/**
+ * HTML final = snapshot EXATO aprovado, guardado no momento da aprovação.
+ * Nunca é recalculado, para que a data e o conteúdo não mudem entre downloads.
+ */
+export async function approvedSnapshotHtml(
+  sb: Sb,
+  ownerId: string,
+  journey: Journey,
+): Promise<string> {
+  if (journey.approvedVersion == null || journey.approvedVersion !== journey.version) {
+    throw new JourneyError(
+      "NAO_APROVADO",
+      "O HTML final só fica disponível depois de aprovar a versão atual na aplicação.",
+    );
+  }
+  if (journey.approvedHash !== journey.contentHash) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "O conteúdo mudou desde a aprovação. Aprove novamente.");
+  }
+  const { data, error } = await sb
+    .from("jornada_aprovacoes")
+    .select("version, content_hash, approved_by, approved_at, snapshot")
+    .eq("jornada_id", journey.id)
+    .eq("owner_id", ownerId)
+    .eq("version", journey.approvedVersion)
+    .order("approved_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new JourneyError("DB", error.message);
+  if (!data) throw new JourneyError("NAO_APROVADO", "Registo de aprovação não encontrado.");
+
+  const row = data as Record<string, unknown>;
+  if (String(row["content_hash"]) !== journey.contentHash) {
+    throw new JourneyError("CONTEUDO_ALTERADO", "A aprovação registada não corresponde ao conteúdo atual.");
+  }
+  if (!row["approved_by"] || !row["approved_at"]) {
+    throw new JourneyError("NAO_APROVADO", "Aprovação sem autor ou data registados.");
+  }
+  const snapshot = row["snapshot"] as Record<string, unknown> | null;
+  const html = snapshot && typeof snapshot["html"] === "string" ? (snapshot["html"] as string) : "";
+  if (!html) throw new JourneyError("NAO_APROVADO", "Snapshot aprovado sem documento.");
+  return html;
 }
