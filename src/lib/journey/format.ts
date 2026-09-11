@@ -13,12 +13,34 @@ export function toNumber(value: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Saída sempre com vírgula decimal, mantendo as casas originais. */
+/**
+ * Valor decimal (peso, PGC, altura, massa muscular): mantém EXATAMENTE as casas
+ * originais e só troca o ponto por vírgula quando ele é mesmo separador decimal.
+ * "70,0" -> "70,0"; "34.0" -> "34,0"; "1.365" (milhar) -> "1.365".
+ */
 export function decimalComma(value: string | null | undefined): string {
   if (value == null) return "";
   const raw = String(value).trim();
   if (!raw) return "";
+  if (raw.includes(",")) return raw; // já em formato pt: pontos são milhares
+  // Um único ponto seguido de exatamente 3 dígitos é separador de milhar.
+  if (/^-?\d{1,3}(\.\d{3})+$/.test(raw)) return raw;
   return raw.replace(".", ",");
+}
+
+/**
+ * Valor inteiro com unidade contável (TMB em kcal, nível de gordura visceral):
+ * nunca vira decimal. 1365 -> "1.365"; "1.365" -> "1.365".
+ */
+export function integerValue(value: string | null | undefined): string {
+  if (value == null) return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+  const digits = raw.replace(/[^\d-]/g, "");
+  if (!digits || !/^-?\d+$/.test(digits)) return raw; // ilegível: transcrito tal como está
+  const n = Number(digits);
+  if (!Number.isFinite(n)) return raw;
+  return n.toLocaleString("pt-PT").replace(/\u00a0/g, ".");
 }
 
 /** Formata uma diferença numérica com sinal e vírgula decimal. */
@@ -46,14 +68,33 @@ export function toBrDate(value: string | null | undefined): string {
   return raw;
 }
 
-/** Chave ordenável AAAA-MM-DD a partir de DD/MM/AAAA ou ISO; "" quando ilegível. */
+/** Data existente no calendário real, incluindo ano bissexto. Sem fuso horário. */
+export function isRealDate(year: number, month: number, day: number): boolean {
+  if (month < 1 || month > 12 || day < 1) return false;
+  const bissexto = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const dias = [31, bissexto ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= dias[month - 1]!;
+}
+
+/**
+ * Chave ordenável AAAA-MM-DD a partir de DD/MM/AAAA ou ISO.
+ * "" quando ilegível OU quando a data não existe (31/02/2026, 29/02 em ano comum).
+ */
 export function dateSortKey(value: string | null | undefined): string {
   if (!value) return "";
   const raw = String(value).trim();
   const br = BR_DATE.exec(raw);
-  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  if (br) {
+    const [, dd, mm, yyyy] = br;
+    if (!isRealDate(Number(yyyy), Number(mm), Number(dd))) return "";
+    return `${yyyy}-${mm}-${dd}`;
+  }
   const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  if (iso) {
+    const [, yyyy, mm, dd] = iso;
+    if (!isRealDate(Number(yyyy), Number(mm), Number(dd))) return "";
+    return `${yyyy}-${mm}-${dd}`;
+  }
   return "";
 }
 

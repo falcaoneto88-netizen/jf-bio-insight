@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 import { ANAMNESE_SYSTEM_PROMPT, BIO_SYSTEM_PROMPT, PROTOCOL_SYSTEM_PROMPT } from "./prompts";
-import { decimalComma, sameIdentity, toBrDate } from "./format";
+import { decimalComma, integerValue, sameIdentity, toBrDate } from "./format";
 import {
   anamneseSchema,
   bioSchema,
@@ -345,9 +345,9 @@ export async function extrairBioimpedanciaSource(
     ...value,
     dataHoraExame: toBrDate(value.dataHoraExame),
     alturaM: decimalComma(value.alturaM),
-    idadeAnos: decimalComma(value.idadeAnos),
-    taxaMetabolicaBasalKcal: decimalComma(value.taxaMetabolicaBasalKcal),
-    nivelGorduraVisceral: decimalComma(value.nivelGorduraVisceral),
+    idadeAnos: integerValue(value.idadeAnos),
+    taxaMetabolicaBasalKcal: integerValue(value.taxaMetabolicaBasalKcal),
+    nivelGorduraVisceral: integerValue(value.nivelGorduraVisceral),
     historico: value.historico
       .map((row) => ({
         data: toBrDate(row.data),
