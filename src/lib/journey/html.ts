@@ -81,7 +81,28 @@ ${rows
   }
 }
 
+/** Secções do protocolo já renderizadas (vazias são omitidas). */
+export function renderProtocolSections(protocolo: Protocolo): string {
+  return protocolo.sections
+    .map((section) => {
+      const body = section.blocks.map(renderBlock).filter(Boolean).join("\n");
+      if (!body) return "";
+      return `<section>
+  <h2>${escapeHtml(section.title)}</h2>
+${body}
+</section>`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** true só quando o protocolo produz conteúdo mesmo visível no documento. */
+export function protocoloTemConteudoRenderizavel(protocolo: Protocolo): boolean {
+  return renderProtocolSections(protocolo).trim().length > 0;
+}
+
 function definitionList(entries: [string, string][]): string {
+
   const filled = entries.filter(([, v]) => String(v ?? "").trim().length > 0);
   if (!filled.length) return "";
   return `<dl class="fields">${filled
