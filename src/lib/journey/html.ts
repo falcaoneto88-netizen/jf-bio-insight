@@ -309,17 +309,8 @@ export function renderProtocolHtml(input: RenderHtmlInput): string {
           .join("")}</ul>`
       : "";
 
-  const sectionsHtml = input.protocolo.sections
-    .map((section) => {
-      const body = section.blocks.map(renderBlock).filter(Boolean).join("\n");
-      if (!body) return "";
-      return `<section>
-  <h2>${escapeHtml(section.title)}</h2>
-${body}
-</section>`;
-    })
-    .filter(Boolean)
-    .join("\n");
+  const sectionsHtml = renderProtocolSections(input.protocolo);
+
 
   const parts = [
     anamneseHtml && `<section><h2>Anamnese</h2>\n${anamneseHtml}</section>`,
