@@ -14,6 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      anamnesis_submissions: {
+        Row: {
+          accepted: boolean
+          answers: Json
+          confirmed_at: string
+          confirmed_name: string
+          consultation_id: string
+          declaration_version: string
+          id: string
+          submitted_by: string
+        }
+        Insert: {
+          accepted: boolean
+          answers: Json
+          confirmed_at?: string
+          confirmed_name: string
+          consultation_id: string
+          declaration_version?: string
+          id?: string
+          submitted_by?: string
+        }
+        Update: {
+          accepted?: boolean
+          answers?: Json
+          confirmed_at?: string
+          confirmed_name?: string
+          consultation_id?: string
+          declaration_version?: string
+          id?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnesis_submissions_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultation_drafts: {
+        Row: {
+          anamnesis_id: string | null
+          body_composition: Json | null
+          clinical_data: Json | null
+          consultation_id: string
+          version: number
+        }
+        Insert: {
+          anamnesis_id?: string | null
+          body_composition?: Json | null
+          clinical_data?: Json | null
+          consultation_id: string
+          version?: number
+        }
+        Update: {
+          anamnesis_id?: string | null
+          body_composition?: Json | null
+          clinical_data?: Json | null
+          consultation_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_drafts_anamnesis_id_consultation_id_fkey"
+            columns: ["anamnesis_id", "consultation_id"]
+            isOneToOne: false
+            referencedRelation: "anamnesis_submissions"
+            referencedColumns: ["id", "consultation_id"]
+          },
+          {
+            foreignKeyName: "consultation_drafts_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: true
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultations: {
+        Row: {
+          consultation_date: string
+          created_at: string
+          id: string
+          invite_email: string
+          invite_expires_at: string
+          patient_id: string
+          patient_name: string
+        }
+        Insert: {
+          consultation_date: string
+          created_at?: string
+          id?: string
+          invite_email?: string
+          invite_expires_at?: string
+          patient_id: string
+          patient_name: string
+        }
+        Update: {
+          consultation_date?: string
+          created_at?: string
+          id?: string
+          invite_email?: string
+          invite_expires_at?: string
+          patient_id?: string
+          patient_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jornada_aprovacoes: {
         Row: {
           approved_at: string
@@ -145,11 +263,34 @@ export type Database = {
         }
         Relationships: []
       }
+      patients: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
+          anamnesis_id: string | null
           body_classification: string
           body_composition: Json | null
           clinical_data: Json | null
+          consultation_id: string | null
           created_at: string
           exam_date: string
           generated_at: string
@@ -159,9 +300,11 @@ export type Database = {
           pdf_file_name: string
         }
         Insert: {
+          anamnesis_id?: string | null
           body_classification?: string
           body_composition?: Json | null
           clinical_data?: Json | null
+          consultation_id?: string | null
           created_at?: string
           exam_date?: string
           generated_at?: string
@@ -171,9 +314,11 @@ export type Database = {
           pdf_file_name?: string
         }
         Update: {
+          anamnesis_id?: string | null
           body_classification?: string
           body_composition?: Json | null
           clinical_data?: Json | null
+          consultation_id?: string | null
           created_at?: string
           exam_date?: string
           generated_at?: string
@@ -182,7 +327,22 @@ export type Database = {
           patient_name?: string
           pdf_file_name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reports_anamnesis_consultation_fk"
+            columns: ["anamnesis_id", "consultation_id"]
+            isOneToOne: false
+            referencedRelation: "anamnesis_submissions"
+            referencedColumns: ["id", "consultation_id"]
+          },
+          {
+            foreignKeyName: "reports_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -228,6 +388,18 @@ export type Database = {
         Args: { _limit: number; _user_id: string }
         Returns: boolean
       }
+      create_patient_consultation: {
+        Args: {
+          _date: string
+          _email: string
+          _existing_patient: boolean
+          _id: string
+          _name: string
+          _patient_id: string
+        }
+        Returns: string
+      }
+      current_verified_email: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
