@@ -1,3 +1,6 @@
+import { identityWarnings } from "@/lib/consultations/mapping";
+import { saveActiveConsultation } from "@/lib/consultations/workspace";
+import { ConsultationBanner } from "@/components/ConsultationBanner";
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
@@ -57,16 +60,15 @@ function ClinicalFormPage() {
   const { clinicalData, bodyComposition, setClinicalData } = useReportStore();
 
   // Pré-preenche com bioimpedância se ainda não há clinicalData salvo
-  const initial: ClinicalData =
-    clinicalData ??
-    {
-      ...emptyClinicalData,
-      patientName: bodyComposition?.patientName ?? "",
-      sex: bodyComposition?.sex ?? "",
-      age: bodyComposition?.age ?? "",
-      height: bodyComposition?.height ?? "",
-      weight: bodyComposition?.weight ?? "",
-    };
+  const initial: ClinicalData = {
+    ...emptyClinicalData,
+    ...clinicalData,
+    patientName: clinicalData?.patientName || bodyComposition?.patientName || "",
+    age: clinicalData?.age || bodyComposition?.age || "",
+    sex: clinicalData?.sex || bodyComposition?.sex || "",
+    height: clinicalData?.height || bodyComposition?.height || "",
+    weight: clinicalData?.weight || bodyComposition?.weight || "",
+  };
 
   const [data, setData] = useState<ClinicalData>(initial);
   const [errors, setErrors] = useState<Errors>({});
@@ -75,7 +77,13 @@ function ClinicalFormPage() {
     setData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    if (saving) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     const newErrors: Errors = {};
     if (!data.patientName.trim()) newErrors.patientName = "Obrigatório";
@@ -90,6 +98,16 @@ function ClinicalFormPage() {
       return;
     }
     setClinicalData(data);
+    setSaving(true);
+    setSaveError("");
+    try {
+      await saveActiveConsultation({ clinicalData: data });
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Não foi possível salvar a consulta.");
+      return;
+    } finally {
+      setSaving(false);
+    }
     navigate({ to: "/review" });
   };
 
@@ -102,6 +120,22 @@ function ClinicalFormPage() {
       <main className="flex-1 px-6 py-10">
         <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
           <Stepper current={3} />
+          <ConsultationBanner />
+          {identityWarnings(data, bodyComposition).map((warning) => (
+            <p
+              key={warning}
+              role="alert"
+              className="my-3 rounded border border-amber-400 bg-amber-50 p-4"
+            >
+              {warning}
+            </p>
+          ))}
+          {saving && <p role="status">Salvando consulta…</p>}
+          {saveError && (
+            <p role="alert" className="my-4 rounded border border-destructive p-4">
+              {saveError}
+            </p>
+          )}
 
           <div className="mt-6">
             <ReturnVisitBadge />
@@ -132,7 +166,12 @@ function ClinicalFormPage() {
                   }))
                 }
               />
-              <Field label="Nome do paciente" required error={errors.patientName} className="sm:col-span-2">
+              <Field
+                label="Nome do paciente"
+                required
+                error={errors.patientName}
+                className="sm:col-span-2"
+              >
                 <Input
                   value={data.patientName}
                   onChange={(e) => update("patientName", e.target.value)}
@@ -155,7 +194,10 @@ function ClinicalFormPage() {
                 />
               </Field>
               <Field label="Sexo" required error={errors.sex}>
-                <Select value={data.sex || undefined} onValueChange={(v) => update("sex", v as ClinicalData["sex"])}>
+                <Select
+                  value={data.sex || undefined}
+                  onValueChange={(v) => update("sex", v as ClinicalData["sex"])}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -218,10 +260,18 @@ function ClinicalFormPage() {
             {/* 3. Rotina */}
             <SectionCard title="Rotina">
               <Field label="Horário que acorda">
-                <Input type="time" value={data.wakeTime} onChange={(e) => update("wakeTime", e.target.value)} />
+                <Input
+                  type="time"
+                  value={data.wakeTime}
+                  onChange={(e) => update("wakeTime", e.target.value)}
+                />
               </Field>
               <Field label="Horário que dorme">
-                <Input type="time" value={data.sleepTime} onChange={(e) => update("sleepTime", e.target.value)} />
+                <Input
+                  type="time"
+                  value={data.sleepTime}
+                  onChange={(e) => update("sleepTime", e.target.value)}
+                />
               </Field>
               <Field label="Horário de trabalho" className="sm:col-span-2">
                 <Input
@@ -261,7 +311,9 @@ function ClinicalFormPage() {
                   <Field label="Tipo de treino" className="sm:col-span-2">
                     <Select
                       value={data.trainingType || undefined}
-                      onValueChange={(v) => update("trainingType", v as ClinicalData["trainingType"])}
+                      onValueChange={(v) =>
+                        update("trainingType", v as ClinicalData["trainingType"])
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione" />
@@ -372,7 +424,11 @@ function ClinicalFormPage() {
                 Voltar
               </Link>
             </Button>
-            <Button type="submit" size="lg" className="bg-gold text-gold-foreground hover:bg-gold/90">
+            <Button
+              type="submit"
+              size="lg"
+              className="bg-gold text-gold-foreground hover:bg-gold/90"
+            >
               <Sparkles />
               Continuar para revisão
               <ArrowRight />

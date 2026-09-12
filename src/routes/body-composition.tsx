@@ -1,3 +1,5 @@
+import { saveActiveConsultation } from "@/lib/consultations/workspace";
+import { ConsultationBanner } from "@/components/ConsultationBanner";
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Calculator, CheckCircle2, Plus, Sparkles, Trash2 } from "lucide-react";
@@ -41,9 +43,7 @@ type HistoryKey = "weightHistory" | "skeletalMuscleHistory" | "bodyFatHistory";
 function BodyCompositionPage() {
   const navigate = useNavigate();
   const { bodyComposition, setBodyComposition, file } = useReportStore();
-  const [data, setData] = useState<BodyCompositionData>(
-    bodyComposition ?? emptyBodyComposition,
-  );
+  const [data, setData] = useState<BodyCompositionData>(bodyComposition ?? emptyBodyComposition);
   const [errors, setErrors] = useState<Partial<Record<keyof BodyCompositionData, string>>>({});
   const hydratedRef = useRef(!!bodyComposition);
   useEffect(() => {
@@ -59,7 +59,12 @@ function BodyCompositionPage() {
     setData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const updateHistoryPoint = (key: HistoryKey, idx: number, field: keyof HistoryPoint, value: string) => {
+  const updateHistoryPoint = (
+    key: HistoryKey,
+    idx: number,
+    field: keyof HistoryPoint,
+    value: string,
+  ) => {
     setData((prev) => ({
       ...prev,
       [key]: prev[key].map((p, i) => (i === idx ? { ...p, [field]: value } : p)),
@@ -83,7 +88,13 @@ function BodyCompositionPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    if (saving) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     const newErrors: typeof errors = {};
     if (!data.patientName.trim()) newErrors.patientName = "Obrigatório";
@@ -94,6 +105,16 @@ function BodyCompositionPage() {
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
     setBodyComposition(data);
+    setSaving(true);
+    setSaveError("");
+    try {
+      await saveActiveConsultation({ bodyComposition: data });
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Não foi possível salvar a consulta.");
+      return;
+    } finally {
+      setSaving(false);
+    }
     navigate({ to: "/clinical-form" });
   };
 
@@ -106,6 +127,13 @@ function BodyCompositionPage() {
       <main className="flex-1 px-6 py-10">
         <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
           <Stepper current={2} />
+          <ConsultationBanner />
+          {saving && <p role="status">Salvando consulta…</p>}
+          {saveError && (
+            <p role="alert" className="my-4 rounded border border-destructive p-4">
+              {saveError}
+            </p>
+          )}
 
           <div className="mt-6">
             <ReturnVisitBadge />
@@ -131,14 +159,18 @@ function BodyCompositionPage() {
                 <div className="flex items-start gap-3 rounded-md border border-gold/40 bg-gold-soft/20 px-4 py-3 text-sm text-foreground">
                   <Sparkles className="mt-0.5 h-4 w-4 text-gold" />
                   <p>
-                    Nenhum dado foi extraído ainda. Preencha manualmente abaixo ou volte para
-                    enviar o exame.
+                    Nenhum dado foi extraído ainda. Preencha manualmente abaixo ou volte para enviar
+                    o exame.
                   </p>
                 </div>
               )}
 
               <Section title="Identificação">
-                <Field label="Nome do paciente" error={errors.patientName} className="sm:col-span-2">
+                <Field
+                  label="Nome do paciente"
+                  error={errors.patientName}
+                  className="sm:col-span-2"
+                >
                   <Input
                     value={data.patientName}
                     onChange={(e) => update("patientName", e.target.value)}

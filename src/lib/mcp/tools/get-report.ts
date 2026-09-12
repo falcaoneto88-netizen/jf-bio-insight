@@ -15,9 +15,13 @@ export default defineTool({
   description:
     "Devolve um relatório pelo seu identificador. Use mode 'summary' (predefinido) para os indicadores principais ou 'full' para incluir toda a composição corporal e dados clínicos.",
   inputSchema: {
-    id: z.string().trim().describe("Identificador do relatório (campo id de list_reports)."),
+    id: z
+      .string({ error: "Indique um texto válido." })
+      .trim()
+      .uuid("Indique um UUID válido.")
+      .describe("Identificador do relatório (campo id de list_reports)."),
     mode: z
-      .enum(["summary", "full"])
+      .enum(["summary", "full"], "O modo deve ser summary ou full.")
       .optional()
       .describe("'summary' devolve apenas os indicadores principais; 'full' devolve tudo."),
   },
@@ -37,12 +41,18 @@ export default defineTool({
       .maybeSingle();
 
     if (error) {
-      return { content: [{ type: "text", text: error.message }], isError: true };
+      return {
+        content: [{ type: "text", text: "Não foi possível consultar o relatório." }],
+        isError: true,
+      };
     }
     if (!data) {
       return {
         content: [
-          { type: "text", text: `Relatório não encontrado para o id "${id}". Use list_reports para obter ids válidos.` },
+          {
+            type: "text",
+            text: `Relatório não encontrado para o id "${id}". Use list_reports para obter ids válidos.`,
+          },
         ],
         isError: true,
       };

@@ -1,3 +1,4 @@
+import { requireAdminAccess, reportFailure } from "@/lib/access";
 import { supabase } from "@/integrations/supabase/client";
 import type { ReportHistoryEntry } from "./report-history";
 
@@ -6,6 +7,7 @@ const MIGRATED_FLAG = "jf-bioreport-history-migrated";
 
 export async function migrateLocalHistoryToCloud(): Promise<number> {
   if (typeof window === "undefined") return 0;
+  await requireAdminAccess();
   try {
     if (window.localStorage.getItem(MIGRATED_FLAG) === "true") return 0;
     const raw = window.localStorage.getItem(LEGACY_KEY);
@@ -33,13 +35,13 @@ export async function migrateLocalHistoryToCloud(): Promise<number> {
       .from("reports")
       .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
     if (error) {
-      console.error("[reports] migration failed");
-      return 0;
+      return reportFailure(error);
     }
     window.localStorage.setItem(MIGRATED_FLAG, "true");
     return rows.length;
   } catch (err) {
-    console.error("[reports] migration error");
-    return 0;
+    throw err instanceof Error
+      ? err
+      : new Error("Não foi possível importar o histórico local. Os registros foram preservados.");
   }
 }

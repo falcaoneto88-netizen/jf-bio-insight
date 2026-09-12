@@ -1,11 +1,9 @@
+import type { ConsultationContext } from "@/lib/consultations/workspace";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 import type { ReportHistoryEntry } from "@/lib/report-history";
-import {
-  buildDefaultPrescription,
-  type PrescriptionData,
-} from "@/lib/prescription-data";
+import { buildDefaultPrescription, type PrescriptionData } from "@/lib/prescription-data";
 import {
   emptyOverride,
   normalizeDietCustomization,
@@ -24,7 +22,6 @@ import {
   normalizeExtraMeals,
   type ExtraMeal,
 } from "@/lib/extra-meals";
-
 
 export type UploadedFile = {
   name: string;
@@ -81,19 +78,9 @@ export const emptyBodyComposition: BodyCompositionData = {
 export type YesNo = "sim" | "nao" | "";
 export type YesNoNA = "sim" | "nao" | "na" | "";
 
-export type MainGoal =
-  | "jejum_intermitente"
-  | "alta_performance"
-  | "recomposicao"
-  | "";
+export type MainGoal = "jejum_intermitente" | "alta_performance" | "recomposicao" | "";
 
-export type TrainingType =
-  | "musculacao"
-  | "cardio"
-  | "funcional"
-  | "personal"
-  | "outro"
-  | "";
+export type TrainingType = "musculacao" | "cardio" | "funcional" | "personal" | "outro" | "";
 
 export type ClinicalData = {
   // Paciente
@@ -168,12 +155,7 @@ export const emptyClinicalData: ClinicalData = {
 };
 
 export type ReportSectionKey =
-  | "bioimpedance"
-  | "analysis"
-  | "dietPlan"
-  | "prescription"
-  | "finalGuidelines"
-  | "patientNotes";
+  "bioimpedance" | "analysis" | "dietPlan" | "prescription" | "finalGuidelines" | "patientNotes";
 
 export type ReportOptions = {
   sections: Record<ReportSectionKey, boolean>;
@@ -195,6 +177,8 @@ export const defaultReportOptions: ReportOptions = {
 };
 
 type ReportState = {
+  consultation: ConsultationContext | null;
+  setConsultation: (consultation: ConsultationContext | null) => void;
   file: UploadedFile | null;
   bodyComposition: BodyCompositionData | null;
   clinicalData: ClinicalData | null;
@@ -223,16 +207,12 @@ type ReportState = {
   resetAllDietCustomization: () => void;
   addExtraMeal: () => void;
   removeExtraMeal: (id: string) => void;
-  updateExtraMeal: (
-    id: string,
-    patch: Partial<Pick<ExtraMeal, "name" | "time">>,
-  ) => void;
+  updateExtraMeal: (id: string, patch: Partial<Pick<ExtraMeal, "name" | "time">>) => void;
   addExtraMealItem: (id: string, item: CustomFoodItem) => void;
   removeExtraMealItem: (id: string, itemId: string) => void;
   clearExtraMeals: () => void;
   reset: () => void;
 };
-
 
 function normalizeBodyComposition(
   bc: BodyCompositionData | null | undefined,
@@ -241,16 +221,12 @@ function normalizeBodyComposition(
   return {
     ...bc,
     weightHistory: Array.isArray(bc.weightHistory) ? bc.weightHistory : [],
-    skeletalMuscleHistory: Array.isArray(bc.skeletalMuscleHistory)
-      ? bc.skeletalMuscleHistory
-      : [],
+    skeletalMuscleHistory: Array.isArray(bc.skeletalMuscleHistory) ? bc.skeletalMuscleHistory : [],
     bodyFatHistory: Array.isArray(bc.bodyFatHistory) ? bc.bodyFatHistory : [],
   };
 }
 
-function normalizeReportOptions(
-  o: Partial<ReportOptions> | null | undefined,
-): ReportOptions {
+function normalizeReportOptions(o: Partial<ReportOptions> | null | undefined): ReportOptions {
   if (!o) return { ...defaultReportOptions, sections: { ...defaultReportOptions.sections } };
   return {
     sections: { ...defaultReportOptions.sections, ...(o.sections ?? {}) },
@@ -262,6 +238,8 @@ function normalizeReportOptions(
 export const useReportStore = create<ReportState>()(
   persist(
     (set) => ({
+      consultation: null,
+      setConsultation: (consultation) => set({ consultation }),
       file: null,
       bodyComposition: null,
       clinicalData: null,
@@ -302,8 +280,7 @@ export const useReportStore = create<ReportState>()(
         set((s) => ({ reportOptions: { ...s.reportOptions, clinicalNotes: value } })),
       setPatientNotes: (value) =>
         set((s) => ({ reportOptions: { ...s.reportOptions, patientNotes: value } })),
-      resetReportOptions: () =>
-        set({ reportOptions: normalizeReportOptions(null) }),
+      resetReportOptions: () => set({ reportOptions: normalizeReportOptions(null) }),
       removeDietItem: (blockKey, itemId) =>
         set((s) => {
           const current = s.dietCustomization[blockKey] ?? emptyOverride();
@@ -314,9 +291,7 @@ export const useReportStore = create<ReportState>()(
               : current.removedIds.includes(itemId)
                 ? current.removedIds
                 : [...current.removedIds, itemId],
-            added: isCustom
-              ? current.added.filter((a) => a.id !== itemId)
-              : current.added,
+            added: isCustom ? current.added.filter((a) => a.id !== itemId) : current.added,
           };
           return {
             dietCustomization: { ...s.dietCustomization, [blockKey]: next },
@@ -365,10 +340,7 @@ export const useReportStore = create<ReportState>()(
         set((s) => {
           if (s.extraMeals.length >= MAX_EXTRA_MEALS) return s;
           return {
-            extraMeals: [
-              ...s.extraMeals,
-              { id: newExtraMealId(), name: "", time: "", items: [] },
-            ],
+            extraMeals: [...s.extraMeals, { id: newExtraMealId(), name: "", time: "", items: [] }],
           };
         }),
       removeExtraMeal: (id) =>
@@ -396,10 +368,7 @@ export const useReportStore = create<ReportState>()(
             if (m.items.length >= MAX_EXTRA_MEAL_ITEMS) return m;
             return {
               ...m,
-              items: [
-                ...m.items,
-                { id: item.id, label: label.slice(0, 60) },
-              ],
+              items: [...m.items, { id: item.id, label: label.slice(0, 60) }],
             };
           }),
         }));
@@ -407,14 +376,13 @@ export const useReportStore = create<ReportState>()(
       removeExtraMealItem: (id, itemId) =>
         set((s) => ({
           extraMeals: s.extraMeals.map((m) =>
-            m.id === id
-              ? { ...m, items: m.items.filter((i) => i.id !== itemId) }
-              : m,
+            m.id === id ? { ...m, items: m.items.filter((i) => i.id !== itemId) } : m,
           ),
         })),
       clearExtraMeals: () => set({ extraMeals: [] }),
       reset: () =>
         set({
+          consultation: null,
           file: null,
           bodyComposition: null,
           clinicalData: null,
@@ -425,7 +393,6 @@ export const useReportStore = create<ReportState>()(
           mealTimeOverrides: {},
           extraMeals: [],
         }),
-
     }),
     {
       name: "jf-bioreport-draft",
@@ -452,10 +419,7 @@ export const useReportStore = create<ReportState>()(
           const legacyGoal = (s.clinicalData as unknown as { mainGoal?: string }).mainGoal;
           if (legacyGoal === "ganho_massa") {
             s.clinicalData = { ...s.clinicalData, mainGoal: "alta_performance" };
-          } else if (
-            legacyGoal === "emagrecimento" ||
-            legacyGoal === "manutencao"
-          ) {
+          } else if (legacyGoal === "emagrecimento" || legacyGoal === "manutencao") {
             s.clinicalData = { ...s.clinicalData, mainGoal: "recomposicao" };
           }
         }
@@ -469,6 +433,7 @@ export const useReportStore = create<ReportState>()(
         };
       },
       partialize: (state) => ({
+        consultation: state.consultation,
         file: state.file,
         bodyComposition: normalizeBodyComposition(state.bodyComposition),
         clinicalData: state.clinicalData,
@@ -489,7 +454,6 @@ export const useReportStore = create<ReportState>()(
           state.mealTimeOverrides = normalizeMealTimeOverrides(state.mealTimeOverrides);
           state.extraMeals = normalizeExtraMeals(state.extraMeals);
         }
-
       },
     },
   ),

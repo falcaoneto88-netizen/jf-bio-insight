@@ -13,10 +13,13 @@ import { Route as UploadRouteImport } from './routes/upload'
 import { Route as SuccessRouteImport } from './routes/success'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as ConsultaRouteImport } from './routes/consulta'
 import { Route as ClinicalFormRouteImport } from './routes/clinical-form'
 import { Route as BodyCompositionRouteImport } from './routes/body-composition'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AnamneseRouteImport } from './routes/anamnese'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -44,9 +47,19 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsultaRoute = ConsultaRouteImport.update({
+  id: '/consulta',
+  path: '/consulta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClinicalFormRoute = ClinicalFormRouteImport.update({
@@ -62,6 +75,11 @@ const BodyCompositionRoute = BodyCompositionRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnamneseRoute = AnamneseRouteImport.update({
+  id: '/anamnese',
+  path: '/anamnese',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -98,10 +116,13 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/anamnese': typeof AnamneseRoute
   '/auth': typeof AuthRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
+  '/consulta': typeof ConsultaRoute
   '/history': typeof HistoryRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
@@ -113,10 +134,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/anamnese': typeof AnamneseRoute
   '/auth': typeof AuthRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
+  '/consulta': typeof ConsultaRoute
   '/history': typeof HistoryRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
@@ -130,10 +154,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/anamnese': typeof AnamneseRoute
   '/auth': typeof AuthRoute
   '/body-composition': typeof BodyCompositionRoute
   '/clinical-form': typeof ClinicalFormRoute
+  '/consulta': typeof ConsultaRoute
   '/history': typeof HistoryRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
@@ -147,10 +174,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/anamnese'
     | '/auth'
     | '/body-composition'
     | '/clinical-form'
+    | '/consulta'
     | '/history'
+    | '/login'
     | '/mcp'
     | '/review'
     | '/success'
@@ -162,10 +192,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/anamnese'
     | '/auth'
     | '/body-composition'
     | '/clinical-form'
+    | '/consulta'
     | '/history'
+    | '/login'
     | '/mcp'
     | '/review'
     | '/success'
@@ -178,10 +211,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/anamnese'
     | '/auth'
     | '/body-composition'
     | '/clinical-form'
+    | '/consulta'
     | '/history'
+    | '/login'
     | '/mcp'
     | '/review'
     | '/success'
@@ -195,10 +231,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AnamneseRoute: typeof AnamneseRoute
   AuthRoute: typeof AuthRoute
   BodyCompositionRoute: typeof BodyCompositionRoute
   ClinicalFormRoute: typeof ClinicalFormRoute
+  ConsultaRoute: typeof ConsultaRoute
   HistoryRoute: typeof HistoryRoute
+  LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   ReviewRoute: typeof ReviewRoute
   SuccessRoute: typeof SuccessRoute
@@ -237,11 +276,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history': {
       id: '/history'
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consulta': {
+      id: '/consulta'
+      path: '/consulta'
+      fullPath: '/consulta'
+      preLoaderRoute: typeof ConsultaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clinical-form': {
@@ -263,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/anamnese': {
+      id: '/anamnese'
+      path: '/anamnese'
+      fullPath: '/anamnese'
+      preLoaderRoute: typeof AnamneseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -326,10 +386,13 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AnamneseRoute: AnamneseRoute,
   AuthRoute: AuthRoute,
   BodyCompositionRoute: BodyCompositionRoute,
   ClinicalFormRoute: ClinicalFormRoute,
+  ConsultaRoute: ConsultaRoute,
   HistoryRoute: HistoryRoute,
+  LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   ReviewRoute: ReviewRoute,
   SuccessRoute: SuccessRoute,

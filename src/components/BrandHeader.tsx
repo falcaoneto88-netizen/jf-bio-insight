@@ -1,6 +1,9 @@
 import { Link } from "@tanstack/react-router";
 
+import { useAccess } from "@/components/AccessBoundary";
+
 export function BrandHeader() {
+  const { status, signOut } = useAccess();
   return (
     <header className="border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
@@ -15,9 +18,15 @@ export function BrandHeader() {
             </span>
           </span>
         </Link>
-        <span className="hidden text-xs uppercase tracking-[0.2em] text-muted-foreground sm:block">
-          Premium Bioimpedance
-        </span>
+        {status === "admin" || status === "forbidden" ? (
+          <button className="text-sm underline" onClick={() => void signOut()}>
+            Sair
+          </button>
+        ) : (
+          <a href="/login" className="text-sm underline">
+            Entrar
+          </a>
+        )}
       </div>
     </header>
   );

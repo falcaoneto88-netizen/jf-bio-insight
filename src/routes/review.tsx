@@ -1,9 +1,18 @@
+import { ConsultationBanner } from "@/components/ConsultationBanner";
+import { requireAdminAccess } from "@/lib/access";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, FileText, Loader2, Pencil, ShieldCheck, Sparkles, Activity } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  FileText,
+  Loader2,
+  Pencil,
+  ShieldCheck,
+  Sparkles,
+  Activity,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { AccessNotice } from "@/components/AccessNotice";
 import { BrandHeader } from "@/components/BrandHeader";
 import { DietPlanCard } from "@/components/DietPlanCard";
 import { DietEditorCard } from "@/components/DietEditorCard";
@@ -14,7 +23,6 @@ import { ReturnVisitBadge } from "@/components/ReturnVisitBadge";
 import { Stepper } from "@/components/Stepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAdminSession } from "@/hooks/use-admin-session";
 import { classifyBody, PROFILE_LABELS } from "@/lib/body-classifier";
 import { applyDietCustomization, applyMealTimeOverrides } from "@/lib/diet-customization";
 import { adjustDiet, getDietBaseForGoal } from "@/lib/diet-adjuster";
@@ -30,7 +38,11 @@ import {
 
 function parseKg(v: string | undefined | null): number | null {
   if (!v) return null;
-  const n = Number(String(v).replace(/[^\d,.\-]/g, "").replace(",", "."));
+  const n = Number(
+    String(v)
+      .replace(/[^\d,.-]/g, "")
+      .replace(",", "."),
+  );
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
@@ -68,7 +80,13 @@ const TRAINING_TYPE_LABELS: Record<TrainingType, string> = {
 
 function ReviewPage() {
   const navigate = useNavigate();
-  const session = useAdminSession();
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const { file, bodyComposition, clinicalData, previousExam } = useReportStore();
   const dietCustomization = useReportStore((s) => s.dietCustomization);
   const mealTimeOverrides = useReportStore((s) => s.mealTimeOverrides);
@@ -86,10 +104,7 @@ function ReviewPage() {
     () =>
       adjustDiet(
         applyMealTimeOverrides(
-          applyDietCustomization(
-            getDietBaseForGoal(cd?.mainGoal ?? ""),
-            dietCustomization,
-          ),
+          applyDietCustomization(getDietBaseForGoal(cd?.mainGoal ?? ""), dietCustomization),
           mealTimeOverrides,
         ),
         {
@@ -109,36 +124,24 @@ function ReviewPage() {
         },
         extraMeals,
       ),
-    [
-      bc?.weight,
-      cd?.weight,
-      cd?.mainGoal,
-      cd?.gallbladderRemoved,
-      cd?.menopause,
-      cd?.currentlyTraining,
-      cd?.trainingTime,
-      cd?.diabetes,
-      cd?.hypertension,
-      analysis?.primaryProfile,
-      dietCustomization,
-      mealTimeOverrides,
-      extraMeals,
-    ],
+    [bc?.weight, cd, analysis?.primaryProfile, dietCustomization, mealTimeOverrides, extraMeals],
   );
-
 
   const prescription = useReportStore((s) => s.prescription);
   const reportOptions = useReportStore((s) => s.reportOptions);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const [generationError, setGenerationError] = useState("");
   const handleGenerate = async () => {
     const anyEnabled = Object.values(reportOptions.sections).some(Boolean);
     if (!anyEnabled) {
       toast.error("Selecione pelo menos uma seção do relatório");
       return;
     }
+    setGenerationError("");
     setIsGenerating(true);
     try {
+      await requireAdminAccess();
       const [{ pdf }, { ReportDocument }] = await Promise.all([
         import("@react-pdf/renderer"),
         import("@/lib/pdf/ReportDocument"),
@@ -155,18 +158,35 @@ function ReviewPage() {
           options={reportOptions}
         />,
       ).toBlob();
-      const url = URL.createObjectURL(blob);
+      if (!active.current) return;
       const d = new Date();
-      const stamp = `${String(d.getDate()).padStart(2, "0")}${String(
-        d.getMonth() + 1,
-      ).padStart(2, "0")}${d.getFullYear()}`;
-      const slug = (bc?.patientName || cd?.patientName || "paciente")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .toLowerCase() || "paciente";
+      const stamp = `${String(d.getDate()).padStart(2, "0")}${String(d.getMonth() + 1).padStart(
+        2,
+        "0",
+      )}${d.getFullYear()}`;
+      const slug =
+        (bc?.patientName || cd?.patientName || "paciente")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .toLowerCase() || "paciente";
       const fileName = `relatorio-${slug}-${stamp}.pdf`;
+      const consultation = useReportStore.getState().consultation;
+      await addReportToHistory({
+        consultationId: consultation?.id,
+        anamnesisId: consultation?.anamnesisId,
+        patientName: bc?.patientName || cd?.patientName || "Paciente",
+        examDate: bc?.examDateTime || "",
+        generatedAt: new Date().toISOString(),
+        mainGoal: cd?.mainGoal ? GOAL_LABELS[cd.mainGoal] : "—",
+        bodyClassification: analysis ? PROFILE_LABELS[analysis.primaryProfile] : "—",
+        pdfFileName: fileName,
+        bodyComposition: bc,
+        clinicalData: cd,
+      });
+      if (!active.current) return;
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
@@ -175,38 +195,17 @@ function ReviewPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-      try {
-        await addReportToHistory({
-          patientName: bc?.patientName || cd?.patientName || "Paciente",
-          examDate: bc?.examDateTime || "",
-          generatedAt: new Date().toISOString(),
-          mainGoal: cd?.mainGoal ? GOAL_LABELS[cd.mainGoal] : "—",
-          bodyClassification: analysis
-            ? PROFILE_LABELS[analysis.primaryProfile]
-            : "—",
-          pdfFileName: fileName,
-          bodyComposition: bc,
-          clinicalData: cd,
-        });
-      } catch {
-        console.error("[reports] falha ao guardar no histórico");
-        toast.warning(
-          session.isAdmin
-            ? "Relatório gerado, mas não foi guardado no histórico"
-            : "Relatório gerado. Inicie sessão com a conta da clínica para o guardar no histórico.",
-        );
-      }
-
-
       toast.success("Relatório gerado", {
         description: "O download do PDF foi iniciado.",
       });
       navigate({ to: "/success" });
-    } catch {
-      console.error("[pdf] falha ao gerar o relatório");
-      toast.error("Falha ao gerar o PDF", {
-        description: "Tente novamente em alguns instantes.",
-      });
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível gerar e salvar o relatório. Tente novamente.";
+      setGenerationError(message);
+      toast.error("Relatório não concluído", { description: message });
     } finally {
       setIsGenerating(false);
     }
@@ -218,21 +217,13 @@ function ReviewPage() {
       <main className="flex-1 px-6 py-10">
         <div className="mx-auto max-w-4xl">
           <Stepper current={4} />
-
-          {!session.loading && !session.isAdmin && (
-            <div className="mt-6">
-              <AccessNotice
-                signedIn={session.signedIn}
-                proximo="/review"
-                descricao={
-                  session.signedIn
-                    ? "Esta conta não tem permissão clínica: o relatório pode ser gerado, mas não fica guardado no histórico."
-                    : "Sem sessão iniciada o relatório pode ser gerado, mas não fica guardado no histórico da clínica."
-                }
-              />
-            </div>
+          <ConsultationBanner />
+          {generationError && (
+            <p role="alert" className="my-4 rounded border border-destructive p-4">
+              {generationError} Revise o acesso e tente gerar novamente. Seu rascunho foi
+              preservado.
+            </p>
           )}
-
 
           <div className="mt-6">
             <ReturnVisitBadge />
@@ -248,9 +239,6 @@ function ReviewPage() {
           <div className="space-y-4">
             <ReportSectionsCard />
             <ReportNotesCard />
-
-
-
 
             <Card className="border-gold/40">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -276,10 +264,19 @@ function ReviewPage() {
                       ))}
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <NarrativeBlock title="Diagnóstico corporal" text={analysis.narrative.diagnosis} />
+                      <NarrativeBlock
+                        title="Diagnóstico corporal"
+                        text={analysis.narrative.diagnosis}
+                      />
                       <NarrativeBlock title="Ponto forte" text={analysis.narrative.strength} />
-                      <NarrativeBlock title="Ponto de atenção" text={analysis.narrative.attention} />
-                      <NarrativeBlock title="Estratégia principal" text={analysis.narrative.strategy} />
+                      <NarrativeBlock
+                        title="Ponto de atenção"
+                        text={analysis.narrative.attention}
+                      />
+                      <NarrativeBlock
+                        title="Estratégia principal"
+                        text={analysis.narrative.strategy}
+                      />
                     </div>
                   </div>
                 ) : (
@@ -293,12 +290,6 @@ function ReviewPage() {
             <DietPlanCard diet={diet} />
 
             <PrescriptionCard />
-
-
-
-
-
-
 
             <Section title="Arquivo enviado" editTo="/upload">
               {file ? (
@@ -452,8 +443,8 @@ function ReviewPage() {
           <div className="mt-10 flex items-start gap-3 rounded-md border border-gold/40 bg-gold-soft/20 px-4 py-3 text-sm text-foreground">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
             <p>
-              Conduta sugerida — este relatório deve ser revisado e validado por um
-              profissional antes de ser enviado ao paciente.
+              Conduta sugerida — este relatório deve ser revisado e validado por um profissional
+              antes de ser enviado ao paciente.
             </p>
           </div>
 
@@ -534,7 +525,10 @@ function DataGrid({ items }: { items: [string, string][] }) {
   return (
     <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
       {items.map(([k, v]) => (
-        <div key={k} className="flex justify-between gap-4 border-b border-dashed border-border/60 py-1.5">
+        <div
+          key={k}
+          className="flex justify-between gap-4 border-b border-dashed border-border/60 py-1.5"
+        >
           <dt className="text-sm text-muted-foreground">{k}</dt>
           <dd className="text-sm font-medium text-foreground text-right">{v || "—"}</dd>
         </div>
@@ -556,13 +550,7 @@ function NarrativeBlock({ title, text }: { title: string; text: string }) {
   );
 }
 
-function HistoryList({
-  label,
-  rows,
-}: {
-  label: string;
-  rows: { date: string; value: string }[];
-}) {
+function HistoryList({ label, rows }: { label: string; rows: { date: string; value: string }[] }) {
   if (rows.length === 0) return null;
   return (
     <div>

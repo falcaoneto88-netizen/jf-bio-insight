@@ -1,5 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { ghlErrorMessage } from "@/lib/ghl/errors";
 
 import { requireAdminClient } from "../supabase";
 
@@ -9,8 +10,19 @@ export default defineTool({
   description:
     "Procura contactos no GoHighLevel por nome, email ou telefone e devolve id, nome, email e telefone.",
   inputSchema: {
-    query: z.string().trim().min(2).describe("Nome, email ou telefone a procurar."),
-    limit: z.number().int().optional().describe("Número máximo de contactos (1 a 25)."),
+    query: z
+      .string({ error: "Indique um texto válido." })
+      .trim()
+      .min(2, "O valor é inferior ao mínimo permitido (2).")
+      .max(254, "Use no máximo 254 caracteres.")
+      .describe("Nome, email ou telefone a procurar."),
+    limit: z
+      .number({ error: "O limite deve ser numérico." })
+      .int("O limite deve ser um número inteiro.")
+      .min(1, "O valor é inferior ao mínimo permitido (1).")
+      .max(25, "O valor excede o máximo permitido (25).")
+      .optional()
+      .describe("Número máximo de contactos (1 a 25)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async ({ query, limit }, ctx) => {
@@ -25,7 +37,7 @@ export default defineTool({
         structuredContent: { contacts },
       };
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Falha ao contactar o GoHighLevel.";
+      const message = ghlErrorMessage(err);
       return { content: [{ type: "text", text: message }], isError: true };
     }
   },

@@ -41,33 +41,32 @@ function Home() {
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 px-8 text-base">
-                <Link to="/jornada">
-                  Iniciar atendimento
+                <Link to="/consulta" search={{ id: undefined }}>
+                  Consulta do paciente
                   <ArrowRight className="ml-1" />
                 </Link>
               </Button>
-              <span className="text-xs text-muted-foreground">
-                Anamnese, exame, protocolo e documento final
-              </span>
+              <span className="text-xs text-muted-foreground">Aceita PDF, PNG ou JPG do exame</span>
             </div>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-              <Link
-                to="/jornada"
-                className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-              >
-                Atendimentos guardados
+            <div className="mt-6 flex flex-wrap justify-center gap-6">
+              <Link to="/jornada" className="text-sm underline underline-offset-4">
+                Jornada clínica e protocolos
+              </Link>
+              <Link to="/upload" className="text-sm underline underline-offset-4">
+                Relatório de bioimpedância
               </Link>
               <Link
-                to="/upload"
-                className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                to="/anamnese"
+                search={{ consulta: undefined }}
+                className="text-sm underline underline-offset-4"
               >
-                Relatório de bioimpedância (fluxo anterior)
+                Preencher anamnese do paciente
               </Link>
               <Link
                 to="/history"
                 className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
               >
-                Histórico de relatórios
+                Ver histórico de relatórios
               </Link>
             </div>
           </div>

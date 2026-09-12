@@ -8,11 +8,9 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 
-import { useEffect } from "react";
+import { AccessProvider, AccessGate } from "@/components/AccessBoundary";
 
 import { Toaster } from "@/components/ui/sonner";
-import { claimAdminRole } from "@/lib/admin.functions";
-import { supabase } from "@/integrations/supabase/client";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -37,7 +35,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
 
@@ -45,9 +43,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="font-serif text-xl text-foreground">Algo deu errado</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Tente novamente ou volte ao início.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Tente novamente ou volte ao início.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -81,18 +77,41 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "JF BioReport gera relatórios clínicos premium a partir de exames de bioimpedância.",
       },
-      { property: "og:title", content: "JF BioReport — Relatórios clínicos premium de bioimpedância" },
+      {
+        property: "og:title",
+        content: "JF BioReport — Relatórios clínicos premium de bioimpedância",
+      },
       {
         property: "og:description",
         content: "Relatórios clínicos premium de bioimpedância.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "JF BioReport — Relatórios clínicos premium de bioimpedância" },
-      { name: "description", content: "BioReport Studio generates premium clinical reports from bioimpedance exams." },
-      { property: "og:description", content: "BioReport Studio generates premium clinical reports from bioimpedance exams." },
-      { name: "twitter:description", content: "BioReport Studio generates premium clinical reports from bioimpedance exams." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c883f03-5fe2-4324-84ad-4eadf4524d03/id-preview-fc5a33c0--26a42c4a-b53d-4fa2-b737-3b14bf0e0665.lovable.app-1779912970344.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c883f03-5fe2-4324-84ad-4eadf4524d03/id-preview-fc5a33c0--26a42c4a-b53d-4fa2-b737-3b14bf0e0665.lovable.app-1779912970344.png" },
+      {
+        name: "twitter:title",
+        content: "JF BioReport — Relatórios clínicos premium de bioimpedância",
+      },
+      {
+        name: "description",
+        content: "BioReport Studio generates premium clinical reports from bioimpedance exams.",
+      },
+      {
+        property: "og:description",
+        content: "BioReport Studio generates premium clinical reports from bioimpedance exams.",
+      },
+      {
+        name: "twitter:description",
+        content: "BioReport Studio generates premium clinical reports from bioimpedance exams.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c883f03-5fe2-4324-84ad-4eadf4524d03/id-preview-fc5a33c0--26a42c4a-b53d-4fa2-b737-3b14bf0e0665.lovable.app-1779912970344.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c883f03-5fe2-4324-84ad-4eadf4524d03/id-preview-fc5a33c0--26a42c4a-b53d-4fa2-b737-3b14bf0e0665.lovable.app-1779912970344.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -129,19 +148,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event !== "SIGNED_IN" || !session) return;
-      void claimAdminRole().catch(() => {
-        /* silencioso: a atribuição de administrador não deve bloquear a app */
-      });
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <AccessProvider>
+        <AccessGate>
+          <Outlet />
+        </AccessGate>
+      </AccessProvider>
       <Toaster />
     </QueryClientProvider>
   );
