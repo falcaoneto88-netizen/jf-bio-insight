@@ -1,8 +1,12 @@
+import { consultationDb } from "@/lib/consultations/types";
+import { requireAdminAccess, reportFailure } from "@/lib/access";
 import { supabase } from "@/integrations/supabase/client";
 import type { BodyCompositionData, ClinicalData } from "@/store/report-store";
 
 export type ReportHistoryEntry = {
   id: string;
+  consultationId?: string;
+  anamnesisId?: string | null;
   patientName: string;
   examDate: string;
   generatedAt: string; // ISO
@@ -43,6 +47,9 @@ function rowToEntry(r: ReportRow): ReportHistoryEntry {
 function entryToRow(entry: Omit<ReportHistoryEntry, "id"> & { id?: string }) {
   return {
     ...(entry.id ? { id: entry.id } : {}),
+    ...(entry.consultationId
+      ? { consultation_id: entry.consultationId, anamnesis_id: entry.anamnesisId ?? null }
+      : {}),
     patient_name: entry.patientName ?? "",
     exam_date: entry.examDate ?? "",
     generated_at: entry.generatedAt,
@@ -55,6 +62,7 @@ function entryToRow(entry: Omit<ReportHistoryEntry, "id"> & { id?: string }) {
 }
 
 export async function getReportHistory(): Promise<ReportHistoryEntry[]> {
+  await requireAdminAccess();
   const { data, error } = await supabase
     .from("reports")
     .select(
@@ -63,16 +71,17 @@ export async function getReportHistory(): Promise<ReportHistoryEntry[]> {
     .order("generated_at", { ascending: false })
     .limit(200);
   if (error) {
-    console.error("[reports] getReportHistory");
-    throw error;
+    return reportFailure(error);
   }
+  await requireAdminAccess();
   return (data ?? []).map((r) => rowToEntry(r as unknown as ReportRow));
 }
 
 export async function addReportToHistory(
   entry: Omit<ReportHistoryEntry, "id">,
 ): Promise<ReportHistoryEntry> {
-  const { data, error } = await supabase
+  await requireAdminAccess();
+  const { data, error } = await consultationDb
     .from("reports")
     .insert(entryToRow(entry))
     .select(
@@ -80,19 +89,16 @@ export async function addReportToHistory(
     )
     .single();
   if (error) {
-    console.error("[reports] addReportToHistory");
-    throw error;
+    return reportFailure(error);
   }
   return rowToEntry(data as unknown as ReportRow);
 }
 
 export async function clearReportHistory(): Promise<void> {
-  const { error } = await supabase
-    .from("reports")
-    .delete()
-    .not("id", "is", null);
+  await requireAdminAccess();
+  const { error } = await supabase.from("reports").delete().not("id", "is", null);
   if (error) {
-    console.error("[reports] clearReportHistory");
-    throw error;
+    return reportFailure(error);
   }
+  await requireAdminAccess();
 }

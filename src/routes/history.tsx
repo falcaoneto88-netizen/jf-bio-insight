@@ -3,7 +3,6 @@ import { ArrowLeft, FileText, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { AccessNotice } from "@/components/AccessNotice";
 import { BrandHeader } from "@/components/BrandHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,9 +20,7 @@ import {
   type ReportHistoryEntry,
 } from "@/lib/report-history";
 import { migrateLocalHistoryToCloud } from "@/lib/migrate-local-history";
-import { useAdminSession } from "@/hooks/use-admin-session";
 import { useReportStore } from "@/store/report-store";
-
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -47,27 +44,32 @@ function formatDateTime(iso: string): string {
 function HistoryPage() {
   const navigate = useNavigate();
   const [entries, setEntries] = useState<ReportHistoryEntry[] | null>(null);
-  const session = useAdminSession();
+
+  const [loadError, setLoadError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (session.loading || !session.isAdmin) return;
+    setLoadError("");
     let cancelled = false;
     (async () => {
       try {
         await migrateLocalHistoryToCloud();
         const list = await getReportHistory();
         if (!cancelled) setEntries(list);
-      } catch {
+      } catch (error) {
         if (!cancelled) {
-          setEntries([]);
-          toast.error("Falha ao carregar o histórico da cloud");
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível carregar o histórico. Tente novamente.",
+          );
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [session.loading, session.isAdmin]);
+  }, [attempt]);
 
   const handleClear = async () => {
     if (!entries || entries.length === 0) return;
@@ -76,11 +78,10 @@ function HistoryPage() {
       await clearReportHistory();
       setEntries([]);
       toast.success("Histórico limpo");
-    } catch {
-      toast.error("Falha ao limpar o histórico");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao limpar o histórico");
     }
   };
-
 
   const handleReopen = (entry: ReportHistoryEntry) => {
     if (!entry.bodyComposition || !entry.clinicalData) {
@@ -88,6 +89,7 @@ function HistoryPage() {
       return;
     }
     const store = useReportStore.getState();
+    store.reset();
     store.setBodyComposition(entry.bodyComposition);
     store.setClinicalData(entry.clinicalData);
     store.setPreviousExam(entry);
@@ -111,7 +113,7 @@ function HistoryPage() {
                 Início
               </Link>
             </Button>
-            {session.isAdmin && list.length > 0 && (
+            {list.length > 0 && (
               <Button variant="outline" size="sm" onClick={handleClear}>
                 <Trash2 className="h-4 w-4" />
                 Limpar histórico
@@ -123,21 +125,16 @@ function HistoryPage() {
             <h1 className="font-serif text-3xl text-foreground sm:text-4xl">
               Histórico de relatórios
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Registos dos relatórios gerados, disponíveis apenas com sessão iniciada.
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">Relatórios salvos na cloud.</p>
           </div>
 
-          {!session.loading && !session.isAdmin ? (
-            <AccessNotice
-              signedIn={session.signedIn}
-              proximo="/history"
-              descricao={
-                session.signedIn
-                  ? "Esta conta não tem permissão para consultar o histórico clínico."
-                  : "Inicie sessão com a conta da clínica para consultar o histórico de relatórios."
-              }
-            />
+          {loadError ? (
+            <Card>
+              <CardContent className="space-y-4 py-10 text-center">
+                <p role="alert">{loadError}</p>
+                <Button onClick={() => setAttempt((value) => value + 1)}>Tentar novamente</Button>
+              </CardContent>
+            </Card>
           ) : entries === null ? (
             <Card className="border-border/80">
               <CardContent className="py-16 text-center text-sm text-muted-foreground">
@@ -150,9 +147,7 @@ function HistoryPage() {
                 <div className="grid h-12 w-12 place-content-center rounded-full border border-gold/40 text-gold">
                   <FileText className="h-5 w-5" />
                 </div>
-                <p className="font-serif text-lg text-foreground">
-                  Nenhum relatório ainda
-                </p>
+                <p className="font-serif text-lg text-foreground">Nenhum relatório ainda</p>
                 <p className="max-w-sm text-sm text-muted-foreground">
                   Os relatórios gerados aparecerão aqui automaticamente.
                 </p>
@@ -204,18 +199,12 @@ function HistoryPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               {canReopen ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleReopen(e)}
-                                >
+                                <Button variant="outline" size="sm" onClick={() => handleReopen(e)}>
                                   <RefreshCw className="h-3.5 w-3.5" />
                                   Nova consulta
                                 </Button>
                               ) : (
-                                <span className="text-xs italic text-muted-foreground">
-                                  —
-                                </span>
+                                <span className="text-xs italic text-muted-foreground">—</span>
                               )}
                             </TableCell>
                           </TableRow>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import { safeReturnTo } from "@/lib/access";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -17,7 +18,8 @@ export const Route = createFileRoute("/auth")({
       { title: "Entrar — Jornada clínica Dr. João Falcão" },
       {
         name: "description",
-        content: "Acesso restrito ao consultório: entre com a sua conta Google para abrir a jornada clínica.",
+        content:
+          "Acesso restrito ao consultório: entre com a sua conta Google para abrir a jornada clínica.",
       },
       { property: "og:title", content: "Entrar — Jornada clínica Dr. João Falcão" },
       { property: "og:description", content: "Acesso restrito ao consultório." },
@@ -34,7 +36,7 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const destino = search.proximo && search.proximo.startsWith("/") ? search.proximo : "/jornada";
+  const destino = safeReturnTo(search.proximo ?? "/jornada");
 
   useEffect(() => {
     let active = true;
@@ -56,7 +58,7 @@ function AuthPage() {
     setLoading(true);
     setError(null);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: `${window.location.origin}/auth?proximo=${encodeURIComponent(destino)}`,
     });
     if (result && "error" in result && result.error) {
       setError("Não foi possível entrar. Tente novamente.");

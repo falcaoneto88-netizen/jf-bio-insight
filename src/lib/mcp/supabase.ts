@@ -65,25 +65,34 @@ export function supabaseForUser(ctx: ToolContext) {
 export async function requireAdminClient(
   ctx: ToolContext,
 ): Promise<
-  | { ok: true; supabase: ReturnType<typeof supabaseForUser> }
-  | { ok: false; message: string }
+  { ok: true; supabase: ReturnType<typeof supabaseForUser> } | { ok: false; message: string }
 > {
   if (!ctx.isAuthenticated()) return { ok: false, message: "Não autenticado." };
 
   const token = ctx.getToken();
   if (!token) return { ok: false, message: "Não autenticado." };
 
-  const supabase = supabaseForUser(ctx);
-  const { data: userData, error: userError } = await supabase.auth.getUser(token);
-  if (userError || !userData.user) return { ok: false, message: "Não autenticado." };
+  try {
+    const supabase = supabaseForUser(ctx);
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData.user) return { ok: false, message: "Não autenticado." };
 
-  const { data: isAdmin, error } = await supabase.rpc("has_role", {
-    _user_id: userData.user.id,
-    _role: "admin",
-  });
-  if (error) return { ok: false, message: error.message };
-  if (!isAdmin) {
-    return { ok: false, message: "Acesso restrito: apenas administradores podem consultar os relatórios." };
+    const { data: isAdmin, error } = await supabase.rpc("has_role", {
+      _user_id: userData.user.id,
+      _role: "admin",
+    });
+    if (error) return { ok: false, message: "Não foi possível verificar as permissões de acesso." };
+    if (isAdmin !== true) {
+      return {
+        ok: false,
+        message: "Acesso restrito: apenas administradores podem consultar os relatórios.",
+      };
+    }
+    return { ok: true, supabase };
+  } catch {
+    return {
+      ok: false,
+      message: "Não foi possível validar a sessão. Verifique a configuração e tente novamente.",
+    };
   }
-  return { ok: true, supabase };
 }

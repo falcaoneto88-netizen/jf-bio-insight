@@ -1,3 +1,4 @@
+import { ConsultationBanner } from "@/components/ConsultationBanner";
 import { useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -140,6 +141,7 @@ function UploadPage() {
       <main className="flex-1 px-6 py-10">
         <div className="mx-auto max-w-3xl">
           <Stepper current={1} />
+          <ConsultationBanner />
 
           {!session.loading && !session.isAdmin && (
             <div className="mt-6">
@@ -155,13 +157,12 @@ function UploadPage() {
             </div>
           )}
 
-
           <Card className="mt-10 border-border/80">
             <CardHeader>
               <CardTitle className="font-serif text-2xl">Envio do exame</CardTitle>
               <CardDescription>
-                Adicione o exame de bioimpedância em PDF, PNG ou JPG (até 10 MB). A IA lerá os
-                dados automaticamente.
+                Adicione o exame de bioimpedância em PDF, PNG ou JPG (até 10 MB). A IA lerá os dados
+                automaticamente.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">

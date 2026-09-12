@@ -1,5 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { ghlErrorMessage } from "@/lib/ghl/errors";
 
 import { buildReportNote } from "@/lib/ghl-summary";
 import { requireAdminClient } from "../supabase";
@@ -20,17 +21,39 @@ export default defineTool({
   name: "ghl_push_report",
   title: "Enviar relatório para o GoHighLevel",
   description:
-    "Envia o resumo de um relatório para o GoHighLevel como nota do contacto. Requer confirmação explícita (confirm: true) e um contacto existente ou email/telefone do paciente.",
+    "Adiciona o resumo como nota no GoHighLevel. Sem contactId, cria ou atualiza o contacto por email/telefone, incluindo nome e etiqueta bioreport. Requer confirmação explícita (confirm: true) e um contacto existente ou email/telefone do paciente.",
   inputSchema: {
-    reportId: z.string().trim().min(1).describe("Identificador do relatório (list_reports)."),
-    contactId: z.string().trim().optional().describe("Id do contacto no GoHighLevel, se já conhecido."),
-    email: z.string().trim().optional().describe("Email do paciente (se não houver contactId)."),
-    phone: z.string().trim().optional().describe("Telefone do paciente (se não houver contactId)."),
+    reportId: z
+      .string({ error: "Indique um texto válido." })
+      .trim()
+      .uuid("Indique um UUID válido.")
+      .describe("Identificador do relatório (list_reports)."),
+    contactId: z
+      .string({ error: "Indique um texto válido." })
+      .trim()
+      .min(1, "O valor é inferior ao mínimo permitido (1).")
+      .max(128, "Use no máximo 128 caracteres.")
+      .regex(/^[A-Za-z0-9_-]+$/, "Identificador de contacto inválido.")
+      .optional()
+      .describe("Id do contacto no GoHighLevel, se já conhecido."),
+    email: z
+      .string({ error: "Indique um texto válido." })
+      .trim()
+      .max(254, "Use no máximo 254 caracteres.")
+      .email("Email inválido.")
+      .optional()
+      .describe("Email do paciente (se não houver contactId)."),
+    phone: z
+      .string({ error: "Indique um texto válido." })
+      .trim()
+      .regex(/^\+[1-9]\d{6,14}$/, "Use telefone internacional, por exemplo +5511999999999.")
+      .optional()
+      .describe("Telefone do paciente (se não houver contactId)."),
     confirm: z
-      .boolean()
+      .literal(true, "Confirme o envio explicitamente com confirm: true.")
       .describe("Tem de ser true. Confirme com o utilizador antes de escrever no GoHighLevel."),
   },
-  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
   handler: async ({ reportId, contactId, email, phone, confirm }, ctx) => {
     const access = await requireAdminClient(ctx);
     if (!access.ok) return { content: [{ type: "text", text: access.message }], isError: true };
@@ -59,8 +82,13 @@ export default defineTool({
       .eq("id", reportId)
       .maybeSingle();
 
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    if (!data) return { content: [{ type: "text", text: "Relatório não encontrado." }], isError: true };
+    if (error)
+      return {
+        content: [{ type: "text", text: "Não foi possível consultar o relatório." }],
+        isError: true,
+      };
+    if (!data)
+      return { content: [{ type: "text", text: "Relatório não encontrado." }], isError: true };
 
     const row = data as unknown as ReportRow;
     const bc = row.body_composition ?? {};
@@ -87,7 +115,7 @@ export default defineTool({
         structuredContent: { contactId: targetId },
       };
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Falha ao contactar o GoHighLevel.";
+      const message = ghlErrorMessage(err);
       return { content: [{ type: "text", text: message }], isError: true };
     }
   },

@@ -1,3 +1,4 @@
+import { ConsultationBanner } from "@/components/ConsultationBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CheckCircle2, Download, FileText, Loader2, Pencil, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -21,7 +22,11 @@ const GOAL_LABELS: Record<MainGoal, string> = {
 
 function parseKg(v: string | undefined | null): number | null {
   if (!v) return null;
-  const n = Number(String(v).replace(/[^\d,.\-]/g, "").replace(",", "."));
+  const n = Number(
+    String(v)
+      .replace(/[^\d,.-]/g, "")
+      .replace(",", "."),
+  );
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
@@ -61,8 +66,7 @@ function SuccessPage() {
     setGeneratedAt(new Date().toISOString());
   }, []);
 
-  const patientName =
-    bc?.patientName || cd?.patientName || "Paciente";
+  const patientName = bc?.patientName || cd?.patientName || "Paciente";
 
   const analysis = useMemo(() => classifyBody(bc, cd), [bc, cd]);
 
@@ -70,10 +74,7 @@ function SuccessPage() {
     () =>
       adjustDiet(
         applyMealTimeOverrides(
-          applyDietCustomization(
-            getDietBaseForGoal(cd?.mainGoal ?? ""),
-            dietCustomization,
-          ),
+          applyDietCustomization(getDietBaseForGoal(cd?.mainGoal ?? ""), dietCustomization),
           mealTimeOverrides,
         ),
         {
@@ -93,23 +94,8 @@ function SuccessPage() {
         },
         extraMeals,
       ),
-    [
-      bc?.weight,
-      cd?.weight,
-      cd?.mainGoal,
-      cd?.gallbladderRemoved,
-      cd?.menopause,
-      cd?.currentlyTraining,
-      cd?.trainingTime,
-      cd?.diabetes,
-      cd?.hypertension,
-      analysis?.primaryProfile,
-      dietCustomization,
-      mealTimeOverrides,
-      extraMeals,
-    ],
+    [bc?.weight, cd, analysis?.primaryProfile, dietCustomization, mealTimeOverrides, extraMeals],
   );
-
 
   // Acesso direto sem dados → volta para a home
   useEffect(() => {
@@ -119,9 +105,7 @@ function SuccessPage() {
   }, [bc, cd, navigate]);
 
   const goalLabel = cd?.mainGoal ? GOAL_LABELS[cd.mainGoal] : "—";
-  const classification = analysis
-    ? PROFILE_LABELS[analysis.primaryProfile]
-    : "—";
+  const classification = analysis ? PROFILE_LABELS[analysis.primaryProfile] : "—";
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -144,9 +128,10 @@ function SuccessPage() {
       ).toBlob();
       const url = URL.createObjectURL(blob);
       const d = new Date();
-      const stamp = `${String(d.getDate()).padStart(2, "0")}${String(
-        d.getMonth() + 1,
-      ).padStart(2, "0")}${d.getFullYear()}`;
+      const stamp = `${String(d.getDate()).padStart(2, "0")}${String(d.getMonth() + 1).padStart(
+        2,
+        "0",
+      )}${d.getFullYear()}`;
       const slug =
         patientName
           .normalize("NFD")
@@ -162,15 +147,12 @@ function SuccessPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
       toast.success("Download iniciado");
-    } catch (err) {
-      console.error("[pdf] falha ao gerar o relatório");
-      const description =
-        err instanceof Error && err.message ? err.message : undefined;
-      toast.error("Falha ao gerar o PDF", { description });
+    } catch {
+      console.error("[pdf] falha ao gerar novamente o relatório");
+      toast.error("Falha ao gerar o PDF", { description: "Tente novamente em alguns instantes." });
     } finally {
       setIsDownloading(false);
     }
-
   };
 
   const handleNewReport = () => {
@@ -181,6 +163,9 @@ function SuccessPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <BrandHeader />
+      <div className="mx-auto w-full max-w-4xl px-6">
+        <ConsultationBanner />
+      </div>
       <main className="flex-1 px-6 py-12">
         <div className="mx-auto max-w-2xl">
           <div className="text-center">
@@ -198,7 +183,10 @@ function SuccessPage() {
           <Card className="mt-10 border-gold/40">
             <CardContent className="space-y-4 p-6">
               <Row label="Paciente" value={patientName} highlight />
-              <Row label="Data de geração" value={generatedAt ? formatDateTime(generatedAt) : "—"} />
+              <Row
+                label="Data de geração"
+                value={generatedAt ? formatDateTime(generatedAt) : "—"}
+              />
               <Row label="Objetivo" value={goalLabel} />
               <div className="flex items-center justify-between gap-4 pt-1">
                 <span className="text-sm text-muted-foreground">Classificação corporal</span>
@@ -216,7 +204,6 @@ function SuccessPage() {
               disabled={isDownloading || generatedAt === null}
               className="bg-gold text-gold-foreground hover:bg-gold/90"
             >
-
               {isDownloading ? (
                 <>
                   <Loader2 className="animate-spin" />
@@ -279,23 +266,13 @@ function SuccessPage() {
   );
 }
 
-function Row({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
+function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-dashed border-border/60 pb-3 last:border-0 last:pb-0">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span
         className={
-          highlight
-            ? "font-serif text-lg text-foreground"
-            : "text-sm font-medium text-foreground"
+          highlight ? "font-serif text-lg text-foreground" : "text-sm font-medium text-foreground"
         }
       >
         {value}

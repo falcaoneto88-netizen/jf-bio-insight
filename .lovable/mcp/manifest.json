@@ -31,21 +31,27 @@
           "properties": {
             "patientName": {
               "description": "Filtro parcial pelo nome do paciente.",
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
             },
             "generatedAfter": {
               "description": "Data ISO (AAAA-MM-DD): apenas relatórios gerados nesta data ou depois.",
-              "type": "string"
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
             },
             "generatedBefore": {
               "description": "Data ISO (AAAA-MM-DD): apenas relatórios gerados nesta data ou antes.",
-              "type": "string"
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
             },
             "limit": {
               "description": "Número máximo de relatórios (1 a 100).",
               "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
+              "minimum": 1,
+              "maximum": 100
             }
           }
         },
@@ -66,6 +72,8 @@
           "properties": {
             "id": {
               "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
               "description": "Identificador do relatório (campo id de list_reports)."
             },
             "mode": {
@@ -86,7 +94,7 @@
       {
         "name": "patient_evolution",
         "title": "Evolução do paciente",
-        "description": "Compara os relatórios de um paciente ao longo do tempo (peso, gordura corporal, massa muscular e gordura visceral) e devolve a variação entre o primeiro e o último exame.",
+        "description": "Compara exames distintos por nome completo e exato. Recusa nomes abreviados, resultados ambíguos e medições conflitantes na mesma data. Remove relatórios regenerados do mesmo exame e compara as datas dos exames mais recentes. A identificação por nome não distingue homónimos.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -98,14 +106,15 @@
           "properties": {
             "patientName": {
               "type": "string",
-              "minLength": 1,
-              "description": "Nome (ou parte do nome) do paciente."
+              "minLength": 2,
+              "maxLength": 200,
+              "description": "Nome completo e exato de list_reports, sem abreviações."
             },
             "limit": {
-              "description": "Número máximo de relatórios a comparar (1 a 50).",
+              "description": "Número máximo de exames distintos mais recentes (2 a 50).",
               "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
+              "minimum": 2,
+              "maximum": 50
             }
           },
           "required": [
@@ -130,13 +139,14 @@
             "query": {
               "type": "string",
               "minLength": 2,
+              "maxLength": 254,
               "description": "Nome, email ou telefone a procurar."
             },
             "limit": {
               "description": "Número máximo de contactos (1 a 25).",
               "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
+              "minimum": 1,
+              "maximum": 25
             }
           },
           "required": [
@@ -148,10 +158,10 @@
       {
         "name": "ghl_push_report",
         "title": "Enviar relatório para o GoHighLevel",
-        "description": "Envia o resumo de um relatório para o GoHighLevel como nota do contacto. Requer confirmação explícita (confirm: true) e um contacto existente ou email/telefone do paciente.",
+        "description": "Adiciona o resumo como nota no GoHighLevel. Sem contactId, cria ou atualiza o contacto por email/telefone, incluindo nome e etiqueta bioreport. Requer confirmação explícita (confirm: true) e um contacto existente ou email/telefone do paciente.",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": false,
+          "destructiveHint": true,
           "openWorldHint": true
         },
         "inputSchema": {
@@ -160,23 +170,32 @@
           "properties": {
             "reportId": {
               "type": "string",
-              "minLength": 1,
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
               "description": "Identificador do relatório (list_reports)."
             },
             "contactId": {
               "description": "Id do contacto no GoHighLevel, se já conhecido.",
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
             },
             "email": {
               "description": "Email do paciente (se não houver contactId).",
-              "type": "string"
+              "type": "string",
+              "maxLength": 254,
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
             },
             "phone": {
               "description": "Telefone do paciente (se não houver contactId).",
-              "type": "string"
+              "type": "string",
+              "pattern": "^\\+[1-9]\\d{6,14}$"
             },
             "confirm": {
               "type": "boolean",
+              "const": true,
               "description": "Tem de ser true. Confirme com o utilizador antes de escrever no GoHighLevel."
             }
           },

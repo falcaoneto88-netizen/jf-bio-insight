@@ -1,3 +1,5 @@
+import { GhlError } from "./errors";
+
 // Cliente HTTP do GoHighLevel (API v2). Server-only.
 // Credenciais: GHL_API_KEY (Private Integration Token) + GHL_LOCATION_ID.
 
@@ -20,9 +22,7 @@ function ghlEnv(): GhlEnv {
   const token = process.env["GHL_API_KEY"]?.trim();
   const locationId = process.env["GHL_LOCATION_ID"]?.trim();
   if (!token || !locationId) {
-    throw new Error(
-      "Integração GoHighLevel não configurada (GHL_API_KEY / GHL_LOCATION_ID em falta).",
-    );
+    throw new GhlError("configuration");
   }
   return { token, locationId };
 }
@@ -35,23 +35,34 @@ async function ghlFetch(
   const url = new URL(`${GHL_BASE}${path}`);
   for (const [k, v] of Object.entries(init.query ?? {})) url.searchParams.set(k, v);
 
-  const response = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Version: GHL_VERSION,
-      Accept: "application/json",
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-    },
-    ...(init.body ? { body: JSON.stringify(init.body) } : {}),
-  });
-
-  const text = await response.text();
-  if (!response.ok) {
-    console.error(`[GHL] ${init.method ?? "GET"} ${path} falhou [${response.status}]: ${text}`);
-    throw new Error(`GoHighLevel respondeu ${response.status}: ${text.slice(0, 400)}`);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
+      method: init.method ?? "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Version: GHL_VERSION,
+        Accept: "application/json",
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(init.body ? { body: JSON.stringify(init.body) } : {}),
+    });
+  } catch {
+    throw new GhlError("transport");
   }
-  return text ? (JSON.parse(text) as unknown) : {};
+  if (!response.ok) {
+    // Never log provider bodies, request paths, contact identifiers or headers.
+    console.error("[GHL] Falha HTTP", { status: response.status, method: init.method ?? "GET" });
+    await response.body?.cancel().catch(() => undefined);
+    throw new GhlError("response", response.status);
+  }
+  try {
+    const text = await response.text();
+    return text ? (JSON.parse(text) as unknown) : {};
+  } catch {
+    throw new GhlError("invalid_response");
+  }
 }
 
 function pick(record: Record<string, unknown>, key: string): string {
@@ -73,7 +84,9 @@ function toContact(raw: unknown): GhlContact | null {
     phone: pick(r, "phone"),
     dateOfBirth: pick(r, "dateOfBirth") || null,
     gender: pick(r, "gender") || null,
-    tags: Array.isArray(r["tags"]) ? (r["tags"] as unknown[]).filter((t): t is string => typeof t === "string") : [],
+    tags: Array.isArray(r["tags"])
+      ? (r["tags"] as unknown[]).filter((t): t is string => typeof t === "string")
+      : [],
   };
 }
 
@@ -83,9 +96,8 @@ export async function searchGhlContacts(query: string, limit = 10): Promise<GhlC
   const payload = (await ghlFetch("/contacts/", {
     query: { locationId, query, limit: String(Math.min(Math.max(limit, 1), 50)) },
   })) as { contacts?: unknown[] };
-  return (payload.contacts ?? [])
-    .map(toContact)
-    .filter((c): c is GhlContact => c !== null);
+  if (!payload || !Array.isArray(payload.contacts)) throw new GhlError("invalid_response");
+  return payload.contacts.map(toContact).filter((c): c is GhlContact => c !== null);
 }
 
 /** Cria ou atualiza um contacto (identificado por email ou telefone). */
@@ -109,8 +121,8 @@ export async function upsertGhlContact(input: {
       ...(input.tags?.length ? { tags: input.tags } : {}),
     },
   })) as { contact?: unknown };
-  const contact = toContact(payload.contact);
-  if (!contact) throw new Error("GoHighLevel não devolveu o contacto criado.");
+  const contact = toContact(payload?.contact);
+  if (!contact) throw new GhlError("invalid_response");
   return contact;
 }
 
