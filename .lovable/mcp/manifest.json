@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "bioreport-studio",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "title": "BioReport Studio"
     },
     "tools": [
@@ -202,6 +202,82 @@
           "required": [
             "reportId",
             "confirm"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "jornada_sync_consultation",
+        "title": "Registrar evento da consulta no Jornada AI",
+        "description": "Envia apenas o estado de uma anamnese confirmada ou relatório salvo ao Jornada AI. Confira o contato HighLevel e a consulta com o utilizador; exige confirm: true. Vincula os IDs e registra o evento, sem enviar mensagens nem mudar etapas. Não envia respostas clínicas ou conteúdo do relatório.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "consultationId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "recordId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "eventType": {
+              "type": "string",
+              "enum": [
+                "anamnese_recebida",
+                "relatorio_disponivel"
+              ]
+            },
+            "ghlContactId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            },
+            "confirm": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "consultationId",
+            "recordId",
+            "eventType",
+            "ghlContactId",
+            "confirm"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "jornada_preview_consultation",
+        "title": "Preparar a sincronização da consulta",
+        "description": "Consulta os IDs e datas de até 10 anamneses confirmadas e 10 relatórios salvos de uma consulta. O consultationId aparece na URL da tela Consulta do paciente. Permite conferir o paciente e escolher recordId antes de jornada_sync_consultation. Não envia eventos ou mensagens.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "consultationId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": [
+            "consultationId"
           ]
         },
         "outputSchema": null

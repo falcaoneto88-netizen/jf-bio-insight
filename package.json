@@ -13,7 +13,8 @@
     "test:mcp": "node --test tests/mcp-regression.test.mjs",
     "test:access": "node --test tests/access-regression.test.mjs",
     "test:anamnesis": "node --test tests/anamnesis.test.mjs",
-    "test:consultations": "node --test tests/consultations.test.mjs && node supabase/tests/consultation-access.mjs"
+    "test:consultations": "node --test tests/consultations.test.mjs && node supabase/tests/consultation-access.mjs",
+    "test:jornada-events": "node --test tests/jornada-events.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
