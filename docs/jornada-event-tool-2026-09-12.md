@@ -1,6 +1,20 @@
 # Ferramentas BioReport → Jornada AI
 
-Estado em 12/09/2026: implementação local concluída e testada. Não publicada; migração e chave de integração ainda não instaladas em produção. Nenhum paciente, contato, mensagem ou workflow de produção foi alterado.
+Estado em 12/09/2026: implantação concluída e verificada em produção. Os patches foram incorporados nos dois projetos, as duas publicações foram solicitadas via `deploy_project` e `get_project` retorna `is_published=true` em ambos. A migração foi aplicada e a rota pública do Jornada responde 401 sem assinatura, como esperado. A transmissão ainda NÃO está ativada: falta a configuração privada da chave. Nenhum paciente, contato, mensagem ou workflow de produção foi alterado.
+
+## Implantação verificada (12/09/2026)
+
+- Patches incorporados nos dois projetos (BioReport a partir do código publicado em `6f46c30`; Jornada AI a partir do commit `eb4f167f9ee42d814bb2457b3c9a04a0cf4caad3`), preservando alterações remotas posteriores.
+- As duas publicações foram solicitadas via `deploy_project`; `get_project` retorna `is_published=true` para BioReport e Jornada AI.
+- Migração `20260912160000_bioreport_events.sql` aplicada pelo operador em transação e registrada no `schema_migrations`. As três tabelas têm RLS; anon e authenticated não leem a chave e não têm INSERT direto em eventos.
+- Rota pública `/api/public/bioreport-event` do Jornada verificada em produção: `POST {}` sem assinatura respondeu HTTP 401 `{"error":"unauthorized"}`.
+- MCP do BioReport em produção recusou `initialize` sem token com o mesmo 401 esperado.
+- Manifestos remotos conferidos: BioReport com 12 ferramentas (v0.4.0) e Jornada AI com 7 ferramentas (v0.2.0).
+- Banco conferido: zero chaves, zero eventos.
+- O conector Jornada existente retornou `[]` ao listar automações — nenhuma automação configurada.
+- IMPORTANTE: transmissão NÃO está ativada, porque falta a configuração privada da chave. Chamadas autenticadas das novas ferramentas e o teste completo continuam pendentes.
+- A autorização já existe. O bloqueio é operacional — o Chrome não responde e não existe transferência segura de secrets entre projetos na API — não falta de permissão.
+- Nenhum paciente, mensagem, contato ou workflow foi alterado por esta implantação.
 
 ## Uso após ativação
 
@@ -21,17 +35,23 @@ O receptor usa somente a chave pública/anon do Supabase. Uma função SQL com `
 
 Referência do algoritmo: [PostgreSQL pgcrypto — hmac](https://www.postgresql.org/docs/18/pgcrypto.html).
 
-## Ativação pendente
+## Estado da ativação
 
-Projetos: BioReport `26a42c4a-b53d-4fa2-b737-3b14bf0e0665`; Jornada AI `36345211-2616-42f7-bb9e-e78a9d00ca22`.
+Concluído na implantação de 12/09/2026:
 
-1. Incorporar os patches revisados aos respectivos projetos, preservando alterações remotas posteriores. O snapshot local do Jornada foi obtido do commit `eb4f167f9ee42d814bb2457b3c9a04a0cf4caad3`; o BioReport parte do código publicado em `6f46c30` e dos registros locais de ativação.
-2. Aplicar no Jornada AI a migração `20260912160000_bioreport_events.sql`. A inspeção somente de leitura confirmou `pgcrypto` no esquema `extensions` e que a integração ainda não está instalada.
-3. Criar uma chave aleatória exclusiva de 32 bytes, codificada em hexadecimal, em um ambiente privado. Não usar chave GHL/Supabase, não colocar em Git, mensagens, logs, argumentos de linha de comando ou variáveis `VITE_*`.
-4. No backend BioReport configurar `BIOREPORT_JORNADA_SIGNING_SECRET`, `BIOREPORT_JORNADA_KEY_ID`, `JORNADA_AI_ORGANIZATION_ID` e o `GHL_LOCATION_ID` existente. Organização/location verificadas: `f07ab3be-7419-4779-a901-ef71c5fc27f0` / `ok2UHC2QMZsd8UHsAgEa`.
-5. Cadastrar a mesma chave/identificação no banco do Jornada usando `scripts/configure-bioreport-integration.mjs --apply`, executado pelo operador com variáveis privadas e conexão `JORNADA_DATABASE_URL`. O script usa parâmetros SQL, TLS verificado em produção, não imprime credenciais e não substitui uma chave divergente. O receptor também precisa da URL e chave pública Supabase já usadas pelo projeto.
-6. Publicar os dois projetos e atualizar a descoberta das ferramentas MCP. Conferir os manifestos: BioReport 12 ferramentas; Jornada AI 7.
-7. Validar primeiro a consulta de eventos vazia e a recusa de pedido sem assinatura. Só transmitir um evento real após confirmar o paciente/contato com o operador.
+1. Patches revisados incorporados aos dois projetos, preservando alterações remotas posteriores.
+2. Migração `20260912160000_bioreport_events.sql` aplicada no Jornada AI (em transação, registrada no `schema_migrations`). `pgcrypto` confirmado no esquema `extensions`.
+3. Os dois projetos publicados; descoberta das ferramentas MCP atualizada e manifestos remotos conferidos: BioReport 12 ferramentas (v0.4.0), Jornada AI 7 (v0.2.0).
+4. Recusa de pedido sem assinatura verificada em produção (HTTP 401 na rota pública; 401 no MCP sem token).
+
+Pendente (transmissão ainda não ativada):
+
+5. Criar uma chave aleatória exclusiva de 32 bytes, codificada em hexadecimal, em um ambiente privado. Não usar chave GHL/Supabase, não colocar em Git, mensagens, logs, argumentos de linha de comando ou variáveis `VITE_*`.
+6. No backend BioReport configurar `BIOREPORT_JORNADA_SIGNING_SECRET`, `BIOREPORT_JORNADA_KEY_ID`, `JORNADA_AI_ORGANIZATION_ID` e o `GHL_LOCATION_ID` existente. Organização/location verificadas: `f07ab3be-7419-4779-a901-ef71c5fc27f0` / `ok2UHC2QMZsd8UHsAgEa`.
+7. Cadastrar a mesma chave/identificação no banco do Jornada usando `scripts/configure-bioreport-integration.mjs --apply`, executado pelo operador com variáveis privadas e conexão `JORNADA_DATABASE_URL`. O script usa parâmetros SQL, TLS verificado em produção, não imprime credenciais e não substitui uma chave divergente. O receptor também precisa da URL e chave pública Supabase já usadas pelo projeto.
+8. Validar primeiro a consulta de eventos vazia e a recusa de pedido sem assinatura por um chamador autenticado. Só transmitir um evento real após confirmar o paciente/contato com o operador.
+
+O script privado de configuração e os passos restantes acima são preservados como estão. O bloqueio atual é operacional (transferência segura da chave entre projetos), não de autorização.
 
 Não foi adicionado disparo automático ao salvar a anamnese. Esta entrega cria o canal confirmado de eventos e seu histórico. Executar mensagens, mover etapas ou ativar workflows é uma etapa separada; `received` não significa que uma automação foi executada. O fluxo `/jornada` de protocolos continua separado da Consulta do paciente.
 
