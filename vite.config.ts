@@ -15,5 +15,9 @@ export default defineConfig({
   },
   vite: {
     plugins: [mcpPlugin()],
+    // Os testes .mjs correm com `node --test` (scripts test:*); o vitest cobre os .test.ts.
+    test: {
+      exclude: ["**/node_modules/**", "**/dist/**", "tests/**", "supabase/tests/**"],
+    },
   },
 });
