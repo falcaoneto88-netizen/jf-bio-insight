@@ -15,7 +15,8 @@
     "test:anamnesis": "node --test tests/anamnesis.test.mjs",
     "test:consultations": "node --test tests/consultations.test.mjs && node supabase/tests/consultation-access.mjs",
     "test:jornada-events": "node --test tests/jornada-events.test.mjs",
-    "test:clinical-analysis": "vitest run src/lib/clinical-analysis/analysis.test.ts && node supabase/tests/clinical-analysis-access.mjs"
+    "test:clinical-analysis": "vitest run src/lib/clinical-analysis/analysis.test.ts && node supabase/tests/clinical-analysis-access.mjs",
+    "test:intake-invitations": "vitest run src/lib/intake-invitations/invitations.test.ts && node supabase/tests/intake-invitations-access.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

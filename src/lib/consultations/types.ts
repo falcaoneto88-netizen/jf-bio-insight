@@ -19,7 +19,8 @@ export type Submission = {
   confirmed_at: string;
   accepted: boolean;
   declaration_version: string;
-  submitted_by: string;
+  submitted_by: string | null;
+  invitation_id?: string | null;
 };
 export type ConsultationDraft = {
   consultation_id: string;

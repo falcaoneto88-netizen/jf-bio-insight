@@ -24,6 +24,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedJornadaIndexRouteImport } from './routes/_authenticated/jornada/index'
+import { Route as ApiPublicGhlAnamneseRouteImport } from './routes/api/public/ghl-anamnese'
+import { Route as ApiPublicAnamneseConviteRouteImport } from './routes/api/public/anamnese-convite'
 import { Route as AuthenticatedJornadaIdRouteImport } from './routes/_authenticated/jornada/$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
@@ -103,6 +105,17 @@ const AuthenticatedJornadaIndexRoute =
     path: '/jornada/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicGhlAnamneseRoute = ApiPublicGhlAnamneseRouteImport.update({
+  id: '/api/public/ghl-anamnese',
+  path: '/api/public/ghl-anamnese',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAnamneseConviteRoute =
+  ApiPublicAnamneseConviteRouteImport.update({
+    id: '/api/public/anamnese-convite',
+    path: '/api/public/anamnese-convite',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedJornadaIdRoute = AuthenticatedJornadaIdRouteImport.update({
   id: '/jornada/$id',
   path: '/jornada/$id',
@@ -130,6 +143,8 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/jornada/$id': typeof AuthenticatedJornadaIdRoute
+  '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
+  '/api/public/ghl-anamnese': typeof ApiPublicGhlAnamneseRoute
   '/jornada/': typeof AuthenticatedJornadaIndexRoute
 }
 export interface FileRoutesByTo {
@@ -148,6 +163,8 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/jornada/$id': typeof AuthenticatedJornadaIdRoute
+  '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
+  '/api/public/ghl-anamnese': typeof ApiPublicGhlAnamneseRoute
   '/jornada': typeof AuthenticatedJornadaIndexRoute
 }
 export interface FileRoutesById {
@@ -168,6 +185,8 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/jornada/$id': typeof AuthenticatedJornadaIdRoute
+  '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
+  '/api/public/ghl-anamnese': typeof ApiPublicGhlAnamneseRoute
   '/_authenticated/jornada/': typeof AuthenticatedJornadaIndexRoute
 }
 export interface FileRouteTypes {
@@ -188,6 +207,8 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/.lovable/oauth/consent'
     | '/jornada/$id'
+    | '/api/public/anamnese-convite'
+    | '/api/public/ghl-anamnese'
     | '/jornada/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -206,6 +227,8 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/.lovable/oauth/consent'
     | '/jornada/$id'
+    | '/api/public/anamnese-convite'
+    | '/api/public/ghl-anamnese'
     | '/jornada'
   id:
     | '__root__'
@@ -225,6 +248,8 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/.lovable/oauth/consent'
     | '/_authenticated/jornada/$id'
+    | '/api/public/anamnese-convite'
+    | '/api/public/ghl-anamnese'
     | '/_authenticated/jornada/'
   fileRoutesById: FileRoutesById
 }
@@ -244,6 +269,8 @@ export interface RootRouteChildren {
   UploadRoute: typeof UploadRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  ApiPublicAnamneseConviteRoute: typeof ApiPublicAnamneseConviteRoute
+  ApiPublicGhlAnamneseRoute: typeof ApiPublicGhlAnamneseRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -353,6 +380,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJornadaIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/ghl-anamnese': {
+      id: '/api/public/ghl-anamnese'
+      path: '/api/public/ghl-anamnese'
+      fullPath: '/api/public/ghl-anamnese'
+      preLoaderRoute: typeof ApiPublicGhlAnamneseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/anamnese-convite': {
+      id: '/api/public/anamnese-convite'
+      path: '/api/public/anamnese-convite'
+      fullPath: '/api/public/anamnese-convite'
+      preLoaderRoute: typeof ApiPublicAnamneseConviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/jornada/$id': {
       id: '/_authenticated/jornada/$id'
       path: '/jornada/$id'
@@ -400,6 +441,8 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  ApiPublicAnamneseConviteRoute: ApiPublicAnamneseConviteRoute,
+  ApiPublicGhlAnamneseRoute: ApiPublicGhlAnamneseRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
