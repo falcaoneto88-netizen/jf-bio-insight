@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { BrandHeader } from "@/components/BrandHeader";
+import { ClinicalAnalysisPanel } from "@/components/ClinicalAnalysisPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -487,6 +488,13 @@ function ConsultationDetail({ id }: { id: string }) {
           </CardContent>
         </Card>
       </div>
+      <ClinicalAnalysisPanel
+        key={`${id}:${data.draft.version}`}
+        consultationId={id}
+        sourceVersion={data.draft.version}
+        anamnesisId={data.draft.anamnesis_id}
+        hasExam={!!data.draft.body_composition}
+      />
       {invalid && <p role="alert">{invalid}</p>}
       {warnings.map((w) => (
         <p key={w} role="alert" className="rounded border border-amber-400 bg-amber-50 p-4">
