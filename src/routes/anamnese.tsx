@@ -3,6 +3,8 @@ import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { loadPatientInvitation, submitAnamnesis } from "@/lib/consultations/api";
 import type { Consultation } from "@/lib/consultations/types";
+import { resolveInvitation, submitInvitation } from "@/lib/intake-invitations/client";
+import { tokenSchema, type Invitation } from "@/lib/intake-invitations/schema";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -38,6 +40,7 @@ export const Route = createFileRoute("/anamnese")({
     meta: [
       { title: "Anamnese — Paciente | Dr. João Falcão" },
       { name: "robots", content: "noindex, nofollow" },
+      { name: "referrer", content: "no-referrer" },
     ],
   }),
   component: AnamnesisPage,
@@ -46,6 +49,28 @@ export const Route = createFileRoute("/anamnese")({
 type Step = "fill" | "review" | "done";
 function AnamnesisPage() {
   const { consulta } = Route.useSearch();
+  const [invite, setInvite] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () =>
+      setInvite(new URLSearchParams(window.location.hash.slice(1)).get("convite") ?? "");
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
+  if (invite === null)
+    return (
+      <main className="p-10" role="status">
+        Abrindo anamnese…
+      </main>
+    );
+  if (invite)
+    return tokenSchema.safeParse(invite).success ? (
+      <LinkInvitation key={invite} token={invite} />
+    ) : (
+      <main className="p-10" role="alert">
+        O link da anamnese é inválido. Solicite outro à clínica.
+      </main>
+    );
   return consulta ? (
     z.uuid().safeParse(consulta).success ? (
       <InvitedAnamnesis key={consulta} id={consulta} />
@@ -56,6 +81,61 @@ function AnamnesisPage() {
     )
   ) : (
     <AnamnesisForm />
+  );
+}
+function LinkInvitation({ token }: { token: string }) {
+  const [data, setData] = useState<Invitation | null>(null);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let live = true;
+    setError("");
+    setData(null);
+    void resolveInvitation(token)
+      .then((value) => {
+        if (live) setData(value);
+      })
+      .catch((e) => {
+        if (live)
+          setError(e instanceof Error ? e.message : "Não foi possível verificar o convite.");
+      });
+    return () => {
+      live = false;
+    };
+  }, [token, attempt]);
+  if (data?.status === "pending")
+    return (
+      <AnamnesisForm
+        invitationToken={token}
+        consultation={{
+          id: data.consultation_id,
+          patient_name: data.patient_name,
+          consultation_date: data.consultation_date,
+        }}
+      />
+    );
+  return (
+    <main className="mx-auto max-w-lg space-y-5 p-8">
+      <h1 className="font-serif text-3xl">Anamnese da consulta</h1>
+      {data?.status === "submitted" ? (
+        <div role="status">
+          <h2>Anamnese já recebida pela clínica</h2>
+          <p>
+            Recebida em {new Date(data.confirmed_at).toLocaleString("pt-BR")}. Para corrigir
+            informações, entre em contato com a equipe.
+          </p>
+        </div>
+      ) : error ? (
+        <>
+          <p role="alert">{error}</p>
+          <button className="underline" onClick={() => setAttempt((a) => a + 1)}>
+            Tentar novamente
+          </button>
+        </>
+      ) : (
+        <p role="status">Verificando seu convite…</p>
+      )}
+    </main>
   );
 }
 function InvitedAnamnesis({ id }: { id: string }) {
@@ -139,8 +219,15 @@ function InvitedAnamnesis({ id }: { id: string }) {
     </main>
   );
 }
-function AnamnesisForm({ consultation }: { consultation?: Consultation }) {
-  const draftKey = consultation ? `bioreport-anamnesis-${consultation.id}` : null;
+function AnamnesisForm({
+  consultation,
+  invitationToken,
+}: {
+  consultation?: Pick<Consultation, "id" | "patient_name" | "consultation_date">;
+  invitationToken?: string;
+}) {
+  const draftKey =
+    consultation && !invitationToken ? `bioreport-anamnesis-${consultation.id}` : null;
   const submissionId = useRef<string | null>(null);
   const [answers, setAnswers] = useState<AnamnesisAnswers>(() => {
     const initial: AnamnesisAnswers = {
@@ -213,11 +300,7 @@ function AnamnesisForm({ consultation }: { consultation?: Consultation }) {
       Object.fromEntries(
         Object.entries(current).filter(
           ([key]) =>
-            key !== id &&
-            isFieldVisible(
-              anamnesisFields.find((field) => field.id === key)!,
-              next,
-            ),
+            key !== id && isFieldVisible(anamnesisFields.find((field) => field.id === key)!, next),
         ),
       ),
     );
@@ -267,24 +350,33 @@ function AnamnesisForm({ consultation }: { consultation?: Consultation }) {
       if (consultation) {
         submissionId.current ??= crypto.randomUUID();
         try {
-          sessionStorage.setItem(
-            draftKey!,
-            JSON.stringify({ answers, submissionId: submissionId.current }),
-          );
+          if (draftKey)
+            sessionStorage.setItem(
+              draftKey!,
+              JSON.stringify({ answers, submissionId: submissionId.current }),
+            );
         } catch {
           /* Retry remains possible in this page. */
         }
-        const saved = await submitAnamnesis({
-          id: submissionId.current,
-          consultationId: consultation.id,
-          answers: validated,
-          name: result.data.name,
-          accepted: true,
-        });
+        const saved = invitationToken
+          ? await submitInvitation({
+              token: invitationToken,
+              id: submissionId.current,
+              answers: validated,
+              name: result.data.name,
+              accepted: true,
+            })
+          : await submitAnamnesis({
+              id: submissionId.current,
+              consultationId: consultation.id,
+              answers: validated,
+              name: result.data.name,
+              accepted: true,
+            });
         setConfirmedAt(saved.confirmed_at);
         setRemoteSaved(true);
         try {
-          sessionStorage.removeItem(draftKey!);
+          if (draftKey) sessionStorage.removeItem(draftKey);
         } catch {
           /* The saved server record is already confirmed. */
         }
@@ -374,8 +466,10 @@ function AnamnesisForm({ consultation }: { consultation?: Consultation }) {
             {consultation ? (
               <>
                 <strong>Anamnese vinculada à consulta.</strong> Suas respostas serão enviadas à
-                clínica somente após confirmar. Enquanto preenche, um rascunho fica nesta aba para
-                retomar após o login.
+                clínica somente após confirmar.{" "}
+                {invitationToken
+                  ? "Este convite permite um único envio e não exige login. Mantenha esta página aberta enquanto preenche; após o envio, correções devem ser solicitadas à clínica."
+                  : "Enquanto preenche, um rascunho fica nesta aba para retomar após o login."}
               </>
             ) : (
               <>
@@ -447,6 +541,10 @@ function AnamnesisForm({ consultation }: { consultation?: Consultation }) {
                           field={field}
                           value={answers[field.id]}
                           error={errors[field.id]}
+                          readOnly={
+                            !!invitationToken &&
+                            ["patientName", "consultationDate"].includes(field.id)
+                          }
                           onChange={(value) => change(field.id, value)}
                         />
                       ))}
@@ -568,7 +666,7 @@ function AnamnesisForm({ consultation }: { consultation?: Consultation }) {
                     >
                       {confirmationError}
                     </p>
-                    {confirmationError && consultation && (
+                    {confirmationError && consultation && !invitationToken && (
                       <button
                         type="button"
                         className="ana-button ana-secondary"
@@ -618,14 +716,16 @@ function AnamnesisForm({ consultation }: { consultation?: Consultation }) {
             </section>
             {step === "done" && (
               <div className="ana-actions ana-no-print">
-                <button
-                  type="button"
-                  className="ana-button ana-secondary"
-                  disabled={saving}
-                  onClick={edit}
-                >
-                  <ArrowLeft size={18} /> Editar respostas
-                </button>
+                {!(invitationToken && remoteSaved) && (
+                  <button
+                    type="button"
+                    className="ana-button ana-secondary"
+                    disabled={saving}
+                    onClick={edit}
+                  >
+                    <ArrowLeft size={18} /> Editar respostas
+                  </button>
+                )}
                 <button type="button" className="ana-button" onClick={() => window.print()}>
                   <Printer size={18} /> Imprimir / salvar PDF
                 </button>
@@ -645,11 +745,13 @@ function AnswerField({
   field,
   value,
   error,
+  readOnly = false,
   onChange,
 }: {
   field: IntakeField;
   value: string;
   error?: string;
+  readOnly?: boolean;
   onChange: (value: string) => void;
 }) {
   const id = `field-${field.id}`;
@@ -671,6 +773,7 @@ function AnswerField({
     name: field.id,
     value,
     required: field.required,
+    readOnly,
     "aria-invalid": !!error,
     "aria-describedby": description,
     onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -731,6 +834,11 @@ function AnswerField({
       {field.hint && (
         <p id={`${id}-hint`} className="ana-hint">
           {field.hint}
+        </p>
+      )}
+      {readOnly && (
+        <p className="ana-hint">
+          Dados do agendamento. Se estiverem incorretos, fale com a clínica antes de preencher.
         </p>
       )}
       {error && (
