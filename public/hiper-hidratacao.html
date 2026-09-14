@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src https://assets.cdn.filesafe.space; connect-src 'none'; form-action 'none'; base-uri 'none'"
+    />
+    <title>Protocolo de Hiperhidratação | Dr. João Falcão</title>
+    <style>
+      :root {
+        --bg: #faf9f5;
+        --text: #2b2b2b;
+        --title: #111111;
+        --gold: #c5a880;
+        --line: #eae6df;
+        --white: #ffffff;
+        --soft: #f4f0e8;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* ── Layout principal ── */
+      .page {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 36px;
+        background: var(--bg);
+      }
+
+      /* ── Cabeçalho ── */
+      .header {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        border-bottom: 2px solid var(--gold);
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+      }
+      .logo-box {
+        flex-shrink: 0;
+        width: 90px;
+        height: 90px;
+        border: 1px solid var(--gold);
+        background: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .logo-box img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+      .header-info {
+        flex: 1;
+      }
+      .brand-kicker {
+        color: var(--gold);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 2.2px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      h1 {
+        color: var(--title);
+        font-size: 22px;
+        line-height: 1.2;
+        letter-spacing: -0.3px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .subtitle {
+        font-size: 12.5px;
+        color: var(--text);
+      }
+
+      /* ── Linha do paciente ── */
+      .patient-line {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr 0.8fr;
+        gap: 10px;
+        margin: 20px 0 24px;
+      }
+      .field {
+        background: var(--white);
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        min-height: 46px;
+      }
+      .field-label {
+        display: block;
+        font-size: 9px;
+        text-transform: uppercase;
+        color: var(--gold);
+        letter-spacing: 1.4px;
+        font-weight: 700;
+      }
+      .field-value {
+        font-size: 13px;
+        color: var(--title);
+        font-weight: 600;
+        margin-top: 4px;
+        word-break: break-word;
+      }
+
+      /* ── Nota personalizada ── */
+      .personalized-note {
+        background: #fff8f0;
+        border: 1px solid var(--gold);
+        border-radius: 4px;
+        padding: 12px 16px;
+        margin: 0 0 20px;
+        font-size: 13px;
+      }
+      .personalized-note strong {
+        color: #a07840;
+      }
+
+      /* ── Box padrão ── */
+      .box {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-left: 5px solid var(--gold);
+        padding: 14px 16px;
+        margin: 12px 0;
+      }
+      .box p {
+        font-size: 12.5px;
+        margin-bottom: 8px;
+      }
+      .box p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* ── Destaque ── */
+      .highlight {
+        background: var(--soft);
+        border: 1px solid var(--gold);
+        padding: 14px 16px;
+        margin: 16px 0;
+      }
+      .highlight .big {
+        color: var(--title);
+        font-weight: 800;
+        font-size: 14px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .highlight p {
+        font-size: 12.5px;
+        margin: 0;
+      }
+
+      /* ── Seções / Títulos ── */
+      h2 {
+        color: var(--title);
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.9px;
+        border-left: 5px solid var(--gold);
+        padding-left: 10px;
+        margin: 26px 0 12px;
+      }
+      h3 {
+        color: var(--title);
+        font-size: 13px;
+        text-transform: uppercase;
+        margin: 18px 0 8px;
+      }
+      p {
+        font-size: 12.5px;
+        margin-bottom: 10px;
+      }
+      strong {
+        color: var(--title);
+      }
+
+      /* ── Meta hídrica dinâmica ── */
+      .meta-hidrica-box {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-left: 5px solid var(--gold);
+        padding: 14px 16px;
+        margin: 12px 0;
+      }
+      .meta-hidrica-box p {
+        font-size: 12.5px;
+        margin-bottom: 8px;
+      }
+      .meta-hidrica-box p:last-child {
+        margin-bottom: 0;
+      }
+      #meta-hidrica-display {
+        background: var(--soft);
+        border: 1px solid var(--gold);
+        display: inline-block;
+        padding: 4px 12px;
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--title);
+        border-radius: 3px;
+        margin: 4px 0;
+      }
+
+      /* ── Tabela ── */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 14px 0 18px;
+        font-size: 12px;
+      }
+      th {
+        background: var(--title);
+        color: #fff;
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.8px;
+        padding: 10px 10px;
+        text-align: left;
+      }
+      td {
+        border: 1px solid var(--line);
+        padding: 9px 10px;
+        vertical-align: top;
+        background: var(--white);
+      }
+      tr:nth-child(even) td {
+        background: #f8f5ee;
+      }
+
+      /* ── Cards de produtos ── */
+      .products {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin: 16px 0 22px;
+      }
+      .product-card {
+        background: var(--white);
+        border: 1px solid var(--line);
+        padding: 14px 12px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .product-img-wrap {
+        width: 100%;
+        height: 140px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9f7f3;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .product-img-wrap img {
+        max-width: 100%;
+        max-height: 130px;
+        object-fit: contain;
+        transition: transform 0.2s ease;
+      }
+      .product-img-wrap img:hover {
+        transform: scale(1.04);
+      }
+      .product-card h4 {
+        color: var(--title);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--gold);
+        padding-bottom: 6px;
+        width: 100%;
+      }
+      .product-card p {
+        font-size: 11px;
+        margin: 0;
+        text-align: left;
+        line-height: 1.6;
+      }
+      .product-badge {
+        background: var(--gold);
+        color: var(--white);
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 3px 8px;
+        border-radius: 2px;
+        align-self: flex-start;
+      }
+
+      /* ── Benefícios ── */
+      .benefits {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+        margin: 12px 0 16px;
+      }
+      .benefit {
+        background: var(--white);
+        border: 1px solid var(--line);
+        padding: 9px 10px;
+        font-size: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .benefit::before {
+        content: "✓";
+        color: var(--gold);
+        font-weight: 900;
+        flex-shrink: 0;
+      }
+
+      /* ── Checklist ── */
+      .checklist {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+        margin-top: 12px;
+      }
+      .check {
+        background: var(--white);
+        border: 1px solid var(--line);
+        padding: 9px 10px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .square {
+        display: inline-block;
+        width: 13px;
+        height: 13px;
+        border: 1.5px solid var(--gold);
+        flex-shrink: 0;
+        border-radius: 2px;
+      }
+
+      /* ── Rodapé ── */
+      .footer {
+        margin-top: 30px;
+        border-top: 1.5px solid var(--gold);
+        padding-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px;
+        color: #7a6f63;
+        font-size: 10px;
+      }
+
+      /* ── Links dos produtos ── */
+      .product-link {
+        display: block;
+        width: 100%;
+        text-decoration: none;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .product-link:hover .product-img-wrap {
+        border-color: var(--gold);
+        box-shadow: 0 2px 10px rgba(197, 168, 128, 0.25);
+      }
+      .product-title-link {
+        color: var(--title);
+        text-decoration: none;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+      }
+      .product-title-link:hover {
+        color: var(--gold);
+        text-decoration: underline;
+      }
+
+      .btn-comprar {
+        display: inline-block;
+        width: 100%;
+        text-align: center;
+        background: var(--gold);
+        color: var(--white);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 8px 12px;
+        text-decoration: none;
+        border-radius: 3px;
+        transition:
+          background 0.2s ease,
+          transform 0.15s ease;
+        margin-top: auto;
+      }
+      .btn-comprar:hover {
+        background: #a8885f;
+        transform: translateY(-1px);
+      }
+
+      /* ── Responsivo ── */
+      @media (max-width: 640px) {
+        .page {
+          padding: 20px 16px;
+        }
+        .header {
+          flex-direction: column;
+          text-align: center;
+        }
+        .patient-line {
+          grid-template-columns: 1fr;
+        }
+        .products {
+          grid-template-columns: 1fr;
+        }
+        .benefits,
+        .checklist {
+          grid-template-columns: 1fr;
+        }
+        .footer {
+          flex-direction: column;
+          gap: 4px;
+        }
+      }
+
+      /* ── Print ── */
+      @media print {
+        body {
+          background: var(--bg);
+        }
+        .page {
+          max-width: 100%;
+          padding: 12mm 10mm;
+        }
+        a {
+          color: var(--title);
+          text-decoration: none;
+        }
+        .product-img-wrap img {
+          max-height: 100px;
+        }
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .review-banner {
+        background: #fff2d9;
+        border: 1px solid #957447;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        color: #624a26;
+        border-radius: 6px;
+      }
+      .toolbar,
+      .goal-entry {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 14px 0;
+      }
+      button,
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 10px 16px;
+        border: 1px solid #8c704b;
+        border-radius: 6px;
+        background: var(--white);
+        color: #493a28;
+        font: inherit;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button:hover,
+      .button:hover {
+        background: var(--soft);
+      }
+      button.primary,
+      .button.primary {
+        background: #806340;
+        color: white;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      input:not([type="checkbox"]) {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        margin-top: 6px;
+        border: 1px solid #b6a78f;
+        border-radius: 4px;
+        padding: 8px;
+        font: inherit;
+        background: white;
+        color: var(--text);
+      }
+      .field-label {
+        color: #806340;
+      }
+      .goal-entry input {
+        flex: 1;
+        width: 180px;
+      }
+      input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        accent-color: #806340;
+      }
+      :focus-visible {
+        outline: 3px solid #806340;
+        outline-offset: 3px;
+      }
+      .privacy-note,
+      .source-note {
+        font-size: 12px;
+        color: #635a4e;
+        margin: 10px 0 16px;
+      }
+      .source-note summary,
+      .week-summary summary {
+        cursor: pointer;
+        min-height: 44px;
+        padding: 10px 0;
+      }
+      .error {
+        color: #9a2929;
+        margin: 8px 0;
+      }
+      .table-scroll {
+        overflow-x: auto;
+      }
+      .table-scroll table {
+        min-width: 470px;
+      }
+      .purchase-note {
+        font-size: 11px;
+        color: #635a4e;
+        margin-top: auto;
+      }
+      .day-picker {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        margin: 20px 0;
+      }
+      .day-picker button {
+        padding: 8px 2px;
+        font-size: 12px;
+      }
+      .day-picker [aria-pressed="true"] {
+        background: #806340;
+        color: white;
+      }
+      .tracking-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .tracking-header h3 {
+        margin: 0;
+      }
+      progress {
+        width: 100%;
+        height: 10px;
+        accent-color: #806340;
+        margin: 10px 0;
+      }
+      .check {
+        min-height: 50px;
+        cursor: pointer;
+      }
+      .check:has(input:checked) {
+        background: #f0eadf;
+        border-color: #957447;
+      }
+      .storage-box {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 16px;
+        margin-top: 20px;
+      }
+      .storage-choice {
+        background: none;
+        border: 0;
+        padding: 0;
+        font-size: 13px;
+      }
+      #storage-status,
+      #reading-status {
+        margin-top: 12px;
+        font-size: 12px;
+      }
+      .final-review button {
+        margin-top: 16px;
+      }
+      .week-summary article {
+        border-bottom: 1px solid var(--line);
+        padding: 8px 0;
+      }
+      .week-summary ul {
+        padding-left: 20px;
+      }
+      @media (max-width: 640px) {
+        h1 {
+          font-size: 21px;
+        }
+        .day-picker {
+          gap: 4px;
+        }
+        .day-picker button {
+          font-size: 11px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      @media print {
+        .toolbar,
+        .day-picker,
+        .storage-box,
+        #daily-checklist,
+        .final-review button,
+        .goal-entry button {
+          display: none !important;
+        }
+        .week-summary > div {
+          display: block !important;
+        }
+        .product-card,
+        .check,
+        .week-summary article {
+          break-inside: avoid;
+        }
+        .table-scroll {
+          overflow: visible;
+        }
+        input {
+          border: 0 !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="page">
+      <!-- ===== CABEÇALHO ===== -->
+      <header class="header">
+        <div class="logo-box">
+          <img
+            src="https://assets.cdn.filesafe.space/ok2UHC2QMZsd8UHsAgEa/media/688154e7e69c954e541f9f85.jpeg"
+            alt="Logo Dr. João Falcão"
+          />
+        </div>
+        <div class="header-info">
+          <div class="brand-kicker">Dr. João Falcão · Cuidados com você</div>
+          <h1>Protocolo de Hiperhidratação<br />Pré e Pós-Procedimento</h1>
+          <div class="subtitle">
+            Orientações clínicas para otimizar hidratação celular, perfusão tecidual, recuperação e
+            durabilidade dos resultados.
+          </div>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <a href="#acompanhamento" class="button primary">Meu acompanhamento</a
+        ><button type="button" id="print">Imprimir / salvar PDF</button>
+      </div>
+      <noscript
+        ><p class="review-banner">
+          Ative o JavaScript para usar o checklist. A leitura e a impressão continuam disponíveis.
+        </p></noscript
+      >
+      <!-- ===== DADOS DO PACIENTE ===== -->
+      <section aria-label="Seus dados" class="patient-line">
+        <label class="field"
+          ><span class="field-label">Seu primeiro nome (opcional)</span
+          ><input
+            id="patient-name"
+            maxlength="60"
+            autocomplete="off"
+            placeholder="Como prefere ser chamado?"
+        /></label>
+        <label class="field"
+          ><span class="field-label">Data do procedimento (opcional)</span
+          ><input id="procedure-date" type="date"
+        /></label>
+        <div class="field">
+          <span class="field-label">Procedimento</span>
+          <div class="field-value">Harmonização glútea</div>
+        </div>
+      </section>
+      <div class="personalized-note">
+        Olá<span id="greeting-name"></span>! Este é seu guia de cuidados. Confirme com a equipe
+        quais orientações se aplicam a você.
+      </div>
+      <p class="privacy-note">
+        Nome, data e meta são usados apenas nesta página e se apagam ao recarregá-la. Não são
+        enviados à clínica.
+      </p>
+
+      <!-- ===== INTRODUÇÃO ===== -->
+      <section class="box">
+        <p>
+          É fundamental que siga corretamente o <strong>protocolo de hiperhidratação</strong> para
+          otimizar os resultados do procedimento. O ideal é iniciar o protocolo
+          <strong>7 dias antes do procedimento</strong> e mantê-lo durante o período de recuperação
+          e adaptação tecidual.
+        </p>
+        <p>
+          Caso não seja possível iniciar os cuidados com antecedência, recomenda-se iniciar
+          imediatamente o protocolo pós-procedimento.
+        </p>
+      </section>
+
+      <!-- ===== FUNDAMENTO CLÍNICO ===== -->
+      <section>
+        <h2>Fundamento Clínico</h2>
+        <p>
+          A hiperhidratação associada ao <strong>Magnésio Bisglicinato</strong> e ao suporte
+          adequado de <strong>eletrólitos</strong> potencializa a perfusão tecidual, melhora a
+          acomodação do ácido hialurônico e promove uma hidratação celular mais eficiente.
+        </p>
+        <p>
+          A água é direcionada para o interior das células, auxiliando diretamente na
+          <strong>volumização, integração e acomodação dos tecidos tratados</strong>.
+        </p>
+
+        <div class="highlight">
+          <div class="big">Objetivo principal</div>
+          <p>
+            Melhorar o ambiente fisiológico do tecido para favorecer recuperação, conforto,
+            hidratação intracelular e estabilidade do resultado estético.
+          </p>
+        </div>
+      </section>
+
+      <!-- ===== PROTOCOLO DE HIDRATAÇÃO ===== -->
+      <section>
+        <h2>Protocolo de Hidratação Diária</h2>
+
+        <h3>Meta Hídrica Personalizada</h3>
+        <div class="meta-hidrica-box">
+          <label for="daily-goal"><strong>Meta diária orientada pela equipe (ml)</strong></label>
+          <div class="goal-entry">
+            <input
+              id="daily-goal"
+              type="text"
+              inputmode="numeric"
+              maxlength="10"
+              autocomplete="off"
+              placeholder="Ex.: 2450"
+              aria-describedby="goal-help goal-error"
+            /><button type="button" id="apply-goal">Usar minha meta</button>
+          </div>
+          <p id="goal-help">
+            Preencha somente o valor informado pela equipe. Não calculamos uma prescrição
+            automaticamente pelo peso.
+          </p>
+          <p id="goal-error" role="alert" class="error" hidden></p>
+          <p>
+            <strong>Sua meta:</strong>
+            <output id="goal-output" aria-live="polite">A confirmar com a equipe</output>
+          </p>
+          <details class="source-note">
+            <summary>Referência de hidratação do protocolo</summary>
+            <p>
+              A referência deste protocolo é 35 ml × peso corporal por dia, com 500 ml adicionais em
+              atividade física intensa ou calor. Se a equipe informou uma meta específica para você,
+              siga o valor informado.
+            </p>
+          </details>
+        </div>
+        <p class="source-note">
+          Distribua os líquidos ao longo do dia, respeitando a meta orientada pela equipe.
+        </p>
+        <div
+          class="table-scroll"
+          role="region"
+          aria-label="Distribuição diária de líquidos"
+          tabindex="0"
+        >
+          <table>
+            <thead>
+              <tr>
+                <th>Horário</th>
+                <th>Quantidade</th>
+                <th>Orientação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Ao acordar</strong> (jejum)</td>
+                <td>500 ml</td>
+                <td>Água morna com pitada de sal rosa ou Himalaia</td>
+              </tr>
+              <tr>
+                <td><strong>Manhã</strong> (09h–12h)</td>
+                <td>500–600 ml</td>
+                <td>Água pura ou com eletrólitos naturais</td>
+              </tr>
+              <tr>
+                <td><strong>Almoço</strong></td>
+                <td>300–400 ml</td>
+                <td>Durante e após a refeição</td>
+              </tr>
+              <tr>
+                <td><strong>Tarde</strong> (14h–18h)</td>
+                <td>500–600 ml</td>
+                <td>Água de coco ou água com limão (eletrólitos naturais)</td>
+              </tr>
+              <tr>
+                <td><strong>Jantar</strong></td>
+                <td>300 ml</td>
+                <td>Antes e durante a refeição</td>
+              </tr>
+              <tr>
+                <td><strong>Antes de dormir</strong></td>
+                <td>200–300 ml</td>
+                <td>Água pura — evitar excesso para não interromper o sono</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== SUPLEMENTAÇÃO ===== -->
+      <section>
+        <h2>Suplementação Recomendada</h2>
+        <p class="source-note">
+          Siga as doses e os horários orientados pela equipe. Em caso de dúvidas sobre seu uso,
+          entre em contato com a clínica.
+        </p>
+
+        <div class="products">
+          <!-- Magnésio Bisglicinato -->
+          <div class="product-card">
+            <div class="product-badge">Essencial</div>
+
+            <h4>Magnésio Bisglicinato</h4>
+            <p>
+              <strong>Dosagem:</strong> 300–400 mg/dia<br />
+              <strong>Quando:</strong> À noite, após o jantar<br />
+              <strong>Benefício:</strong> Transporte de água para dentro das células, relaxamento
+              muscular e melhora da recuperação tecidual.
+            </p>
+            <span class="purchase-note">Produto e dose a confirmar com a equipe</span>
+          </div>
+
+          <!-- Eletrólitos -->
+          <div class="product-card">
+            <div class="product-badge">Diário</div>
+
+            <h4>Eletrólitos</h4>
+            <p>
+              <strong>Dosagem:</strong> 1 sachê ou 1 cápsula/dia<br />
+              <strong>Quando:</strong> Manhã ou pós-atividade física<br />
+              <strong>Benefício:</strong> Sódio, potássio e magnésio equilibrados — essenciais para
+              a manutenção do volume intracelular.
+            </p>
+            <span class="purchase-note">Produto e dose a confirmar com a equipe</span>
+          </div>
+
+          <!-- Colágeno + Vitamina C -->
+          <div class="product-card">
+            <div class="product-badge">Recuperação</div>
+
+            <h4>Colágeno Hidrolisado + Vitamina C</h4>
+            <p>
+              <strong>Dosagem:</strong> 10 g colágeno + 500 mg Vit. C/dia<br />
+              <strong>Quando:</strong> Manhã, em jejum ou com o café<br />
+              <strong>Benefício:</strong> Suporte à síntese de colágeno, elasticidade tecidual e
+              recuperação pós-procedimento.
+            </p>
+            <span class="purchase-note">Produto e dose a confirmar com a equipe</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== BENEFÍCIOS ===== -->
+      <section>
+        <h2>Benefícios do Protocolo</h2>
+        <div class="benefits">
+          <div class="benefit">Melhora da acomodação do ácido hialurônico</div>
+          <div class="benefit">Redução do edema e inflamação pós-procedimento</div>
+          <div class="benefit">Maior durabilidade dos resultados estéticos</div>
+          <div class="benefit">Hidratação intracelular profunda e sustentada</div>
+          <div class="benefit">Melhora da perfusão e oxigenação tecidual</div>
+          <div class="benefit">Aceleração da recuperação e cicatrização</div>
+          <div class="benefit">Redução de cãibras e tensão muscular</div>
+          <div class="benefit">Melhora da qualidade da pele e turgor cutâneo</div>
+        </div>
+      </section>
+
+      <!-- ===== CHECKLIST ===== -->
+      <section id="acompanhamento" aria-labelledby="tracking-title">
+        <h2 id="tracking-title">Checklist de Adesão — Próximos 7 Dias</h2>
+        <p>
+          Escolha o dia e marque apenas o que realizou. Suplementos só entram no seu cuidado quando
+          prescritos pela equipe.
+        </p>
+        <div class="day-picker" role="group" aria-label="Dia do acompanhamento"></div>
+        <div class="tracking-header">
+          <h3 id="day-heading">Dia 1</h3>
+          <span id="day-progress" role="status"></span>
+        </div>
+        <progress id="day-meter" max="8" value="0" aria-label="Itens marcados no dia"></progress>
+        <div id="daily-checklist" class="checklist"></div>
+        <p id="week-progress" class="privacy-note"></p>
+        <div class="storage-box">
+          <label class="check storage-choice"
+            ><input id="remember" type="checkbox" />Lembrar minhas marcações neste dispositivo por
+            até 30 dias</label
+          >
+          <p id="storage-status" role="status">
+            Marcações apenas nesta página. Ao fechar ou recarregar, elas serão apagadas.
+          </p>
+          <p class="privacy-note">
+            Em dispositivo compartilhado, deixe esta opção desmarcada. Não há envio de respostas ao
+            BioReport ou ao GHL.
+          </p>
+          <button type="button" id="reset">Apagar minhas marcações</button>
+          <div id="reset-confirmation" hidden>
+            <p>Apagar as marcações dos sete dias neste dispositivo?</p>
+            <button type="button" id="confirm-reset">Sim, apagar</button
+            ><button type="button" id="cancel-reset">Cancelar</button>
+          </div>
+        </div>
+        <details class="week-summary">
+          <summary>Ver os sete dias para conferência e impressão</summary>
+          <div id="week-summary"></div>
+        </details>
+      </section>
+      <section class="box final-review" aria-labelledby="final-title">
+        <h2 id="final-title">Conferência das orientações</h2>
+        <label class="check"
+          ><input id="read-confirmation" type="checkbox" />Li as orientações e vou confirmar minhas
+          dúvidas com a equipe.</label
+        >
+        <button type="button" id="confirm-reading" class="primary" disabled>
+          Registrar leitura nesta página
+        </button>
+        <p id="reading-status" role="status">
+          Esta confirmação não é enviada à clínica e não representa liberação para o procedimento.
+        </p>
+      </section>
+      <footer class="footer">
+        <div>Dr. João Falcão · BioReport Studio</div>
+        <div>Cuidados pré e pós-procedimento</div>
+      </footer>
+    </main>
+    <script type="module" src="/hiper-hidratacao.js"></script>
+  </body>
+</html>
