@@ -23,7 +23,8 @@ export type Database = {
           consultation_id: string
           declaration_version: string
           id: string
-          submitted_by: string
+          invitation_id: string | null
+          submitted_by: string | null
         }
         Insert: {
           accepted: boolean
@@ -33,7 +34,8 @@ export type Database = {
           consultation_id: string
           declaration_version?: string
           id?: string
-          submitted_by?: string
+          invitation_id?: string | null
+          submitted_by?: string | null
         }
         Update: {
           accepted?: boolean
@@ -43,7 +45,8 @@ export type Database = {
           consultation_id?: string
           declaration_version?: string
           id?: string
-          submitted_by?: string
+          invitation_id?: string | null
+          submitted_by?: string | null
         }
         Relationships: [
           {
@@ -51,6 +54,13 @@ export type Database = {
             columns: ["consultation_id"]
             isOneToOne: false
             referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnesis_submissions_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: true
+            referencedRelation: "intake_invitations"
             referencedColumns: ["id"]
           },
         ]
@@ -128,6 +138,122 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ghl_patient_links: {
+        Row: {
+          contact_id: string
+          location_id: string
+          patient_id: string
+        }
+        Insert: {
+          contact_id: string
+          location_id: string
+          patient_id: string
+        }
+        Update: {
+          contact_id?: string
+          location_id?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ghl_patient_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_automation: {
+        Row: {
+          enabled: boolean
+          location_id: string
+          secret_hash: string
+          singleton: boolean
+          updated_at: string
+          updated_by: string
+          workflow_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          location_id: string
+          secret_hash: string
+          singleton?: boolean
+          updated_at?: string
+          updated_by: string
+          workflow_id: string
+        }
+        Update: {
+          enabled?: boolean
+          location_id?: string
+          secret_hash?: string
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string
+          workflow_id?: string
+        }
+        Relationships: []
+      }
+      intake_invitations: {
+        Row: {
+          appointment_id: string
+          appointment_start: string
+          consultation_id: string
+          contact_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          location_id: string
+          revoked_at: string | null
+          submission_id: string | null
+          submitted_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          appointment_id: string
+          appointment_start: string
+          consultation_id: string
+          contact_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          location_id: string
+          revoked_at?: string | null
+          submission_id?: string | null
+          submitted_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          appointment_id?: string
+          appointment_start?: string
+          consultation_id?: string
+          contact_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          location_id?: string
+          revoked_at?: string | null
+          submission_id?: string | null
+          submitted_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_invitations_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: true
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_invitations_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "anamnesis_submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -384,6 +510,19 @@ export type Database = {
           content_hash: string
         }[]
       }
+      check_intake_key: {
+        Args: { _location_id?: string; _secret: string; _workflow_id?: string }
+        Returns: boolean
+      }
+      configure_intake_automation: {
+        Args: {
+          _enabled: boolean
+          _location_id: string
+          _secret_hash: string
+          _workflow_id: string
+        }
+        Returns: undefined
+      }
       consume_ai_quota: {
         Args: { _limit: number; _user_id: string }
         Returns: boolean
@@ -406,6 +545,40 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      issue_intake_invitation: {
+        Args: {
+          _appointment_id: string
+          _appointment_start: string
+          _consultation_date: string
+          _contact_id: string
+          _email: string
+          _location_id: string
+          _name: string
+          _secret: string
+          _token_hash: string
+          _workflow_id: string
+        }
+        Returns: Json
+      }
+      resolve_intake_invitation: {
+        Args: { _secret: string; _token: string }
+        Returns: Json
+      }
+      revoke_intake_invitation: {
+        Args: { _consultation_id: string }
+        Returns: undefined
+      }
+      submit_intake_invitation: {
+        Args: {
+          _accepted: boolean
+          _answers: Json
+          _id: string
+          _name: string
+          _secret: string
+          _token: string
+        }
+        Returns: Json
       }
     }
     Enums: {
