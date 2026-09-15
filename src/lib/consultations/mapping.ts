@@ -55,6 +55,25 @@ export function mapAnamnesis(value: unknown, bc: BodyCompositionData | null): Cl
     // Do not infer a structured diagnosis or clinical goal from free text.
   };
 }
+// The first received anamnesis fills missing fields without erasing clinical review.
+// Keep the complete patient answers in notes, including answers that conflict with
+// values already entered by the clinician. Identity differences remain visible.
+export function mergeReceivedAnamnesis(
+  value: unknown,
+  bc: BodyCompositionData | null,
+  existing: ClinicalData | null,
+): ClinicalData {
+  const mapped = mapAnamnesis(value, bc);
+  if (!existing) return mapped;
+  const merged = { ...mapped };
+  for (const key of Object.keys(mapped) as (keyof ClinicalData)[]) {
+    if (existing[key]?.trim()) Object.assign(merged, { [key]: existing[key] });
+  }
+  merged.additionalNotes = existing.additionalNotes?.includes(mapped.additionalNotes)
+    ? existing.additionalNotes
+    : [existing.additionalNotes, mapped.additionalNotes].filter(Boolean).join("\n\n");
+  return merged;
+}
 export function identityWarnings(
   a: { patientName?: string; age?: string },
   bc: BodyCompositionData | null,

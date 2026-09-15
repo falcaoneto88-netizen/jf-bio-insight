@@ -57,7 +57,7 @@ type Errors = Partial<Record<keyof ClinicalData, string>>;
 
 function ClinicalFormPage() {
   const navigate = useNavigate();
-  const { clinicalData, bodyComposition, setClinicalData } = useReportStore();
+  const { clinicalData, bodyComposition, setClinicalData, consultation } = useReportStore();
 
   // Pré-preenche com bioimpedância se ainda não há clinicalData salvo
   const initial: ClinicalData = {
@@ -146,7 +146,9 @@ function ClinicalFormPage() {
               Dados Clínicos Complementares
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Informações que complementam o exame de bioimpedância.
+              {consultation?.anamnesisId
+                ? "Respostas da anamnese já aproveitadas. Revise os dados e complete somente o que faltar."
+                : "Informações que complementam o exame de bioimpedância."}
             </p>
           </div>
 
@@ -154,7 +156,7 @@ function ClinicalFormPage() {
             {/* 1. Dados do paciente */}
             <SectionCard
               title="Dados do paciente"
-              description="Em breve estes campos serão preenchidos automaticamente pela leitura da bioimpedância."
+              description="Confira os dados já preenchidos a partir da anamnese e do exame."
             >
               <GhlContactSearch
                 onSelect={(contact) =>
