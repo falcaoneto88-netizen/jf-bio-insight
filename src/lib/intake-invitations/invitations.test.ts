@@ -85,13 +85,13 @@ function db(status = "pending") {
   }));
   return { rpc, client: { rpc } as unknown as SupabaseClient };
 }
-function fetcher() {
+function fetcher(appointmentResponse: unknown = { appointment: event.event }) {
   return vi.fn<typeof fetch>(async (url, init) => {
     expect(init?.method).toBe("GET");
-    expect(init?.redirect).toBe("error");
+    expect(init?.redirect).toBe("manual");
     return Response.json(
       String(url).includes("/appointments/")
-        ? event
+        ? appointmentResponse
         : String(url).includes("/contacts/")
           ? contact
           : location,
