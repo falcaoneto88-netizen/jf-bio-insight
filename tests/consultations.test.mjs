@@ -126,3 +126,12 @@ test('a stale workspace cannot overwrite newer clinical changes while importing 
  await assert.rejects(()=>api.saveActiveConsultation({clinicalData:api.emptyClinicalData}),/outra janela/);
  assert.equal(count(),0);
 });
+test('single-digit hours remain visible in clinical time inputs without changing the original answer',()=>{
+ const original={...answers(),trainingTime:'8:00'};
+ const result=api.mapAnamnesis(original,null);
+ assert.equal(result.trainingTime,'08:00');
+ assert.equal(original.trainingTime,'8:00');
+ assert.match(result.additionalNotes,/8:00/);
+ for(const [input,expected] of [['8:00','08:00'],['08:00','08:00'],['0:05','00:05'],['23:59','23:59'],['',''],['25:00','25:00'],['8:70','8:70'],['de manhã','de manhã']])
+  assert.equal(api.normalizeClinicalTime(input),expected);
+});

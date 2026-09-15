@@ -1,4 +1,4 @@
-import { identityWarnings } from "@/lib/consultations/mapping";
+import { identityWarnings, normalizeClinicalTime } from "@/lib/consultations/mapping";
 import { saveActiveConsultation } from "@/lib/consultations/workspace";
 import { ConsultationBanner } from "@/components/ConsultationBanner";
 import { useState } from "react";
@@ -68,6 +68,9 @@ function ClinicalFormPage() {
     sex: clinicalData?.sex || bodyComposition?.sex || "",
     height: clinicalData?.height || bodyComposition?.height || "",
     weight: clinicalData?.weight || bodyComposition?.weight || "",
+    wakeTime: normalizeClinicalTime(clinicalData?.wakeTime ?? ""),
+    sleepTime: normalizeClinicalTime(clinicalData?.sleepTime ?? ""),
+    trainingTime: normalizeClinicalTime(clinicalData?.trainingTime ?? ""),
   };
 
   const [data, setData] = useState<ClinicalData>(initial);
