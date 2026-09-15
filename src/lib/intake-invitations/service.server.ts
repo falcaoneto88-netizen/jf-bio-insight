@@ -164,17 +164,23 @@ export function appointmentContext(
       }),
     })
     .safeParse(contactRaw);
+  const appointmentSchema = z.object({
+    id: z.string(),
+    contactId: z.string(),
+    locationId: z.string(),
+    startTime: z.iso.datetime({ offset: true }),
+    calendarId: z.string(),
+    appointmentStatus: z.string(),
+  });
   const event = z
-    .object({
-      event: z.object({
-        id: z.string(),
-        contactId: z.string(),
-        locationId: z.string(),
-        startTime: z.iso.datetime({ offset: true }),
-        calendarId: z.string(),
-        appointmentStatus: z.string(),
-      }),
-    })
+    .union([
+      z
+        .object({ appointment: appointmentSchema, event: z.never().optional() })
+        .transform((value) => value.appointment),
+      z
+        .object({ event: appointmentSchema, appointment: z.never().optional() })
+        .transform((value) => value.event),
+    ])
     .safeParse(eventRaw);
   const location = z
     .object({ location: z.object({ id: z.string(), timezone: z.string() }) })
