@@ -119,7 +119,9 @@ async function ghlRead(path: string, key: string, fetcher: typeof fetch) {
   try {
     response = await fetcher(`https://services.leadconnectorhq.com/${path}`, {
       method: "GET",
-      redirect: "error",
+      // workerd supports manual redirects; reject their non-2xx response below.
+      // Never follow a redirect with the GHL bearer credential.
+      redirect: "manual",
       signal: AbortSignal.timeout(15000),
       headers: { Authorization: `Bearer ${key}`, Version: "2021-07-28" },
     });
@@ -162,17 +164,23 @@ export function appointmentContext(
       }),
     })
     .safeParse(contactRaw);
+  const appointmentSchema = z.object({
+    id: z.string(),
+    contactId: z.string(),
+    locationId: z.string(),
+    startTime: z.iso.datetime({ offset: true }),
+    calendarId: z.string(),
+    appointmentStatus: z.string(),
+  });
   const event = z
-    .object({
-      event: z.object({
-        id: z.string(),
-        contactId: z.string(),
-        locationId: z.string(),
-        startTime: z.iso.datetime({ offset: true }),
-        calendarId: z.string(),
-        appointmentStatus: z.string(),
-      }),
-    })
+    .union([
+      z
+        .object({ appointment: appointmentSchema, event: z.never().optional() })
+        .transform((value) => value.appointment),
+      z
+        .object({ event: appointmentSchema, appointment: z.never().optional() })
+        .transform((value) => value.event),
+    ])
     .safeParse(eventRaw);
   const location = z
     .object({ location: z.object({ id: z.string(), timezone: z.string() }) })
@@ -184,7 +192,7 @@ export function appointmentContext(
       502,
     );
   const c = contact.data.contact,
-    e = event.data.event,
+    e = event.data,
     l = location.data.location;
   if (
     c.id !== input.contact_id ||
