@@ -22,6 +22,11 @@ export function parseSavedAnswers(value: unknown) {
 }
 const yesNo = (value: string): "sim" | "nao" | "" =>
   value === "Sim" ? "sim" : value === "Não" ? "nao" : "";
+export function normalizeClinicalTime(value: string): string {
+  const match = /^(\d{1,2}):([0-5]\d)$/.exec(value.trim());
+  if (!match || Number(match[1]) > 23) return value;
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
 export function mapAnamnesis(value: unknown, bc: BodyCompositionData | null): ClinicalData {
   const a = parseSavedAnswers(value);
   const detail = (flag: string, text: string) =>
@@ -33,12 +38,12 @@ export function mapAnamnesis(value: unknown, bc: BodyCompositionData | null): Cl
     sex: bc?.sex ?? "",
     height: bc?.height ?? "",
     weight: bc?.weight ?? "",
-    wakeTime: a.wakeTime,
-    sleepTime: a.sleepTime,
+    wakeTime: normalizeClinicalTime(a.wakeTime),
+    sleepTime: normalizeClinicalTime(a.sleepTime),
     workSchedule: a.workSchedule,
     currentlyTraining: yesNo(a.trains),
     weeklyTrainingFrequency: a.trainingFrequency ?? "",
-    trainingTime: a.trainingTime ?? "",
+    trainingTime: normalizeClinicalTime(a.trainingTime ?? ""),
     trainingType: a.trains === "Sim" ? "outro" : "",
     trainingTypeOther: a.trainingType ?? "",
     previousDiseases: detail("hasConditions", "conditions"),
