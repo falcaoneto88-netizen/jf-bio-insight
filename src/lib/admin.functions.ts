@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const ADMIN_EMAILS = ["falcaoneto88@gmail.com"];
+const ADMIN_EMAILS = ["falcaoneto88@gmail.com", "ffmconsultoria@gmail.com"];
 
 /**
  * Atribui o papel de administrador à conta autenticada, caso o seu email
