@@ -119,7 +119,9 @@ async function ghlRead(path: string, key: string, fetcher: typeof fetch) {
   try {
     response = await fetcher(`https://services.leadconnectorhq.com/${path}`, {
       method: "GET",
-      redirect: "error",
+      // workerd supports manual redirects; reject their non-2xx response below.
+      // Never follow a redirect with the GHL bearer credential.
+      redirect: "manual",
       signal: AbortSignal.timeout(15000),
       headers: { Authorization: `Bearer ${key}`, Version: "2021-07-28" },
     });
