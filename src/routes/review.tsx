@@ -1,4 +1,5 @@
 import { ConsultationBanner } from "@/components/ConsultationBanner";
+import { assertConsultationReadyForReport } from "@/lib/consultations/api";
 import { requireAdminAccess } from "@/lib/access";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -142,6 +143,13 @@ function ReviewPage() {
     setIsGenerating(true);
     try {
       await requireAdminAccess();
+      const consultation = useReportStore.getState().consultation;
+      if (consultation)
+        await assertConsultationReadyForReport(
+          consultation.id,
+          consultation.version,
+          consultation.anamnesisId,
+        );
       const [{ pdf }, { ReportDocument }] = await Promise.all([
         import("@react-pdf/renderer"),
         import("@/lib/pdf/ReportDocument"),
@@ -172,7 +180,6 @@ function ReviewPage() {
           .replace(/^-+|-+$/g, "")
           .toLowerCase() || "paciente";
       const fileName = `relatorio-${slug}-${stamp}.pdf`;
-      const consultation = useReportStore.getState().consultation;
       await addReportToHistory({
         consultationId: consultation?.id,
         anamnesisId: consultation?.anamnesisId,

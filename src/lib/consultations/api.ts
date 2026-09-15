@@ -2,7 +2,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { requireAdminAccess, AccessError } from "@/lib/access";
 import { consultationDb as db, type Consultation, type ConsultationDraft } from "./types";
-import { parseSavedAnswers } from "./mapping";
+import { mergeReceivedAnamnesis, parseSavedAnswers } from "./mapping";
 import { confirmationSchema } from "@/lib/anamnesis/form";
 import type { Json } from "@/integrations/supabase/types";
 import type { BodyCompositionData, ClinicalData } from "@/store/report-store";
@@ -111,6 +111,65 @@ export async function saveConsultationDraft(
       "A consulta foi alterada em outra janela ou seu acesso mudou. Reabra a consulta antes de salvar; seu rascunho foi preservado.",
     );
   return result.data.version;
+}
+
+export function receivedAnamnesisPatch(loaded: Awaited<ReturnType<typeof loadConsultation>>) {
+  if (loaded.draft.anamnesis_id) return null;
+  const submission = loaded.submissions[0];
+  if (!submission) return null;
+  if (submission.consultation_id !== loaded.consultation.id)
+    throw new Error("A anamnese não pertence a esta consulta.");
+  return {
+    clinicalData: mergeReceivedAnamnesis(
+      submission.answers,
+      loaded.draft.body_composition as unknown as BodyCompositionData | null,
+      loaded.draft.clinical_data as unknown as ClinicalData | null,
+    ),
+    anamnesisId: submission.id,
+  };
+}
+
+const preparing = new Map<string, Promise<Awaited<ReturnType<typeof loadConsultation>>>>();
+export function prepareConsultation(id: string) {
+  const current = preparing.get(id);
+  if (current) return current;
+  const pending = loadAndPrepareConsultation(id).finally(() => {
+    if (preparing.get(id) === pending) preparing.delete(id);
+  });
+  preparing.set(id, pending);
+  return pending;
+}
+
+async function loadAndPrepareConsultation(id: string) {
+  const loaded = await loadConsultation(id);
+  const patch = receivedAnamnesisPatch(loaded);
+  if (!patch) return loaded;
+  const version = await saveConsultationDraft(id, loaded.draft.version, patch);
+  return {
+    ...loaded,
+    draft: {
+      ...loaded.draft,
+      clinical_data: patch.clinicalData as unknown as Json,
+      anamnesis_id: patch.anamnesisId,
+      version,
+    },
+  };
+}
+
+export async function assertConsultationReadyForReport(
+  id: string,
+  version: number,
+  anamnesisId: string | null,
+) {
+  const loaded = await loadConsultation(id);
+  if (loaded.submissions.length && !anamnesisId)
+    throw new Error(
+      "Há uma anamnese recebida para esta consulta. Abra a consulta para aproveitar automaticamente as respostas e revisar a ficha antes de gerar o relatório.",
+    );
+  if (loaded.draft.version !== version || loaded.draft.anamnesis_id !== anamnesisId)
+    throw new Error(
+      "A ficha foi atualizada. Reabra a consulta e revise os dados antes de gerar o relatório.",
+    );
 }
 export async function loadPatientInvitation(id: string): Promise<Consultation> {
   uuid.parse(id);

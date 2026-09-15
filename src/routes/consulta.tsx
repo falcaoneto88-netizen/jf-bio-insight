@@ -9,6 +9,7 @@ import {
   createConsultation,
   listConsultations,
   loadConsultation,
+  prepareConsultation,
   saveConsultationDraft,
 } from "@/lib/consultations/api";
 import { identityWarnings, mapAnamnesis, parseSavedAnswers } from "@/lib/consultations/mapping";
@@ -244,11 +245,13 @@ function ConsultationDetail({ id }: { id: string }) {
   useEffect(() => {
     let live = true;
     setError("");
-    void loadConsultation(id)
+    void prepareConsultation(id)
       .then((d) => {
         if (live) {
           setData(d);
-          setSelected(d.submissions[0] ?? null);
+          setSelected(
+            d.submissions.find((s) => s.id === d.draft.anamnesis_id) ?? d.submissions[0] ?? null,
+          );
         }
       })
       .catch((e) => {
@@ -283,6 +286,10 @@ function ConsultationDetail({ id }: { id: string }) {
   }
   async function importSubmission() {
     if (!data || !selected || busy) return;
+    if (data.draft.anamnesis_id === selected.id) {
+      openWorkspace("/clinical-form");
+      return;
+    }
     if (
       data.draft.clinical_data &&
       !window.confirm(
@@ -389,7 +396,7 @@ function ConsultationDetail({ id }: { id: string }) {
             </p>
             <Button asChild>
               <Link to="/anamnese" search={{ consulta: id }}>
-                Preencher anamnese
+                {data.submissions.length ? "Registrar nova versão" : "Preencher anamnese"}
               </Link>
             </Button>
             {data.consultation.invite_email && (
@@ -438,7 +445,11 @@ function ConsultationDetail({ id }: { id: string }) {
                   </select>
                 </label>
                 <Button disabled={busy || !!invalid} onClick={() => void importSubmission()}>
-                  {busy ? "Carregando…" : "Carregar na ficha clínica"}
+                  {busy
+                    ? "Carregando…"
+                    : data.draft.anamnesis_id === selected?.id
+                      ? "Revisar respostas na ficha"
+                      : "Usar esta versão na ficha"}
                 </Button>
               </>
             )}
@@ -475,7 +486,9 @@ function ConsultationDetail({ id }: { id: string }) {
               Revisar ficha clínica
             </Button>
             <p className="text-xs text-muted-foreground">
-              Carregue a anamnese ou adicione um exame para completar a ficha antes de gerar.
+              {data.draft.anamnesis_id
+                ? "As respostas recebidas já estão na ficha. Revise e complete somente o que faltar."
+                : "Adicione um exame ou aguarde a anamnese para revisar a ficha."}
             </p>
             <ul>
               {data.reports.map((r) => (
@@ -506,8 +519,8 @@ function ConsultationDetail({ id }: { id: string }) {
               Confirmada por {selected.confirmed_name} em{" "}
               {new Date(selected.confirmed_at).toLocaleString("pt-BR")}.{" "}
               {data.draft.anamnesis_id === selected.id
-                ? "Versão carregada na ficha."
-                : "Esta versão ainda não está carregada na ficha."}
+                ? "Respostas aproveitadas na ficha clínica. Não é necessário preencher novamente."
+                : "Esta versão não é a utilizada na ficha atual."}
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
