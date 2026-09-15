@@ -192,7 +192,7 @@ export function appointmentContext(
       502,
     );
   const c = contact.data.contact,
-    e = event.data.event,
+    e = event.data,
     l = location.data.location;
   if (
     c.id !== input.contact_id ||
