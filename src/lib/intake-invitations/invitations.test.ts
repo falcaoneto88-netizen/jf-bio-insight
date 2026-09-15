@@ -219,28 +219,99 @@ describe("GHL invitation issuance", () => {
     expect(f).not.toHaveBeenCalled();
     expect(d.rpc).not.toHaveBeenCalled();
   });
+  describe.each(["appointment", "event"])("GHL %s envelope", (envelope) => {
+    it("issues an invitation with the verified identity and clinic date", async () => {
+      const d = db();
+      const result = await issueInvitation(
+        input,
+        token,
+        d.client,
+        fetcher({ [envelope]: event.event }),
+        env,
+      );
+      expect(result).toMatchObject({
+        can_proceed: true,
+        can_send: true,
+        consultation_id: cid,
+        appointment_id: input.appointment_id,
+        appointment_start: "2026-09-14T23:30:00.000Z",
+        appointment_timezone: "Europe/Lisbon",
+        consultation_date: "2026-09-15",
+      });
+      expect(d.rpc).toHaveBeenCalledTimes(1);
+    });
+    it.each([
+      [{ appointmentStatus: "new" }, "appointment_not_confirmed"],
+      [{ appointmentStatus: "cancelled" }, "appointment_not_confirmed"],
+      [{ appointmentStatus: "noshow" }, "appointment_not_confirmed"],
+      [{ calendarId: "initial_consultation" }, "calendar_mismatch"],
+      [{ calendarId: undefined }, "ghl_invalid"],
+      [{ startTime: "2026-09-14T12:00:00Z" }, "appointment_out_of_range"],
+      [{ startTime: "2026-09-13T12:00:00Z" }, "appointment_out_of_range"],
+      [{ startTime: "2028-09-14T12:00:00Z" }, "appointment_out_of_range"],
+      [{ startTime: "2026-09-15" }, "ghl_invalid"],
+      [{ startTime: "2026-09-15T10:00:00" }, "ghl_invalid"],
+      [{ contactId: "another_contact" }, "identity_mismatch"],
+      [{ id: "another_appointment" }, "identity_mismatch"],
+      [{ locationId: "another_location" }, "identity_mismatch"],
+      [{ locationId: undefined }, "ghl_invalid"],
+    ])("blocks invalid procedure %j before creating a consultation", async (change, code) => {
+      const d = db();
+      await expect(
+        issueInvitation(
+          input,
+          token,
+          d.client,
+          fetcher({ [envelope]: { ...event.event, ...change } }),
+          env,
+        ),
+      ).rejects.toMatchObject({ code });
+      expect(d.rpc).not.toHaveBeenCalled();
+    });
+  });
   it.each([
-    [{ appointmentStatus: "new" }, "appointment_not_confirmed"],
-    [{ appointmentStatus: "cancelled" }, "appointment_not_confirmed"],
-    [{ appointmentStatus: "noshow" }, "appointment_not_confirmed"],
-    [{ calendarId: "initial_consultation" }, "calendar_mismatch"],
-    [{ calendarId: undefined }, "ghl_invalid"],
-    [{ startTime: "2026-09-14T12:00:00Z" }, "appointment_out_of_range"],
-    [{ startTime: "2026-09-13T12:00:00Z" }, "appointment_out_of_range"],
-    [{ startTime: "2028-09-14T12:00:00Z" }, "appointment_out_of_range"],
-    [{ startTime: "2026-09-15" }, "ghl_invalid"],
-    [{ startTime: "2026-09-15T10:00:00" }, "ghl_invalid"],
-    [{ contactId: "another_contact" }, "identity_mismatch"],
-  ])("blocks invalid procedure %j before creating a consultation", async (change, code) => {
-    const d = db(),
-      base = fetcher();
-    const f: typeof fetch = async (url, init) =>
-      String(url).includes("/appointments/")
-        ? Response.json({ event: { ...event.event, ...change } })
-        : base(url, init);
-    await expect(issueInvitation(input, token, d.client, f, env)).rejects.toMatchObject({ code });
+    ["missing envelope", {}],
+    ["malformed appointment", { appointment: {} }],
+    ["malformed event", { event: {} }],
+    ["two valid envelopes", { appointment: event.event, event: event.event }],
+    ["invalid appointment with valid event", { appointment: {}, event: event.event }],
+    ["invalid event with valid appointment", { appointment: event.event, event: {} }],
+  ])("rejects %s without guessing which appointment to use", async (_name, response) => {
+    const d = db();
+    await expect(
+      issueInvitation(input, token, d.client, fetcher(response), env),
+    ).rejects.toMatchObject({ code: "ghl_invalid", status: 502 });
     expect(d.rpc).not.toHaveBeenCalled();
   });
+  it.each([301, 302, 303, 307, 308])(
+    "rejects HTTP %i without following the redirect",
+    async (status) => {
+      const d = db();
+      const f = vi.fn<typeof fetch>(
+        async () =>
+          new Response("private-upstream-body", {
+            status,
+            headers: { Location: "https://untrusted.example.test/redirect" },
+          }),
+      );
+      await expect(issueInvitation(input, token, d.client, f, env)).rejects.toMatchObject({
+        code: "ghl_unavailable",
+        status: 502,
+        message: "Contato ou agendamento indisponível no GHL.",
+      });
+      expect(d.rpc).not.toHaveBeenCalled();
+      expect(f.mock.calls.map(([url]) => url).sort()).toEqual(
+        [
+          `https://services.leadconnectorhq.com/contacts/${input.contact_id}`,
+          `https://services.leadconnectorhq.com/calendars/events/appointments/${input.appointment_id}`,
+          `https://services.leadconnectorhq.com/locations/${input.location_id}`,
+        ].sort(),
+      );
+      for (const [, init] of f.mock.calls) {
+        expect(init).toMatchObject({ method: "GET", redirect: "manual" });
+      }
+    },
+  );
   it("returns a linked consultation and authoritative date only after storage succeeds", async () => {
     const result = await issueInvitation(input, token, db().client, fetcher(), env);
     expect(result).toMatchObject({
