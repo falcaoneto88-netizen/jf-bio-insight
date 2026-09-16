@@ -12,6 +12,7 @@ import { ACCEPTED_MIMES, MAX_PASTED_TEXT } from "@/lib/journey/agent.server";
 import {
   anamneseSchema,
   bioSchema,
+  prescriptionEntrySchema,
   protocolSchema,
   protocolLocaleSchema,
   type Anamnese,
@@ -143,13 +144,22 @@ export const guardarJornada = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => patchSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    const { patchJourney, reviewIssues } = await core();
+    const { getJourney, patchJourney, reviewIssues } = await core();
     const { id, expectedVersion, ...patch } = data;
+
+    // O marcador do gerador não se apaga por patch: as regras dos protocolos
+    // gerados continuam a aplicar-se a qualquer edição no servidor.
+    let protocolo = patch.protocolo as Protocolo | null | undefined;
+    if (protocolo) {
+      const { preserveGeneratorMarker } = await import("@/lib/journey/protocol-quality");
+      const atual = await getJourney(context.supabase, context.userId, id);
+      protocolo = preserveGeneratorMarker(atual.protocolo, protocolo);
+    }
     const jornada = await patchJourney(context.supabase, context.userId, id, expectedVersion, {
       ...patch,
       anamnese: patch.anamnese as Anamnese | undefined,
       bio: patch.bio as Bio | undefined,
-      protocolo: patch.protocolo as Protocolo | null | undefined,
+      protocolo,
     });
     return { jornada, issues: reviewIssues(jornada) };
   });
