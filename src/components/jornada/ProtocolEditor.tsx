@@ -15,9 +15,11 @@ import {
 export function ProtocolEditor({
   sections,
   onChange,
+  structuredPrescriptions = false,
 }: {
   sections: ProtocolSection[];
   onChange: (sections: ProtocolSection[]) => void;
+  structuredPrescriptions?: boolean;
 }) {
   const updateSection = (index: number, section: ProtocolSection) => {
     const next = [...sections];
@@ -27,97 +29,108 @@ export function ProtocolEditor({
 
   return (
     <div className="space-y-6">
-      {sections.map((section, sIndex) => (
-        <Card key={section.id || sIndex}>
-          <CardHeader className="gap-3">
-            <CardTitle className="sr-only">Secção {sIndex + 1}</CardTitle>
-            <div className="space-y-1.5">
-              <Label htmlFor={`sec-${sIndex}`} className="text-xs text-muted-foreground">
-                Título da secção
-              </Label>
-              <Input
-                id={`sec-${sIndex}`}
-                value={section.title}
-                onChange={(e) => updateSection(sIndex, { ...section, title: e.target.value })}
-              />
-              <Label htmlFor={`kind-${sIndex}`}>Organização no documento</Label>
-              <select
-                id={`kind-${sIndex}`}
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                value={section.kind ?? ""}
-                onChange={(e) =>
-                  updateSection(sIndex, {
-                    ...section,
-                    kind: e.target.value
-                      ? protocolSectionKindSchema.parse(e.target.value)
-                      : undefined,
-                  })
-                }
-              >
-                <option value="">Reconhecer pelo título</option>
-                <option value="objective">Objetivo</option>
-                <option value="guidelines">Orientações e rotina</option>
-                <option value="meals">Plano alimentar</option>
-                <option value="substitutions">Substituições gerais</option>
-                <option value="prescription">Prescrição e suplementação</option>
-                <option value="other">Outra seção clínica</option>
-              </select>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {section.blocks.map((block, bIndex) => (
-              <BlockEditor
-                key={bIndex}
-                block={block}
-                onChange={(b) => {
-                  const blocks = [...section.blocks];
-                  blocks[bIndex] = b;
-                  updateSection(sIndex, { ...section, blocks });
-                }}
-                onRemove={() =>
-                  updateSection(sIndex, {
-                    ...section,
-                    blocks: section.blocks.filter((_, i) => i !== bIndex),
-                  })
-                }
-              />
-            ))}
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ["paragraph", "Parágrafo"],
-                  ["list", "Lista"],
-                  ["table", "Tabela"],
-                  ["patientNote", "Observação ao paciente"],
-                  ["meal", "Refeição"],
-                ] as const
-              ).map(([type, label]) => (
-                <Button
-                  key={type}
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
+      {structuredPrescriptions && (
+        <p className="text-sm text-muted-foreground">
+          Edite as prescrições nos campos acima e confirme cada entrada. A seção do documento será
+          atualizada ao guardar; ela não é editada separadamente neste editor.
+        </p>
+      )}
+      {sections.map((section, sIndex) =>
+        structuredPrescriptions &&
+        (section.kind === "prescription" || section.id === "prescricoes") ? null : (
+          <Card key={section.id || sIndex}>
+            <CardHeader className="gap-3">
+              <CardTitle className="sr-only">Secção {sIndex + 1}</CardTitle>
+              <div className="space-y-1.5">
+                <Label htmlFor={`sec-${sIndex}`} className="text-xs text-muted-foreground">
+                  Título da secção
+                </Label>
+                <Input
+                  id={`sec-${sIndex}`}
+                  value={section.title}
+                  onChange={(e) => updateSection(sIndex, { ...section, title: e.target.value })}
+                />
+                <Label htmlFor={`kind-${sIndex}`}>Organização no documento</Label>
+                <select
+                  id={`kind-${sIndex}`}
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={section.kind ?? ""}
+                  onChange={(e) =>
                     updateSection(sIndex, {
                       ...section,
-                      blocks: [...section.blocks, newBlock(type)],
+                      kind: e.target.value
+                        ? protocolSectionKindSchema.parse(e.target.value)
+                        : undefined,
                     })
                   }
                 >
-                  <Plus className="mr-1 h-3.5 w-3.5" /> {label}
-                </Button>
+                  <option value="">Reconhecer pelo título</option>
+                  <option value="objective">Objetivo</option>
+                  <option value="guidelines">Orientações e rotina</option>
+                  <option value="meals">Plano alimentar</option>
+                  <option value="substitutions">Substituições gerais</option>
+                  {!structuredPrescriptions && (
+                    <option value="prescription">Prescrição e suplementação</option>
+                  )}
+                  <option value="other">Outra seção clínica</option>
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {section.blocks.map((block, bIndex) => (
+                <BlockEditor
+                  key={bIndex}
+                  block={block}
+                  onChange={(b) => {
+                    const blocks = [...section.blocks];
+                    blocks[bIndex] = b;
+                    updateSection(sIndex, { ...section, blocks });
+                  }}
+                  onRemove={() =>
+                    updateSection(sIndex, {
+                      ...section,
+                      blocks: section.blocks.filter((_, i) => i !== bIndex),
+                    })
+                  }
+                />
               ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground"
-                onClick={() => onChange(sections.filter((_, i) => i !== sIndex))}
-              >
-                <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover secção
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["paragraph", "Parágrafo"],
+                    ["list", "Lista"],
+                    ["table", "Tabela"],
+                    ["patientNote", "Observação ao paciente"],
+                    ["meal", "Refeição"],
+                  ] as const
+                ).map(([type, label]) => (
+                  <Button
+                    key={type}
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      updateSection(sIndex, {
+                        ...section,
+                        blocks: [...section.blocks, newBlock(type)],
+                      })
+                    }
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> {label}
+                  </Button>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                  onClick={() => onChange(sections.filter((_, i) => i !== sIndex))}
+                >
+                  <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover secção
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      )}
 
       <Button
         variant="outline"
