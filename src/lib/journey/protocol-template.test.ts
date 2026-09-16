@@ -259,3 +259,60 @@ describe("horários de refeições legadas", () => {
     ).toBe(false);
   });
 });
+
+describe("documento dos protocolos gerados", () => {
+  const gerado = (over: Partial<ReturnType<typeof shortProtocolFixture>> = {}) => {
+    const fixture = shortProtocolFixture();
+    fixture.protocolo = protocolSchema.parse({
+      ...fixture.protocolo,
+      objetivo: "hipertrofia",
+      generator: "protocolo-openai-2026-09-16-v1",
+    });
+    fixture.objetivo = "hipertrofia";
+    return renderProtocolHtml({ ...fixture, ...over });
+  };
+
+  it("usa o título «Protocolo avançado de …» e um único objetivo", () => {
+    const output = gerado();
+    expect(output).toContain("Protocolo avançado de Hipertrofia");
+    expect(output.match(/Protocolo avançado de/g)?.length).toBeGreaterThan(0);
+  });
+
+  it("indica campos ausentes em vez de os esconder", () => {
+    const fixture = shortProtocolFixture();
+    fixture.protocolo = protocolSchema.parse({
+      ...fixture.protocolo,
+      generator: "protocolo-openai-2026-09-16-v1",
+    });
+    fixture.bio = { ...fixture.bio, semExame: true };
+    const output = renderProtocolHtml(fixture);
+    expect(output).toContain("Não informado");
+  });
+
+  it("repete paciente, versão e rascunho no rodapé de todas as páginas", () => {
+    const output = gerado({ draft: true, version: 7 });
+    const page = /@bottom-center \{ content: "([^"]*)"/.exec(output)?.[1] ?? "";
+    expect(page).toContain("Paciente Fictícia Aurora");
+    expect(page).toContain("7");
+    expect(page.toLowerCase()).toContain("rascunho");
+  });
+
+  it("não repete o logotipo grande final na impressão dos protocolos novos", () => {
+    expect(gerado()).toContain("@media print { .doc-footer { display: none; } }");
+    // O documento legado mantém o rodapé com a marca.
+    expect(renderProtocolHtml(shortProtocolFixture())).not.toContain(".doc-footer { display: none");
+    expect(gerado().match(/<img /g)).toHaveLength(2);
+  });
+
+  it("nomes maliciosos não escapam da folha de estilo nem do título", () => {
+    const output = gerado({
+      patientName: 'Fictício" } </style><script>alert(1)</script><style>{',
+      draft: true,
+      version: 2,
+    });
+    expect(output).not.toMatch(/<script/);
+    const styles = output.match(/<style>[\s\S]*?<\/style>/g) ?? [];
+    expect(styles).toHaveLength(1);
+    expect(styles[0]).not.toContain("</style>");
+  });
+});
