@@ -311,6 +311,7 @@ export type Database = {
           approved_version: number | null
           bio: Json
           confirmations: Json
+          consultation_id: string | null
           content_hash: string
           created_at: string
           id: string
@@ -318,6 +319,8 @@ export type Database = {
           owner_id: string
           patient_name: string
           protocolo: Json | null
+          source_draft_version: number | null
+          source_received_id: string | null
           status: string
           updated_at: string
           version: number
@@ -330,6 +333,7 @@ export type Database = {
           approved_version?: number | null
           bio?: Json
           confirmations?: Json
+          consultation_id?: string | null
           content_hash?: string
           created_at?: string
           id?: string
@@ -337,6 +341,8 @@ export type Database = {
           owner_id: string
           patient_name?: string
           protocolo?: Json | null
+          source_draft_version?: number | null
+          source_received_id?: string | null
           status?: string
           updated_at?: string
           version?: number
@@ -349,6 +355,7 @@ export type Database = {
           approved_version?: number | null
           bio?: Json
           confirmations?: Json
+          consultation_id?: string | null
           content_hash?: string
           created_at?: string
           id?: string
@@ -356,11 +363,28 @@ export type Database = {
           owner_id?: string
           patient_name?: string
           protocolo?: Json | null
+          source_draft_version?: number | null
+          source_received_id?: string | null
           status?: string
           updated_at?: string
           version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jornadas_clinicas_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornadas_clinicas_source_received_id_fkey"
+            columns: ["source_received_id"]
+            isOneToOne: false
+            referencedRelation: "anamnesis_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       journey_ai_usage: {
         Row: {
@@ -558,6 +582,19 @@ export type Database = {
           _secret: string
           _token_hash: string
           _workflow_id: string
+        }
+        Returns: Json
+      }
+      open_consultation_journey: {
+        Args: {
+          _anamnese: Json
+          _bio: Json
+          _consultation_id: string
+          _content_hash: string
+          _draft_version: number
+          _expected_version?: number
+          _received_id: string
+          _refresh_id?: string
         }
         Returns: Json
       }

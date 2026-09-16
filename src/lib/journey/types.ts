@@ -203,6 +203,29 @@ export const emptyBio: Bio = bioSchema.parse({ historico: [], fontes: [], duvida
 /* ------------------------------------------------------------------ */
 
 export const PROTOCOL_TEMPLATE_VERSION = "modelo-protocolo-v1";
+export const CURRENT_PROTOCOL_TEMPLATE_VERSION = "modelo-protocolo-v2";
+export const protocolLocaleSchema = z.enum(["pt-BR", "es", "en"]);
+export type ProtocolLocale = z.infer<typeof protocolLocaleSchema>;
+export const protocolSectionKindSchema = z.enum([
+  "objective",
+  "guidelines",
+  "meals",
+  "substitutions",
+  "prescription",
+  "other",
+]);
+
+export const mealBlockSchema = z.object({
+  type: z.literal("meal"),
+  liquid: z.boolean(),
+  foods: z.array(z.object({ name: z.string().max(600), quantity: z.string().max(200) })).max(60),
+  preparation: z.string().max(4000),
+  substitutions: z.object({
+    protein: z.array(z.string().max(600)).max(40),
+    carbohydrate: z.array(z.string().max(600)).max(40),
+    fat: z.array(z.string().max(600)).max(40),
+  }),
+});
 
 export const OBJETIVOS = [
   { value: "hipertrofia", label: "Hipertrofia", available: true },
@@ -220,12 +243,15 @@ export const protocolBlockSchema = z.discriminatedUnion("type", [
     rows: z.array(z.array(z.string().max(600)).max(8)).max(120),
   }),
   z.object({ type: z.literal("patientNote"), text: z.string().max(4000) }),
+  mealBlockSchema,
 ]);
 export type ProtocolBlock = z.infer<typeof protocolBlockSchema>;
 
 export const protocolSectionSchema = z.object({
   id: z.string().max(64),
   title: z.string().max(200),
+  /** Opcionais para não modificar hashes de documentos legados ao ler. */
+  kind: protocolSectionKindSchema.optional(),
   blocks: z.array(protocolBlockSchema).max(60).default([]),
 });
 export type ProtocolSection = z.infer<typeof protocolSectionSchema>;
@@ -234,13 +260,17 @@ export const protocolSchema = z.object({
   templateVersion: z.string().max(64).default(PROTOCOL_TEMPLATE_VERSION),
   objetivo: z.enum(["hipertrofia", "recomposicao", "emagrecimento"]).nullable().default(null),
   instrucoes: z.string().max(6000).default(""),
+  locale: protocolLocaleSchema.optional(),
+  calorieTarget: z.string().trim().max(200).optional(),
   sections: z.array(protocolSectionSchema).max(40).default([]),
   /** Painel interno — NUNCA exportado para o HTML. */
   pendencias: z.array(z.string().max(600)).max(60).default([]),
 });
 export type Protocolo = z.infer<typeof protocolSchema>;
 
-export const emptyProtocolo: Protocolo = protocolSchema.parse({});
+export const emptyProtocolo: Protocolo = protocolSchema.parse({
+  templateVersion: CURRENT_PROTOCOL_TEMPLATE_VERSION,
+});
 
 /* ------------------------------------------------------------------ */
 /* Jornada                                                             */
@@ -266,6 +296,10 @@ export const JOURNEY_STEPS: { step: JourneyStep; label: string; short: string }[
 
 export type Journey = {
   id: string;
+  consultationId?: string | null;
+  sourceDraftVersion?: number | null;
+  sourceReceivedId?: string | null;
+  sourceCurrent?: boolean;
   patientName: string;
   status: string;
   version: number;
@@ -285,6 +319,7 @@ export type Journey = {
 
 export type JourneySummary = {
   id: string;
+  consultationId?: string | null;
   patientName: string;
   status: string;
   version: number;

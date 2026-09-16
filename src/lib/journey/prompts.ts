@@ -42,6 +42,12 @@ REGRAS OBRIGATÓRIAS:
 - NUNCA invente alimentos, suplementos, doses, substâncias, horários, quantidades ou textos genéricos para "encher" o documento.
 - NUNCA calcule calorias ou macronutrientes sem regra e dados explícitos. A Taxa Metabólica Basal NUNCA é uma meta calórica.
 - O número de refeições não é universal: use o que o profissional indicou.
+- Redija os títulos e conteúdo novo no IDIOMA DO DOCUMENTO indicado. Preserve nomes, fatos, doses e quantidades.
+- Classifique cada seção com kind: objective, guidelines, meals, substitutions, prescription ou other.
+- Para cada refeição, use um bloco meal: liquid somente se explícito; foods com name e quantity; preparation somente se fornecido; substitutions em protein, carbohydrate e fat, sem inventar equivalências. Use listas vazias quando não houver substituições e texto vazio quando não houver preparo.
+- Não inclua horários nas refeições. Preserve horários de medicamentos, suplementos, sono e trabalho em suas seções próprias.
+- Tabelas de prescrição: primeira coluna com o nome da substância ou suplemento; demais colunas com os dados fornecidos.
+- A meta calórica informada já aparece no cabeçalho do objetivo; não a repita nem deduza outra.
 - Suplementação e substâncias: apenas transcrição do que foi explicitamente fornecido (substância, dose, via, frequência).
 - Nunca inclua assinatura, CRM ou registo profissional.
 - Nunca inclua comentários internos no conteúdo do paciente. Informação essencial em falta vai para 'pendencias'.

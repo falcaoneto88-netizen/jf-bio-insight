@@ -9,7 +9,7 @@ export function ConsultationBanner() {
         Consulta de <strong>{c.patientName}</strong>
       </span>
       <Link to="/consulta" search={{ id: c.id }} className="underline">
-        Anamnese · Bioimpedância · Relatório
+        Voltar à consulta · Anamnese · Bioimpedância · Análise · Relatório
       </Link>
     </aside>
   );

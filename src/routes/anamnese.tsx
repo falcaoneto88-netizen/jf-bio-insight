@@ -5,7 +5,7 @@ import { loadPatientInvitation, submitAnamnesis } from "@/lib/consultations/api"
 import type { Consultation } from "@/lib/consultations/types";
 import { resolveInvitation, submitInvitation } from "@/lib/intake-invitations/client";
 import { tokenSchema, type Invitation } from "@/lib/intake-invitations/schema";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
@@ -80,7 +80,14 @@ function AnamnesisPage() {
       </main>
     )
   ) : (
-    <AnamnesisForm />
+    <main className="mx-auto max-w-xl space-y-4 p-10">
+      <h1 className="font-serif text-3xl">Anamnese do paciente</h1>
+      <p>Paciente: abra o convite individual enviado pela clínica para responder sua anamnese.</p>
+      <p>Equipe clínica: escolha a consulta para registrar as respostas no atendimento correto.</p>
+      <Link to="/consulta" search={{ id: undefined }} className="underline">
+        Abrir Consulta do paciente
+      </Link>
+    </main>
   );
 }
 function LinkInvitation({ token }: { token: string }) {

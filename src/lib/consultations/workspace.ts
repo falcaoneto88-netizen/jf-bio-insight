@@ -14,7 +14,7 @@ export async function saveActiveConsultation(patch: {
   anamnesisId?: string | null;
 }) {
   const c = useReportStore.getState().consultation;
-  if (!c) return;
+  if (!c) throw new Error("Abra a Consulta do paciente antes de salvar estes dados.");
   const loaded = await loadConsultation(c.id);
   if (loaded.draft.version !== c.version)
     throw new Error(

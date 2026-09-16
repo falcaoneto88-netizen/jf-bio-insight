@@ -144,6 +144,8 @@ function ReviewPage() {
     try {
       await requireAdminAccess();
       const consultation = useReportStore.getState().consultation;
+      if (!consultation)
+        throw new Error("Escolha a consulta do paciente antes de gerar o relatório.");
       if (consultation)
         await assertConsultationReadyForReport(
           consultation.id,

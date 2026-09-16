@@ -12,6 +12,8 @@ import {
   emptyAnamnese,
   emptyBio,
   protocolSchema,
+  mealBlockSchema,
+  protocolSectionKindSchema,
   type Anamnese,
   type Bio,
   type Protocolo,
@@ -174,9 +176,18 @@ const anamneseTool = {
         },
         queixaObjetivos: {
           type: "object",
-          properties: { queixa: str, objetivo: str, evolucao: str, tratamentos: str, expectativas: str },
+          properties: {
+            queixa: str,
+            objetivo: str,
+            evolucao: str,
+            tratamentos: str,
+            expectativas: str,
+          },
         },
-        observacoesClinicas: { type: "object", properties: { adicionais: str, pontosAtencao: str } },
+        observacoesClinicas: {
+          type: "object",
+          properties: { adicionais: str, pontosAtencao: str },
+        },
       },
       required: ["header"],
       additionalProperties: false,
@@ -184,7 +195,8 @@ const anamneseTool = {
   },
 };
 
-const BANNED_PLACEHOLDERS = /^(n[aã]o informado|nao informado|n\/?a|desconhecido|sem informa[cç][aã]o|-{1,3})$/i;
+const BANNED_PLACEHOLDERS =
+  /^(n[aã]o informado|nao informado|n\/?a|desconhecido|sem informa[cç][aã]o|-{1,3})$/i;
 
 function cleanValue(value: unknown): string {
   const raw = value == null ? "" : String(value).trim();
@@ -238,7 +250,11 @@ export async function organizarAnamneseTexto(
     ),
   };
 
-  if (patientHint && anamnese.header.paciente && !sameIdentity(patientHint, anamnese.header.paciente)) {
+  if (
+    patientHint &&
+    anamnese.header.paciente &&
+    !sameIdentity(patientHint, anamnese.header.paciente)
+  ) {
     return {
       data: null,
       error: `Identificação incompatível: o texto refere "${anamnese.header.paciente}" e a jornada é de "${patientHint}".`,
@@ -321,19 +337,22 @@ export async function extrairBioimpedanciaSource(
     ];
   }
 
-  const result = await callGateway(BIO_SYSTEM_PROMPT, userContent, bioTool, "extrair_bioimpedancia");
+  const result = await callGateway(
+    BIO_SYSTEM_PROMPT,
+    userContent,
+    bioTool,
+    "extrair_bioimpedancia",
+  );
   if (!result.data) return { data: null, error: result.error };
 
   const raw = deepClean(result.data) as Record<string, unknown>;
-  const parsed = bioSchema
-    .omit({ semExame: true, arquivoNome: true })
-    .safeParse({
-      ...raw,
-      identityReview: raw["identityReview"] === true,
-      fontes: Array.isArray(raw["fontes"]) ? raw["fontes"] : [],
-      duvidas: Array.isArray(raw["duvidas"]) ? raw["duvidas"] : [],
-      historico: Array.isArray(raw["historico"]) ? raw["historico"] : [],
-    });
+  const parsed = bioSchema.omit({ semExame: true, arquivoNome: true }).safeParse({
+    ...raw,
+    identityReview: raw["identityReview"] === true,
+    fontes: Array.isArray(raw["fontes"]) ? raw["fontes"] : [],
+    duvidas: Array.isArray(raw["duvidas"]) ? raw["duvidas"] : [],
+    historico: Array.isArray(raw["historico"]) ? raw["historico"] : [],
+  });
   if (!parsed.success) {
     console.error("[agente-clinico] bioimpedância inválida");
     return { data: null, error: "A IA devolveu uma transcrição fora do formato esperado." };
@@ -405,12 +424,35 @@ const protocolTool = {
             properties: {
               id: { type: "string" },
               title: { type: "string" },
+              kind: { type: "string", enum: protocolSectionKindSchema.options },
               blocks: {
                 type: "array",
                 items: {
                   type: "object",
                   properties: {
-                    type: { type: "string", enum: ["paragraph", "list", "table", "patientNote"] },
+                    type: {
+                      type: "string",
+                      enum: ["paragraph", "list", "table", "patientNote", "meal"],
+                    },
+                    liquid: { type: ["boolean", "null"] },
+                    foods: {
+                      type: ["array", "null"],
+                      items: {
+                        type: "object",
+                        properties: { name: { type: "string" }, quantity: { type: "string" } },
+                        required: ["name", "quantity"],
+                      },
+                    },
+                    preparation: { type: ["string", "null"] },
+                    substitutions: {
+                      type: ["object", "null"],
+                      properties: {
+                        protein: { type: "array", items: { type: "string" } },
+                        carbohydrate: { type: "array", items: { type: "string" } },
+                        fat: { type: "array", items: { type: "string" } },
+                      },
+                      required: ["protein", "carbohydrate", "fat"],
+                    },
                     text: { type: ["string", "null"] },
                     items: { type: ["array", "null"], items: { type: "string" } },
                     columns: { type: ["array", "null"], items: { type: "string" } },
@@ -436,6 +478,8 @@ const protocolTool = {
 
 export type PrepareProtocolInput = {
   objetivo: NonNullable<Protocolo["objetivo"]>;
+  locale?: Protocolo["locale"];
+  calorieTarget?: string;
   instrucoes: string;
   anamneseResumo: string;
   bioResumo: string;
@@ -445,7 +489,9 @@ export type PrepareProtocolInput = {
 export async function prepararProtocoloRascunho(
   input: PrepareProtocolInput,
 ): Promise<AgentResult<Pick<Protocolo, "sections" | "pendencias">>> {
-  const userText = `OBJETIVO CONFIRMADO: ${input.objetivo}
+  const userText = `IDIOMA DO DOCUMENTO: ${input.locale ?? "pt-BR"}
+META CALÓRICA INFORMADA PELO PROFISSIONAL: ${input.calorieTarget || "(não definida)"}
+OBJETIVO CONFIRMADO: ${input.objetivo}
 
 INSTRUÇÕES DO PROFISSIONAL (fonte única do que pode ser prescrito):
 ${input.instrucoes.trim() || "(sem instruções adicionais)"}
@@ -474,7 +520,8 @@ Monte as secções do documento do paciente com base APENAS no acima. O que falt
     pendencias: z.array(z.string()).max(60).default([]),
   });
   const outer = shape.safeParse(result.data);
-  if (!outer.success) return { data: null, error: "A IA devolveu um protocolo fora do formato esperado." };
+  if (!outer.success)
+    return { data: null, error: "A IA devolveu um protocolo fora do formato esperado." };
 
   const sections = outer.data.sections
     .map((section, index) => {
@@ -483,6 +530,11 @@ Monte as secções do documento do paciente com base APENAS no acima. O que falt
         .map((b) => {
           const block = (b ?? {}) as Record<string, unknown>;
           switch (block["type"]) {
+            case "meal": {
+              const meal = mealBlockSchema.safeParse(block);
+              // An invalid clinical meal must reject the response, never silently drop content.
+              return meal.success ? meal.data : block;
+            }
             case "paragraph":
               return { type: "paragraph" as const, text: String(block["text"] ?? "") };
             case "patientNote":
@@ -490,7 +542,9 @@ Monte as secções do documento do paciente com base APENAS no acima. O que falt
             case "list":
               return {
                 type: "list" as const,
-                items: (Array.isArray(block["items"]) ? block["items"] : []).map((i) => String(i ?? "")),
+                items: (Array.isArray(block["items"]) ? block["items"] : []).map((i) =>
+                  String(i ?? ""),
+                ),
               };
             case "table":
               return {
@@ -511,6 +565,7 @@ Monte as secções do documento do paciente com base APENAS no acima. O que falt
         id: String(section["id"] ?? `s${index + 1}`).slice(0, 64),
         title: String(section["title"] ?? "").slice(0, 200),
         blocks,
+        ...(section["kind"] != null ? { kind: section["kind"] } : {}),
       };
     })
     .filter((s) => s.title && s.blocks.length > 0);
@@ -518,7 +573,8 @@ Monte as secções do documento do paciente com base APENAS no acima. O que falt
   const parsed = protocolSchema
     .pick({ sections: true, pendencias: true })
     .safeParse({ sections, pendencias: outer.data.pendencias });
-  if (!parsed.success) return { data: null, error: "A IA devolveu um protocolo fora do formato esperado." };
+  if (!parsed.success)
+    return { data: null, error: "A IA devolveu um protocolo fora do formato esperado." };
   return { data: parsed.data, error: null };
 }
 
@@ -541,7 +597,8 @@ export function anamneseParaTexto(anamnese: Anamnese = emptyAnamnese): string {
       continue;
     }
     if (typeof value === "object") {
-      for (const [k, v] of Object.entries(value as Record<string, string>)) push(`${group}.${k}`, v);
+      for (const [k, v] of Object.entries(value as Record<string, string>))
+        push(`${group}.${k}`, v);
     }
   }
   return lines.join("\n");
