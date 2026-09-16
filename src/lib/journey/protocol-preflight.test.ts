@@ -24,7 +24,7 @@ const { preflightProtocolGeneration, revalidateAfterGeneration } = await import(
 );
 
 function journey(over: Partial<Journey> = {}): Journey {
-  return {
+  const base = {
     id: "00000000-0000-4000-8000-000000000001",
     version: 3,
     contentHash: "hash-ficticio",
@@ -32,8 +32,8 @@ function journey(over: Partial<Journey> = {}): Journey {
     bio: emptyBio,
     protocolo: null,
     confirmations: { anamnese: true, bio: true, revisao: true },
-    ...(over as Journey),
-  } as Journey;
+  } as unknown as Journey;
+  return { ...base, ...over };
 }
 
 beforeEach(() => {
