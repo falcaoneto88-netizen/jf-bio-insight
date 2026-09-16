@@ -5,7 +5,8 @@
  * versão esperada ANTES do envio; fonte, identidade e versão outra vez DEPOIS
  * da resposta, antes de gravar.
  */
-import { sourceIssues, type Journey } from "./core.server";
+import { sourceIssues } from "./core.server";
+import type { Journey } from "./types";
 import { protocolAiConfigured } from "./protocol-openai.server";
 
 export type PreflightResult = { ok: true } | { ok: false; error: string };
