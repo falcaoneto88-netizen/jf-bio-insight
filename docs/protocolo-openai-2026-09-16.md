@@ -143,3 +143,20 @@ tipos, lint dos ficheiros alterados e build — todos verdes nesta prévia.
 `OPENAI_API_KEY` continua ausente: **nenhuma chamada real à OpenAI foi feita**.
 Toda a cobertura da geração é por mocks e dados fictícios; o teste com chave
 real permanece pendente. Nada foi publicado.
+
+## Complemento final (16/09/2026) — quatro pontos remanescentes
+
+- A gravação também exige nova geração quando a anamnese ou as medidas mudam
+  de facto, não só quando mudam as opções do protocolo.
+- A meta calórica profissional fica guardada no formulário depois de gerar, por
+  isso não volta a "Sem meta" nem impede uma nova geração.
+- O editor de secções dos protocolos gerados deixa de oferecer edição paralela
+  da prescrição (que seria descartada ao guardar) e indica os campos
+  estruturados.
+- O texto enviado à IA já não pede o campo de prescrições: a secção é montada
+  exclusivamente pelo servidor a partir das entradas confirmadas.
+
+Validação executada nesta prévia: 238 testes Vitest (12 ficheiros), 76 testes
+Node (6 ficheiros), verificação de tipos, lint dos ficheiros alterados e build —
+todos verdes. Sem chave da OpenAI, sem chamada real, sem dados de pacientes e
+sem publicação.
