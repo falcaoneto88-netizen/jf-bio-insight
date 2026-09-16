@@ -67,8 +67,45 @@ export function preserveGeneratorMarker(
   return { ...next, generator: current.generator };
 }
 
+/* ---------------------- prescrições estruturadas ---------------------- */
+
+export const REGENERATION_REQUIRED_ISSUE =
+  "Os dados de entrada mudaram depois da geração (objetivo, meta, refeições, energia ou instruções). Gere o protocolo novamente antes de aprovar: o plano alimentar atual foi calculado com outros dados.";
+
+/** Uma prescrição só entra no documento com substância, dose, via e frequência. */
+export function prescriptionIsComplete(p: PrescriptionEntry): boolean {
+  return Boolean(p.substancia.trim() && p.dose.trim() && p.via.trim() && p.frequencia.trim());
+}
+
+/** Identidade clínica da entrada: mudar qualquer destes campos anula a confirmação. */
+export function prescriptionSignature(p: PrescriptionEntry): string {
+  return [p.substancia, p.dose, p.via, p.frequencia]
+    .map((v) => v.trim().toLowerCase().replace(/\s+/g, " "))
+    .join("|");
+}
+
+/**
+ * Regras do servidor, aplicadas mesmo a patches diretos: editar substância,
+ * dose, via ou frequência retira a confirmação individual.
+ */
+export function applyPrescriptionRules(
+  current: PrescriptionEntry[] | undefined,
+  next: PrescriptionEntry[] | undefined,
+): PrescriptionEntry[] | undefined {
+  if (!next) return next;
+  return next.map((entry, index) => {
+    const before = current?.[index];
+    if (!entry.confirmada) return entry;
+    if (before && prescriptionSignature(before) !== prescriptionSignature(entry))
+      return { ...entry, confirmada: false };
+    return entry;
+  });
+}
+
 export function protocolEssentialIssues(protocolo: Protocolo): string[] {
   const issues: string[] = [];
+
+  if (protocolo.regenerationRequired) issues.push(REGENERATION_REQUIRED_ISSUE);
 
   const target = protocolo.energy?.targetKcal;
   if (!protocolo.energy || typeof target !== "number" || !(target > 0))
@@ -76,13 +113,16 @@ export function protocolEssentialIssues(protocolo: Protocolo): string[] {
       "Sem meta calórica válida: defina a meta profissional ou complete o cálculo interno antes de aprovar.",
     );
 
-  const unconfirmed = (protocolo.prescriptions ?? []).filter(
-    (p) => p.substancia.trim() && !p.confirmada,
-  );
-  for (const p of unconfirmed)
+  const entradas = (protocolo.prescriptions ?? []).filter((p) => p.substancia.trim());
+  for (const p of entradas.filter((p) => !p.confirmada))
     issues.push(
       `Prescrição por confirmar individualmente: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
     );
+  for (const p of entradas.filter((p) => p.confirmada && !prescriptionIsComplete(p)))
+    issues.push(
+      `Prescrição incompleta: ${p.substancia.trim()} precisa de dose, via e frequência antes de ser confirmada.`,
+    );
+
 
   const meals = protocolo.sections
     .flatMap((s) => s.blocks)
