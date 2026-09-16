@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Download, Eye } from "lucide-react";
+import { Copy, Download, Eye, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -158,6 +158,9 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
           </Button>
           <Button variant="outline" onClick={() => void visualizar()} disabled={busy}>
             <Eye className="mr-1 h-4 w-4" /> Visualizar
+          </Button>
+          <Button variant="outline" onClick={() => void imprimir()} disabled={busy}>
+            <Printer className="mr-1 h-4 w-4" /> Imprimir / Salvar PDF
           </Button>
           <Button variant="ghost" onClick={onBack}>
             Voltar para editar
