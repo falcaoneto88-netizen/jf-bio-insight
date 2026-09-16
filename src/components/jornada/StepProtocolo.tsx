@@ -41,10 +41,14 @@ export function StepProtocolo({
 }) {
   const [preparing, setPreparing] = useState(false);
   const objetivo = draft.objetivo;
+  const energy = draft.energyInput ?? {};
+  const setEnergy = (patch: Partial<NonNullable<Protocolo["energyInput"]>>) =>
+    onDraftChange({ ...draft, energyInput: { ...energy, ...patch } });
+  const refeicoesSugeridas = journey.anamnese.alimentacao.refeicoes.trim();
 
   const preparar = async () => {
-    if (objetivo !== "hipertrofia" && objetivo !== "recomposicao") {
-      toast.error("Escolha um objetivo com modelo disponível.");
+    if (!objetivo) {
+      toast.error("Escolha o objetivo desta consulta.");
       return;
     }
     setPreparing(true);
@@ -57,6 +61,8 @@ export function StepProtocolo({
           instrucoes: draft.instrucoes,
           locale: draft.locale ?? "pt-BR",
           calorieTarget: draft.calorieTarget,
+          mealCount: draft.mealCount,
+          energyInput: draft.energyInput,
         },
       });
       if (!result.data) {
