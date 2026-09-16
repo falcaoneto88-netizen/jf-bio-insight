@@ -130,7 +130,7 @@ describe("chamada à OpenAI (simulada)", () => {
 
   it("aborta por tempo limite e devolve o código timeout", async () => {
     vi.useFakeTimers();
-    const pending = requestProtocol({}, config, ((_url, init) =>
+    const pending = requestProtocol({}, config, ((_url: unknown, init: { signal?: AbortSignal }) =>
       new Promise((_resolve, reject) => {
         init?.signal?.addEventListener("abort", () => reject(new Error("abortado")));
       })) as unknown as typeof fetch);
