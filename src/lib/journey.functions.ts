@@ -14,7 +14,6 @@ import {
   bioSchema,
   protocolSchema,
   protocolLocaleSchema,
-  CURRENT_PROTOCOL_TEMPLATE_VERSION,
   type Anamnese,
   type Bio,
   type Protocolo,
