@@ -8,7 +8,9 @@
  * - avisos (protocolOpenWarnings): podem ser marcados como revistos.
  */
 import { hideMealTimes } from "./meal-presentation";
-import type { ProtocolBlock, Protocolo } from "./types";
+import type { PrescriptionEntry, ProtocolBlock, ProtocolSection, Protocolo } from "./types";
+import { documentLabels } from "./document-locale";
+import { emptyProtocolo } from "./types";
 
 const UNITS =
   "g|gr|gramas?|kg|mg|ml|l|litros?|un|und|unid|unidades?|colheres?|colher|fatias?|fatia|x[íi]caras?|scoops?|copos?|copo|porç(?:ão|ões)|porcao|porcoes|dose|doses|oz|cup|cups|tbsp|tsp|slices?|pieces?|piece|units?|ovos?|fil[ée]s?";

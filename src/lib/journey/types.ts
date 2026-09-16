@@ -306,6 +306,12 @@ export const protocolSchema = z.object({
    * remonta medicação: só entradas confirmadas aqui entram no documento.
    */
   prescriptions: z.array(prescriptionEntrySchema).max(20).optional(),
+  /**
+   * Marcado pelo servidor quando os dados de entrada mudam depois da geração.
+   * Só uma nova geração pelo caminho do servidor o limpa: um patch do cliente
+   * não o remove.
+   */
+  regenerationRequired: z.boolean().optional(),
 });
 export type Protocolo = z.infer<typeof protocolSchema>;
 
