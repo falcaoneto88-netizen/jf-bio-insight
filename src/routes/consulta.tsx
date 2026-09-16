@@ -572,7 +572,18 @@ function ConsultationDetail({ id }: { id: string }) {
             </p>
             {analysis && (
               <Button asChild>
-                <Link to="/jornada/$id" params={{ id: analysis.id }}>
+                <Link
+                  to="/jornada/$id"
+                  params={{ id: analysis.id }}
+                  search={{
+                    // Aprovado e atual: abre direto no documento para imprimir.
+                    etapa:
+                      analysis.approvedVersion === analysis.version &&
+                      analysis.sourceCurrent !== false
+                        ? 6
+                        : 5,
+                  }}
+                >
                   {analysis.approvedVersion === analysis.version && analysis.sourceCurrent !== false
                     ? "Abrir protocolo aprovado"
                     : "Gerar, revisar e imprimir protocolo"}

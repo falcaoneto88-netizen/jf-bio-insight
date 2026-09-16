@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -31,7 +32,13 @@ import {
   type Protocolo,
 } from "@/lib/journey/types";
 
+const searchSchema = z.object({
+  /** Etapa inicial pedida por quem abriu o link (1 a 6). */
+  etapa: z.coerce.number().int().min(1).max(6).optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/jornada/$id")({
+  validateSearch: (search: Record<string, unknown>) => searchSchema.parse(search),
   head: () => ({
     meta: [
       { title: "Atendimento — Jornada clínica Dr. João Falcão" },
@@ -60,12 +67,13 @@ function statusToStep(journey: Journey): JourneyStep {
 
 function JornadaDetailPage() {
   const { id } = useParams({ from: "/_authenticated/jornada/$id" });
+  const { etapa } = Route.useSearch();
   // key={id}: mudar de paciente recria o estado interno por completo — nunca
   // sobra rascunho, etapa ou pré-visualização do atendimento anterior.
-  return <JornadaDetail key={id} id={id} />;
+  return <JornadaDetail key={id} id={id} etapaInicial={(etapa ?? null) as JourneyStep | null} />;
 }
 
-function JornadaDetail({ id }: { id: string }) {
+function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: JourneyStep | null }) {
   const obter = useServerFn(obterJornada);
   const guardar = useServerFn(guardarJornada);
   const preview = useServerFn(previewHtml);
@@ -130,9 +138,11 @@ function JornadaDetail({ id }: { id: string }) {
     setAnamnese(journey.anamnese);
     setBio(journey.bio);
     setProtocolo(journey.protocolo ?? emptyProtocolo);
-    setStep(statusToStep(journey));
+    // Etapa pedida no link (aprovação/impressão), sem passar do ponto já atingido.
+    const natural = statusToStep(journey);
+    setStep(etapaInicial ? (Math.min(etapaInicial, natural) as JourneyStep) : natural);
     setInitialised(true);
-  }, [journey, initialised]);
+  }, [journey, initialised, etapaInicial]);
 
   const maxReached = useMemo<JourneyStep>(() => {
     if (!journey) return 1;
@@ -250,7 +260,9 @@ function JornadaDetail({ id }: { id: string }) {
                   setBio(journey.bio);
                   setProtocolo(journey.protocolo ?? emptyProtocolo);
                   setDraftVersion(journey.version);
-                  setStep(statusToStep(journey));
+                  // Etapa pedida no link (aprovação/impressão), sem passar do ponto já atingido.
+    const natural = statusToStep(journey);
+    setStep(etapaInicial ? (Math.min(etapaInicial, natural) as JourneyStep) : natural);
                 }
               }}
             >
