@@ -169,50 +169,41 @@ export const prepararProtocoloTool = defineTool({
     "Prepara o rascunho estruturado do protocolo a partir dos dados já confirmados e das instruções do profissional. Devolve id, versão, hash e o endereço de revisão. Não prescreve e não aprova.",
   inputSchema: {
     jornadaId: z.string().uuid(),
-    objetivo: z
-      .enum(["hipertrofia", "recomposicao"])
-      .describe("Emagrecimento tem modelo pendente de definição e não é aceite."),
+    objetivo: z.enum(["hipertrofia", "recomposicao", "emagrecimento"]),
     instrucoes: z.string().max(6000).default("").describe("Instruções clínicas do profissional."),
+    numeroDeRefeicoes: z
+      .number()
+      .int()
+      .min(1)
+      .max(12)
+      .optional()
+      .describe("Se omitido, usa o número já revisto na aplicação."),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async ({ jornadaId, objetivo, instrucoes }, ctx) => {
+  handler: async ({ jornadaId, objetivo, instrucoes, numeroDeRefeicoes }, ctx) => {
     const access = await requireJourneyAccess(ctx);
     if (!access.ok) return toolError(access.message);
-    const { getJourney, patchJourney, reviewIssues, bioResumoTexto, consumeAiQuota } =
+    const { getJourney, patchJourney, reviewIssues, consumeAiQuota } =
       await import("@/lib/journey/core.server");
-    const { prepararProtocoloRascunho, anamneseParaTexto } =
-      await import("@/lib/journey/agent.server");
-    const { computeEvolution } = await import("@/lib/journey/evolution");
-    const { protocolSchema, CURRENT_PROTOCOL_TEMPLATE_VERSION } =
-      await import("@/lib/journey/types");
+    const { gerarProtocolo } = await import("@/lib/journey/protocol-generation.server");
+    const { protocolSchema } = await import("@/lib/journey/types");
     try {
       await consumeAiQuota(access.userId);
       const jornada = await getJourney(access.supabase, access.userId, jornadaId);
       if (!jornada.confirmations.revisao) {
         return toolError("O profissional ainda não confirmou a revisão dos dados desta jornada.");
       }
-      const evolution = computeEvolution(jornada.bio);
-      const bioResumo = bioResumoTexto(jornada.bio);
-      const result = await prepararProtocoloRascunho({
+      // Mesmo serviço de geração usado pela interface: regras idênticas.
+      const result = await gerarProtocolo(jornada, {
         objetivo,
         instrucoes: instrucoes ?? "",
         locale: jornada.protocolo?.locale ?? "pt-BR",
         calorieTarget: jornada.protocolo?.calorieTarget,
-        anamneseResumo: anamneseParaTexto(jornada.anamnese),
-        bioResumo,
-        evolucaoResumo: evolution.summaryLines.join(" "),
+        mealCount: numeroDeRefeicoes ?? jornada.protocolo?.mealCount,
+        energyInput: jornada.protocolo?.energyInput,
       });
       if (!result.data) return toolError(result.error ?? "Não foi possível preparar o protocolo.");
-
-      const protocolo = protocolSchema.parse({
-        templateVersion: CURRENT_PROTOCOL_TEMPLATE_VERSION,
-        objetivo,
-        instrucoes: instrucoes ?? "",
-        locale: jornada.protocolo?.locale ?? "pt-BR",
-        calorieTarget: jornada.protocolo?.calorieTarget,
-        sections: result.data.sections,
-        pendencias: result.data.pendencias,
-      });
+      const protocolo = protocolSchema.parse(result.data.protocolo);
       const atualizada = await patchJourney(
         access.supabase,
         access.userId,
