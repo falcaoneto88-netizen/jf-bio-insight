@@ -9,7 +9,7 @@ import {
   computeEnergyPlan,
   energyInputSchema,
   measuresForExam,
-  resolveFfmDetailed,
+  resolveEnergyForBio,
   type EnergyPlan,
 } from "./energy";
 import { buildProtocolContext, protocoloGerado, type ProtocolAiOutput } from "./protocol-ai";
@@ -44,23 +44,13 @@ export const protocolGenerationRequestSchema = z.object({
 export type ProtocolGenerationRequest = z.infer<typeof protocolGenerationRequestSchema>;
 
 export function resolveEnergy(bio: Bio, request: ProtocolGenerationRequest) {
-  const measures = measuresForExam(bio);
-  const { ffm, issues } = resolveFfmDetailed({
-    ffmExameKg: bio.semExame ? "" : (bio.massaLivreGorduraKg ?? ""),
-    ffmManualKg: request.energyInput?.ffmManualKg ?? "",
-    pesoKg: measures.pesoKg,
-    pgc: measures.pgc,
-  });
-  const result = computeEnergyPlan({
+  const { plan, pendencias } = resolveEnergyForBio({
+    bio,
     objetivo: request.objetivo,
-    ffm,
-    input: request.energyInput ?? {},
-    ...(request.calorieTarget ? { professionalTarget: request.calorieTarget } : {}),
+    ...(request.energyInput ? { energyInput: request.energyInput } : {}),
+    ...(request.calorieTarget ? { calorieTarget: request.calorieTarget } : {}),
   });
-  return {
-    plan: result.plan,
-    pendencias: [...measures.issues, ...issues, ...result.pendencias],
-  };
+  return { plan, pendencias };
 }
 
 /**

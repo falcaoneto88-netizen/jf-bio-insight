@@ -369,3 +369,33 @@ export function measuresForExam(bio: Bio): {
   };
 }
 
+
+/**
+ * Cálculo completo a partir do exame e das escolhas do profissional.
+ * Puro e partilhado: a interface mostra exatamente o que o servidor calcula.
+ */
+export function resolveEnergyForBio(args: {
+  bio: Bio;
+  objetivo: "hipertrofia" | "recomposicao" | "emagrecimento";
+  energyInput?: EnergyInput;
+  calorieTarget?: string;
+}): EnergyResult & { ffm: FfmResolution } {
+  const measures = measuresForExam(args.bio);
+  const { ffm, issues } = resolveFfmDetailed({
+    ffmExameKg: args.bio.semExame ? "" : (args.bio.massaLivreGorduraKg ?? ""),
+    ffmManualKg: args.energyInput?.ffmManualKg ?? "",
+    pesoKg: measures.pesoKg,
+    pgc: measures.pgc,
+  });
+  const result = computeEnergyPlan({
+    objetivo: args.objetivo,
+    ffm,
+    input: args.energyInput ?? {},
+    ...(args.calorieTarget ? { professionalTarget: args.calorieTarget } : {}),
+  });
+  return {
+    plan: result.plan,
+    pendencias: [...measures.issues, ...issues, ...result.pendencias],
+    ffm,
+  };
+}
