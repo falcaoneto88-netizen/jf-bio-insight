@@ -463,6 +463,8 @@ export function bioResumoTexto(bio: Bio): string {
     `Data do exame: ${bio.dataHoraExame}`,
     `TMB (kcal): ${bio.taxaMetabolicaBasalKcal}`,
     `Gordura visceral: ${bio.nivelGorduraVisceral}`,
+    `Massa livre de gordura (kg): ${bio.massaLivreGorduraKg ?? ""}`,
+    `Massa de gordura (kg): ${bio.massaGorduraKg ?? ""}`,
     ...(bio.historico ?? []).map(
       (h) =>
         `Histórico ${h.data}: peso ${h.peso} kg | músculo ${h.massaMuscularEsqueletica} kg | PGC ${h.pgc} %`,
