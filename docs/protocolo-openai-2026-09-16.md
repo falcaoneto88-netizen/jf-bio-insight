@@ -56,3 +56,48 @@ podem conter identificadores — **não se trata de conteúdo anonimizado**. O c
 - Substituições são propostas para revisão do profissional, não equivalências nutricionais
   certificadas.
 - Nada foi publicado: as alterações vivem apenas na prévia.
+
+## Revisão de 16/09/2026 — correções e limites reais
+
+Corrigido nesta prévia (não publicado):
+
+1. **Meta calórica unificada.** O campo da interface e `energyInput.professionalTarget` são a mesma
+   meta profissional; ela tem prioridade no contexto da IA e no documento. Meta explícita vale por
+   si (guardada como método `profissional`, sem MLG nem fator inventados). Metas ≤ 0, sem unidade
+   reconhecível ou fora de 400–10000 kcal/dia são recusadas; ajustes fora de ±40% e fatores fora de
+   0,9–2,5 bloqueiam; nunca se produz meta negativa. MLG maior do que o peso é conflito e uma MLG
+   informada inválida nunca é substituída em silêncio pela derivação.
+2. **Medidas por data.** Peso e PGC vêm da mesma data (a do exame ou a data válida mais recente),
+   nunca da posição na lista; sem PGC nessa data não se usa o de outra; conflitos na mesma data
+   bloqueiam; com «sem exame» nada é aproveitado.
+3. **Aprovação.** Pendências essenciais (meta válida, refeições, porções, substituições,
+   prescrições por confirmar) bloqueiam e não podem ser dispensadas; os avisos podem ser marcados
+   como revistos no painel. Prescrições são entradas estruturadas do profissional com confirmação
+   individual — a IA não cria nem remonta medicação.
+4. **Marcador do gerador.** É preservado na gravação; apagá-lo num pedido não desliga a validação.
+   A validação da origem está separada da qualidade do rascunho, por isso um rascunho incompleto
+   pode ser corrigido e gerado de novo.
+5. **Preflight igual na interface e no MCP.** Revisão, fonte da consulta, versão esperada e
+   configuração antes do envio; nova validação depois da resposta, antes de gravar. No MCP,
+   `expectedVersion` e confirmação explícita do envio à OpenAI são obrigatórias.
+6. **Qualidade.** Porções e substituições exigem número positivo com unidade; três alternativas
+   distintas por categoria; a gordura é exigida pela categoria explícita do alimento, não por
+   palavras em português. Refeições líquidas só quando indicadas.
+7. **Documento.** Versão e hash são comparados antes de baixar, copiar, visualizar ou imprimir, e
+   os bytes recebidos são conferidos por SHA-256. A impressão é cancelada em troca de paciente, de
+   versão ou ao sair do ecrã. A aplicação nunca afirma que imprimiu: o navegador não o informa.
+8. **Novos protocolos:** título «Protocolo avançado de …», campos ausentes assinalados, objetivo
+   uma única vez, rodapé com paciente/versão/rascunho em todas as páginas e sem o logotipo grande
+   repetido no fim da impressão. O documento legado mantém-se byte a byte.
+
+### Limites verificados (o que NÃO foi testado)
+
+- **OPENAI_API_KEY continua ausente no projeto: nenhuma chamada real foi feita.** Toda a validação
+  da chamada usa `fetch` simulado (endpoint, `store:false`, schema estrito, 401/403/429/500,
+  timeout, recusa, resposta incompleta, corpo e entrada grandes). O comportamento real do modelo
+  permanece por confirmar até a chave ser cadastrada.
+- A impressão foi testada com DOM falso (verificação de versão, obsolescência, bloqueio). **Não
+  houve impressão física nem teste de diálogo nativo.**
+- O layout foi conferido com WeasyPrint local sobre dados fictícios, não em impressoras reais.
+- Executado nesta revisão: 207 testes Vitest, 76 testes Node, TypeScript e build.
+- Nada foi publicado; a produção continua na versão anterior.
