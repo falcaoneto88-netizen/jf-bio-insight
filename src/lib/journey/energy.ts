@@ -356,10 +356,19 @@ export function measuresForExam(bio: Bio): {
       .trim()
       .split(/[\s,]+/)[0] ?? "",
   );
-  const target =
-    examKey && rows.some((r) => r.key === examKey)
-      ? examKey
-      : [...rows].sort((a, b) => a.key.localeCompare(b.key)).at(-1)!.key;
+  // Cabeçalho com data válida que NÃO existe no histórico: não se usa um exame
+  // antigo como se fosse o atual. Falha claro e deixa a meta profissional livre.
+  if (examKey && !rows.some((r) => r.key === examKey)) {
+    return {
+      pesoKg: "",
+      pgc: "",
+      date: examKey,
+      issues: [
+        `A data do exame (${String(bio.dataHoraExame ?? "").trim()}) não existe no histórico: registe o peso e o percentual de gordura dessa data ou escreva a meta calórica profissional. Medidas de outros dias não são usadas.`,
+      ],
+    };
+  }
+  const target = [...rows].sort((a, b) => a.key.localeCompare(b.key)).at(-1)!.key;
 
   const sameDate = rows.filter((r) => r.key === target);
   const issues: string[] = [];

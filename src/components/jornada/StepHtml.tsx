@@ -5,7 +5,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { previewHtml } from "@/lib/journey.functions";
-import { documentMatchesRequest, printHtmlDocument, sha256Text } from "@/lib/journey/print";
+import {
+  documentMatchesRequest,
+  htmlBytesMismatch,
+  printHtmlDocument,
+  sha256Text,
+} from "@/lib/journey/print";
 import type { Journey } from "@/lib/journey/types";
 
 export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => void }) {
@@ -73,11 +78,10 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
       // E os bytes entregues têm de corresponder ao hash que o servidor calculou.
       const hash = await sha256Text(result.html);
       if (!mountedRef.current || requestId !== requestRef.current) return null;
-      if (hash && result.htmlHash && hash !== result.htmlHash) {
-        const msg =
-          "O documento recebido não corresponde ao seu identificador. Recarregue o atendimento antes de continuar.";
-        setErro(msg);
-        toast.error(msg);
+      const bytesMismatch = htmlBytesMismatch(hash, result.htmlHash);
+      if (bytesMismatch) {
+        setErro(bytesMismatch);
+        toast.error(bytesMismatch);
         return null;
       }
       setErro(null);
