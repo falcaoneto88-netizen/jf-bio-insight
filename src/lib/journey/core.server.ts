@@ -354,6 +354,13 @@ export function reviewIssues(journey: Journey): JourneyIssues {
     for (const duvida of journey.bio.duvidas) warnings.push(`Dúvida na extração: ${duvida}`);
   }
 
+  // Protocolos GERADOS exigem plano alimentar completo. Documentos legados
+  // (sem "generator") mantêm-se exatamente como estão.
+  if (journey.protocolo && isGeneratedProtocol(journey.protocolo)) {
+    blocking.push(...protocolCompletenessIssues(journey.protocolo));
+    warnings.push(...journey.protocolo.pendencias.map((p) => `Pendência do protocolo: ${p}`));
+  }
+
   if (
     journey.protocolo &&
     journey.protocolo.sections.length > 0 &&
