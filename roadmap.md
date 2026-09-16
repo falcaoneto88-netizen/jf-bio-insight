@@ -34,3 +34,13 @@
 - [ ] Validação manual na aplicação com dados sintéticos (lista em docs/VALIDACAO_JORNADA.md)
 - [ ] Conversão WeasyPrint verificada fora do sandbox (não há WeasyPrint disponível aqui)
 - [ ] Publicação, só depois da revisão do proprietário
+
+## Geração do protocolo pela OpenAI (16/09/2026, só prévia)
+- [x] Cálculo energético determinístico revisável (Cunningham, MLG do exame ou derivada)
+- [x] Geração completa do plano alimentar pela Responses API, sem fallback para outro fornecedor
+- [x] Mesmo serviço na aplicação e no assistente MCP, com quota, versão e aprovação humana
+- [x] Bloqueio de aprovação por refeições/quantidades/substituições em falta
+- [x] Imprimir / Salvar PDF da versão aprovada dentro da jornada
+- [x] /review identificado como gerador antigo (secundário)
+- [ ] Cadastrar OPENAI_API_KEY em Project Settings → Secrets (sem ela não há chamada real)
+- [ ] Validação manual na prévia e publicação, só depois da revisão do proprietário

@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import { energyInputSchema, energyPlanSchema } from "./energy";
+
 export const AGENT_RULES_VERSION = "agente-clinico-v1";
 
 /* ------------------------------------------------------------------ */
@@ -178,6 +180,8 @@ export const bioHistoryRowSchema = z.object({
 });
 export type BioHistoryRow = z.infer<typeof bioHistoryRowSchema>;
 
+const optionalTxt = z.string().trim().max(4000).optional();
+
 export const bioSchema = z.object({
   paciente: txt,
   alturaM: txt,
@@ -186,6 +190,9 @@ export const bioSchema = z.object({
   dataHoraExame: txt,
   taxaMetabolicaBasalKcal: txt,
   nivelGorduraVisceral: txt,
+  /** Opcionais: ausentes nos registos legados, por isso nunca mudam hashes antigos. */
+  massaLivreGorduraKg: optionalTxt,
+  massaGorduraKg: optionalTxt,
   historico: z.array(bioHistoryRowSchema).max(60).default([]),
   /** Metadados: nunca entram no documento do paciente. */
   fontes: z.array(z.string().max(500)).max(60).default([]),
@@ -230,7 +237,7 @@ export const mealBlockSchema = z.object({
 export const OBJETIVOS = [
   { value: "hipertrofia", label: "Hipertrofia", available: true },
   { value: "recomposicao", label: "Recomposição corporal", available: true },
-  { value: "emagrecimento", label: "Emagrecimento", available: false },
+  { value: "emagrecimento", label: "Emagrecimento", available: true },
 ] as const;
 export type Objetivo = (typeof OBJETIVOS)[number]["value"];
 
@@ -265,6 +272,11 @@ export const protocolSchema = z.object({
   sections: z.array(protocolSectionSchema).max(40).default([]),
   /** Painel interno — NUNCA exportado para o HTML. */
   pendencias: z.array(z.string().max(600)).max(60).default([]),
+  /** Opcionais e sem default: documentos legados continuam com o mesmo hash. */
+  generator: z.string().max(64).optional(),
+  mealCount: z.number().int().min(1).max(12).optional(),
+  energy: energyPlanSchema.optional(),
+  energyInput: energyInputSchema.optional(),
 });
 export type Protocolo = z.infer<typeof protocolSchema>;
 

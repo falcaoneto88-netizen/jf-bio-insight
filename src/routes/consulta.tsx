@@ -570,21 +570,25 @@ function ConsultationDetail({ id }: { id: string }) {
                 ? `${data.reports.length} relatório(s) salvo(s)`
                 : "Ainda não gerado"}
             </p>
-            <Button disabled={!data.draft.clinical_data} onClick={() => openWorkspace("/review")}>
-              Revisar e gerar PDF
-            </Button>
-            <Button variant="outline" onClick={() => openWorkspace("/clinical-form")}>
-              Revisar ficha clínica
-            </Button>
             {analysis && (
-              <Button asChild variant="outline">
+              <Button asChild>
                 <Link to="/jornada/$id" params={{ id: analysis.id }}>
                   {analysis.approvedVersion === analysis.version && analysis.sourceCurrent !== false
                     ? "Abrir protocolo aprovado"
-                    : "Revisar protocolo para aprovação"}
+                    : "Gerar, revisar e imprimir protocolo"}
                 </Link>
               </Button>
             )}
+            <Button variant="outline" onClick={() => openWorkspace("/clinical-form")}>
+              Revisar ficha clínica
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={!data.draft.clinical_data}
+              onClick={() => openWorkspace("/review")}
+            >
+              Gerador antigo de PDF (secundário)
+            </Button>
             <p className="text-xs text-muted-foreground">
               {data.draft.anamnesis_id
                 ? "As respostas recebidas já estão na ficha. Revise e complete somente o que faltar."

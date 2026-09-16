@@ -239,9 +239,12 @@ function ReviewPage() {
           </div>
 
           <div className="mt-4 mb-6 text-center">
-            <h1 className="font-serif text-3xl text-foreground sm:text-4xl">Revisão final</h1>
+            <h1 className="font-serif text-3xl text-foreground sm:text-4xl">
+              Gerador antigo (secundário)
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Confirme os dados antes de gerar o relatório clínico.
+              Este é o gerador de PDF anterior, mantido para consultar e reemitir relatórios
+              antigos. O protocolo atual é gerado, revisto, aprovado e impresso na consulta.
             </p>
           </div>
 

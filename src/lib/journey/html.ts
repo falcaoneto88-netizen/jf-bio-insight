@@ -259,6 +259,8 @@ function renderBio(bio: Bio, locale: ProtocolLocale): string {
   const fields = [
     [t.exam, documentDate(bio.dataHoraExame, locale), ""],
     [t.height, decimalComma(bio.alturaM), "m"],
+    [t.fatFreeMass, decimalComma(bio.massaLivreGorduraKg ?? ""), "kg"],
+    [t.fatMass, decimalComma(bio.massaGorduraKg ?? ""), "kg"],
     [t.bmr, integerValue(bio.taxaMetabolicaBasalKcal), "kcal"],
     [t.visceral, integerValue(bio.nivelGorduraVisceral), ""],
   ].filter((row) => row[1].trim());

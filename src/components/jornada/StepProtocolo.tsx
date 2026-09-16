@@ -41,10 +41,14 @@ export function StepProtocolo({
 }) {
   const [preparing, setPreparing] = useState(false);
   const objetivo = draft.objetivo;
+  const energy = draft.energyInput ?? {};
+  const setEnergy = (patch: Partial<NonNullable<Protocolo["energyInput"]>>) =>
+    onDraftChange({ ...draft, energyInput: { ...energy, ...patch } });
+  const refeicoesSugeridas = journey.anamnese.alimentacao.refeicoes.trim();
 
   const preparar = async () => {
-    if (objetivo !== "hipertrofia" && objetivo !== "recomposicao") {
-      toast.error("Escolha um objetivo com modelo disponível.");
+    if (!objetivo) {
+      toast.error("Escolha o objetivo desta consulta.");
       return;
     }
     setPreparing(true);
@@ -57,6 +61,8 @@ export function StepProtocolo({
           instrucoes: draft.instrucoes,
           locale: draft.locale ?? "pt-BR",
           calorieTarget: draft.calorieTarget,
+          mealCount: draft.mealCount,
+          energyInput: draft.energyInput,
         },
       });
       if (!result.data) {
@@ -132,6 +138,72 @@ export function StepProtocolo({
               </button>
             ))}
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1 text-sm">
+              <span>Número de refeições</span>
+              <Input
+                type="number"
+                min={1}
+                max={12}
+                value={draft.mealCount ?? ""}
+                placeholder={refeicoesSugeridas ? `Anamnese: ${refeicoesSugeridas}` : "1 a 12"}
+                onChange={(e) =>
+                  onDraftChange({
+                    ...draft,
+                    mealCount: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+              />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span>Massa livre de gordura (kg), se não vier do exame</span>
+              <Input
+                value={energy.ffmManualKg ?? ""}
+                maxLength={20}
+                placeholder={journey.bio.massaLivreGorduraKg || "Ex.: 58,4"}
+                onChange={(e) => setEnergy({ ffmManualKg: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span>Fator de atividade (escolhido por si)</span>
+              <Input
+                value={energy.activityFactor ?? ""}
+                maxLength={20}
+                placeholder="Ex.: 1,5"
+                onChange={(e) => setEnergy({ activityFactor: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span>
+                Ajuste (%){" "}
+                {objetivo === "recomposicao"
+                  ? "— défice entre 15 e 25"
+                  : objetivo === "hipertrofia"
+                    ? "— hipertrofia fica em manutenção"
+                    : "— definido por si"}
+              </span>
+              <Input
+                value={energy.adjustmentPercent ?? ""}
+                maxLength={20}
+                placeholder="Ex.: -20"
+                onChange={(e) => setEnergy({ adjustmentPercent: e.target.value })}
+              />
+            </label>
+          </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={energy.factorReviewed === true}
+              onChange={(e) => setEnergy({ factorReviewed: e.target.checked })}
+            />
+            <span className="text-muted-foreground">
+              Confirmo que revi o fator de atividade. Sem esta confirmação, a meta calórica não é
+              calculada — não existe tabela de fatores predefinida. O cálculo usa Cunningham (500 +
+              22 × massa livre de gordura) e fica apenas neste painel profissional; a taxa
+              metabólica basal não é meta calórica. Uma meta escrita em cima substitui o cálculo.
+            </span>
+          </label>
           <div className="space-y-1.5">
             <Label htmlFor="instrucoes" className="text-xs text-muted-foreground">
               Instruções profissionais (única fonte do que pode ser prescrito)
@@ -144,10 +216,17 @@ export function StepProtocolo({
               onChange={(e) => onDraftChange({ ...draft, instrucoes: e.target.value })}
             />
           </div>
-          <Button variant="outline" onClick={preparar} disabled={preparing || saving}>
+          <Button variant="outline" onClick={() => void preparar()} disabled={preparing || saving}>
             <Sparkles className="mr-1 h-4 w-4" />
-            {preparing ? "A preparar rascunho…" : "Preparar rascunho com o agente"}
+            {preparing ? "A gerar protocolo…" : "Gerar protocolo completo"}
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Ao gerar, os dados clínicos desta consulta (anamnese, rotina, alergias, medicação
+            relatada, exame, objetivo e as suas orientações) são enviados ao serviço de IA da
+            OpenAI. Nome, telefone, e-mail e identificadores de CRM são retirados dos campos
+            estruturados; textos livres seguem como foram escritos. O resultado é sempre um rascunho
+            para a sua revisão.
+          </p>
         </CardContent>
       </Card>
 

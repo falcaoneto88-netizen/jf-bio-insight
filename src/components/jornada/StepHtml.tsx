@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Download, Eye } from "lucide-react";
+import { Copy, Download, Eye, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,9 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
     }
   };
 
-  const run = async (action: (result: { html: string; fileName?: string | null }) => Promise<void> | void) => {
+  const run = async (
+    action: (result: { html: string; fileName?: string | null }) => Promise<void> | void,
+  ) => {
     const requestId = ++requestRef.current;
     setBusy(true);
     setErro(null);
@@ -104,6 +106,40 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
       setPreview(html);
     });
 
+  /**
+   * Impressão nativa do MESMO HTML servido para esta versão — sem serviço externo
+   * de PDF. O navegador não informa se o utilizador imprimiu ou cancelou, por isso
+   * nada é dado como impresso.
+   */
+  const imprimir = () =>
+    run(({ html }) => {
+      const frame = document.createElement("iframe");
+      frame.setAttribute("title", "Impressão do protocolo");
+      frame.setAttribute("sandbox", "allow-same-origin allow-modals");
+      frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+      frame.srcdoc = html;
+      frame.onload = () => {
+        try {
+          const view = frame.contentWindow;
+          if (!view) throw new Error("sem janela");
+          view.focus();
+          view.print();
+          toast.message("Janela de impressão aberta.", {
+            description:
+              "Escolha «Guardar como PDF» para gerar o ficheiro. Se nada apareceu, o navegador pode ter bloqueado a impressão.",
+          });
+        } catch {
+          const msg =
+            "O navegador bloqueou a impressão. Use «Visualizar» e imprima a página, ou baixe o HTML.";
+          setErro(msg);
+          toast.error(msg);
+        } finally {
+          setTimeout(() => frame.remove(), 60_000);
+        }
+      };
+      document.body.appendChild(frame);
+    });
+
   return (
     <div className="space-y-6">
       <Card>
@@ -112,7 +148,9 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
           <CardDescription>
             {aprovado
               ? `Entrega final da versão aprovada ${journey.approvedVersion}.`
-              : "Sem aprovação em vigor: o ficheiro sai marcado como RASCUNHO."}
+              : "Sem aprovação em vigor: o ficheiro sai marcado como RASCUNHO."}{" "}
+            Versão atual {journey.version} · identificador {journey.contentHash.slice(0, 12)}.
+            Baixar, copiar e imprimir usam exatamente este documento.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -124,6 +162,9 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
           </Button>
           <Button variant="outline" onClick={() => void visualizar()} disabled={busy}>
             <Eye className="mr-1 h-4 w-4" /> Visualizar
+          </Button>
+          <Button variant="outline" onClick={() => void imprimir()} disabled={busy}>
+            <Printer className="mr-1 h-4 w-4" /> Imprimir / Salvar PDF
           </Button>
           <Button variant="ghost" onClick={onBack}>
             Voltar para editar

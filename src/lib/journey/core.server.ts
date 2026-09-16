@@ -8,6 +8,7 @@ import { DOCUMENT_TEMPLATE_VERSION, LOGO_SHA256 } from "./brand";
 import { computeEvolution } from "./evolution";
 import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { needsNumberReview, sameIdentity, todayBr } from "./format";
+import { isGeneratedProtocol, protocolCompletenessIssues } from "./protocol-quality";
 import {
   anamneseSchema,
   bioSchema,
@@ -354,6 +355,13 @@ export function reviewIssues(journey: Journey): JourneyIssues {
     for (const duvida of journey.bio.duvidas) warnings.push(`Dúvida na extração: ${duvida}`);
   }
 
+  // Protocolos GERADOS exigem plano alimentar completo. Documentos legados
+  // (sem "generator") mantêm-se exatamente como estão.
+  if (journey.protocolo && isGeneratedProtocol(journey.protocolo)) {
+    blocking.push(...protocolCompletenessIssues(journey.protocolo));
+    warnings.push(...journey.protocolo.pendencias.map((p) => `Pendência do protocolo: ${p}`));
+  }
+
   if (
     journey.protocolo &&
     journey.protocolo.sections.length > 0 &&
@@ -455,6 +463,8 @@ export function bioResumoTexto(bio: Bio): string {
     `Data do exame: ${bio.dataHoraExame}`,
     `TMB (kcal): ${bio.taxaMetabolicaBasalKcal}`,
     `Gordura visceral: ${bio.nivelGorduraVisceral}`,
+    `Massa livre de gordura (kg): ${bio.massaLivreGorduraKg ?? ""}`,
+    `Massa de gordura (kg): ${bio.massaGorduraKg ?? ""}`,
     ...(bio.historico ?? []).map(
       (h) =>
         `Histórico ${h.data}: peso ${h.peso} kg | músculo ${h.massaMuscularEsqueletica} kg | PGC ${h.pgc} %`,
