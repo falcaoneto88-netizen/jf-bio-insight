@@ -166,7 +166,12 @@ export function buildProtocolSections(
     ...(metaLinha ? [{ type: "list" as const, items: [`${t.calories}: ${metaLinha}`] }] : []),
   ];
   if (objetivoBlocos.length)
-    sections.push({ id: "objetivo", title: t.objective, kind: "objective", blocks: objetivoBlocos });
+    sections.push({
+      id: "objetivo",
+      title: t.objective,
+      kind: "objective",
+      blocks: objetivoBlocos,
+    });
 
   const orientacoes = [...output.orientacoesGerais, ...output.orientacoesAtividade]
     .map((i) => i.trim())
@@ -237,12 +242,11 @@ export function buildProtocolSections(
         },
       ],
     });
-    pendencias.push(
-      ...prescricoes.map(
-        (p) =>
-          `Confirme individualmente antes de emitir: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
-      ),
-    );
+  pendencias.push(
+    ...prescricoes.map((p) =>
+      `Confirme individualmente antes de emitir: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
+    ),
+  );
 
   return { sections, pendencias };
 }

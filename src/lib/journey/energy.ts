@@ -47,9 +47,7 @@ export function parseDecimal(value: string | undefined | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export type FfmResolution =
-  | { ffmKg: number; origin: "exame" | "derivada"; formula: string }
-  | null;
+export type FfmResolution = { ffmKg: number; origin: "exame" | "derivada"; formula: string } | null;
 
 /** MLG do exame; em alternativa, derivada de peso × (1 − PGC/100), com origem registada. */
 export function resolveFfm(source: {

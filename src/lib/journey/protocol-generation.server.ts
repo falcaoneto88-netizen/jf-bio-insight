@@ -100,7 +100,10 @@ export async function gerarProtocolo(
     );
   } catch (error) {
     const code = error instanceof ProtocolAiFailure ? error.code : "unavailable";
-    return { data: null, error: protocolFailureMessages[code] ?? protocolFailureMessages.unavailable };
+    return {
+      data: null,
+      error: protocolFailureMessages[code] ?? protocolFailureMessages.unavailable,
+    };
   }
 
   const protocolo = protocoloGerado({

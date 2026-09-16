@@ -21,7 +21,13 @@ const anamnese = (): Anamnese => ({
   alimentacao: { ...emptyAnamnese.alimentacao, refeicoes: "4" },
   habitos: { ...emptyAnamnese.habitos, treino: "Sim", horario: "07:00" },
   medicacoesEmUso: [
-    { nome: "Substância fictícia", dose: "10 mg", frequencia: "1x/dia", horario: "08:00", motivo: "Relato" },
+    {
+      nome: "Substância fictícia",
+      dose: "10 mg",
+      frequencia: "1x/dia",
+      horario: "08:00",
+      motivo: "Relato",
+    },
   ],
 });
 

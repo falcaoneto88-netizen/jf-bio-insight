@@ -40,7 +40,11 @@ export function protocolCompletenessIssues(protocolo: Protocolo): string[] {
       issues.push(`Refeição ${n}: são exigidas exatamente 3 substituições de proteína.`);
     if (carbohydrate.length !== 3)
       issues.push(`Refeição ${n}: são exigidas exatamente 3 substituições de carboidrato.`);
-    const hasFat = foods.some((f) => /azeite|óleo|oleo|manteiga|castanh|abacate|am[eê]ndoa|nozes|gordura|pasta de amendoim|coco|gema/i.test(f.name));
+    const hasFat = foods.some((f) =>
+      /azeite|óleo|oleo|manteiga|castanh|abacate|am[eê]ndoa|nozes|gordura|pasta de amendoim|coco|gema/i.test(
+        f.name,
+      ),
+    );
     if ((hasFat || fat.length) && fat.length !== 3)
       issues.push(
         `Refeição ${n}: há gordura prescrita, por isso são exigidas exatamente 3 substituições de gordura.`,

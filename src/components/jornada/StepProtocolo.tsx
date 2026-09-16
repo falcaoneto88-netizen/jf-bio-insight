@@ -199,8 +199,8 @@ export function StepProtocolo({
             />
             <span className="text-muted-foreground">
               Confirmo que revi o fator de atividade. Sem esta confirmação, a meta calórica não é
-              calculada — não existe tabela de fatores predefinida. O cálculo usa Cunningham
-              (500 + 22 × massa livre de gordura) e fica apenas neste painel profissional; a taxa
+              calculada — não existe tabela de fatores predefinida. O cálculo usa Cunningham (500 +
+              22 × massa livre de gordura) e fica apenas neste painel profissional; a taxa
               metabólica basal não é meta calórica. Uma meta escrita em cima substitui o cálculo.
             </span>
           </label>
@@ -224,8 +224,8 @@ export function StepProtocolo({
             Ao gerar, os dados clínicos desta consulta (anamnese, rotina, alergias, medicação
             relatada, exame, objetivo e as suas orientações) são enviados ao serviço de IA da
             OpenAI. Nome, telefone, e-mail e identificadores de CRM são retirados dos campos
-            estruturados; textos livres seguem como foram escritos. O resultado é sempre um
-            rascunho para a sua revisão.
+            estruturados; textos livres seguem como foram escritos. O resultado é sempre um rascunho
+            para a sua revisão.
           </p>
         </CardContent>
       </Card>

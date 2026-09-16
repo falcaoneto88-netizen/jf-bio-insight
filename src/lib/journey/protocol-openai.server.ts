@@ -29,7 +29,8 @@ export const protocolFailureMessages: Record<string, string> = {
 export function readProtocolAiConfig(env: Record<string, string | undefined> = process.env) {
   const apiKey = env["OPENAI_API_KEY"]?.trim();
   const model = env["OPENAI_CLINICAL_MODEL"]?.trim() || "gpt-5.4";
-  if (!apiKey || !/^[a-zA-Z0-9._:-]{1,100}$/.test(model)) throw new ProtocolAiFailure("configuration");
+  if (!apiKey || !/^[a-zA-Z0-9._:-]{1,100}$/.test(model))
+    throw new ProtocolAiFailure("configuration");
   return { apiKey, model };
 }
 

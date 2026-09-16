@@ -77,7 +77,8 @@ export function StepBio({
       onDraftChange(result.data);
       toast.success("Exame transcrito. Reveja cada campo antes de confirmar.");
     } catch (err) {
-      if (mountedRef.current && requestId === requestRef.current) toast.error((err as Error).message);
+      if (mountedRef.current && requestId === requestRef.current)
+        toast.error((err as Error).message);
     } finally {
       if (mountedRef.current && requestId === requestRef.current) setBusy(false);
     }
@@ -105,8 +106,8 @@ export function StepBio({
     await runExtraction({ fileBase64: base64, mimeType: mime, fileName: file.name });
   };
 
-
-  const setField = (field: keyof Bio, value: string) => onDraftChange({ ...draft, [field]: value } as Bio);
+  const setField = (field: keyof Bio, value: string) =>
+    onDraftChange({ ...draft, [field]: value } as Bio);
 
   return (
     <div className="space-y-6">
@@ -142,7 +143,6 @@ export function StepBio({
                 <Trash2 className="mr-1 h-4 w-4" /> Remover arquivo
               </Button>
             )}
-
           </div>
           {draft.arquivoNome && (
             <p className="text-xs text-muted-foreground">Arquivo atual: {draft.arquivoNome}</p>
@@ -154,7 +154,11 @@ export function StepBio({
             onChange={(e) => setPasted(e.target.value)}
           />
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => void runExtraction({ texto: pasted })} disabled={busy}>
+            <Button
+              variant="outline"
+              onClick={() => void runExtraction({ texto: pasted })}
+              disabled={busy}
+            >
               <Sparkles className="mr-1 h-4 w-4" />
               {busy ? "A ler o exame…" : "Extrair do texto"}
             </Button>
@@ -168,11 +172,11 @@ export function StepBio({
             >
               {draft.semExame ? "Voltar a usar exame" : "Prosseguir sem exame"}
             </Button>
-
           </div>
           {draft.semExame && (
             <p className="rounded-md border border-gold/50 bg-gold-soft/30 p-3 text-xs text-foreground">
-              Esta jornada segue sem exame de bioimpedância. Nenhum resultado será inventado no documento.
+              Esta jornada segue sem exame de bioimpedância. Nenhum resultado será inventado no
+              documento.
             </p>
           )}
         </CardContent>
@@ -183,20 +187,42 @@ export function StepBio({
           <Card>
             <CardHeader>
               <CardTitle className="font-serif text-xl">Campos do exame</CardTitle>
-              <CardDescription>Tudo editável. Campos vazios são simplesmente omitidos.</CardDescription>
+              <CardDescription>
+                Tudo editável. Campos vazios são simplesmente omitidos.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <FieldGrid>
-                <FieldRow id="b-pac" label="Paciente" value={draft.paciente} onChange={(v) => setField("paciente", v)} />
+                <FieldRow
+                  id="b-pac"
+                  label="Paciente"
+                  value={draft.paciente}
+                  onChange={(v) => setField("paciente", v)}
+                />
                 <FieldRow
                   id="b-data"
                   label="Data e hora do exame"
                   value={draft.dataHoraExame}
                   onChange={(v) => setField("dataHoraExame", v)}
                 />
-                <FieldRow id="b-sexo" label="Sexo" value={draft.sexo} onChange={(v) => setField("sexo", v)} />
-                <FieldRow id="b-idade" label="Idade (anos)" value={draft.idadeAnos} onChange={(v) => setField("idadeAnos", v)} />
-                <FieldRow id="b-altura" label="Altura (m)" value={draft.alturaM} onChange={(v) => setField("alturaM", v)} />
+                <FieldRow
+                  id="b-sexo"
+                  label="Sexo"
+                  value={draft.sexo}
+                  onChange={(v) => setField("sexo", v)}
+                />
+                <FieldRow
+                  id="b-idade"
+                  label="Idade (anos)"
+                  value={draft.idadeAnos}
+                  onChange={(v) => setField("idadeAnos", v)}
+                />
+                <FieldRow
+                  id="b-altura"
+                  label="Altura (m)"
+                  value={draft.alturaM}
+                  onChange={(v) => setField("alturaM", v)}
+                />
                 <FieldRow
                   id="b-tmb"
                   label="Taxa metabólica basal (kcal)"
@@ -228,7 +254,9 @@ export function StepBio({
           <Card>
             <CardHeader>
               <CardTitle className="font-serif text-xl">Histórico</CardTitle>
-              <CardDescription>Data | Peso (kg) | Massa muscular esquelética (kg) | PGC (%)</CardDescription>
+              <CardDescription>
+                Data | Peso (kg) | Massa muscular esquelética (kg) | PGC (%)
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {draft.historico.map((row, index) => (
@@ -280,7 +308,10 @@ export function StepBio({
                     size="sm"
                     className="mt-3 text-muted-foreground"
                     onClick={() =>
-                      onDraftChange({ ...draft, historico: draft.historico.filter((_, i) => i !== index) })
+                      onDraftChange({
+                        ...draft,
+                        historico: draft.historico.filter((_, i) => i !== index),
+                      })
                     }
                   >
                     <Trash2 className="mr-1 h-4 w-4" /> Remover linha

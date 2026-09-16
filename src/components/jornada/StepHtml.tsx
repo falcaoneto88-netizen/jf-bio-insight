@@ -59,7 +59,9 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
     }
   };
 
-  const run = async (action: (result: { html: string; fileName?: string | null }) => Promise<void> | void) => {
+  const run = async (
+    action: (result: { html: string; fileName?: string | null }) => Promise<void> | void,
+  ) => {
     const requestId = ++requestRef.current;
     setBusy(true);
     setErro(null);
