@@ -415,15 +415,21 @@
               "type": "string",
               "enum": [
                 "hipertrofia",
-                "recomposicao"
-              ],
-              "description": "Emagrecimento tem modelo pendente de definição e não é aceite."
+                "recomposicao",
+                "emagrecimento"
+              ]
             },
             "instrucoes": {
               "default": "",
               "description": "Instruções clínicas do profissional.",
               "type": "string",
               "maxLength": 6000
+            },
+            "numeroDeRefeicoes": {
+              "description": "Se omitido, usa o número já revisto na aplicação.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
             }
           },
           "required": [
