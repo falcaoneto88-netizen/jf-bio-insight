@@ -14,7 +14,13 @@ import { StepHtml } from "@/components/jornada/StepHtml";
 import { StepProtocolo } from "@/components/jornada/StepProtocolo";
 import { StepRevisao } from "@/components/jornada/StepRevisao";
 import { Button } from "@/components/ui/button";
-import { guardarJornada, obterJornada, previewHtml } from "@/lib/journey.functions";
+import {
+  abrirAnaliseDaConsulta,
+  guardarJornada,
+  obterJornada,
+  previewHtml,
+} from "@/lib/journey.functions";
+import { prepareConsultation } from "@/lib/consultations/api";
 import {
   JOURNEY_STEPS,
   emptyProtocolo,
@@ -31,7 +37,8 @@ export const Route = createFileRoute("/_authenticated/jornada/$id")({
       { title: "Atendimento — Jornada clínica Dr. João Falcão" },
       {
         name: "description",
-        content: "Conduza o atendimento por anamnese, bioimpedância, revisão, protocolo, aprovação e documento final.",
+        content:
+          "Conduza o atendimento por anamnese, bioimpedância, revisão, protocolo, aprovação e documento final.",
       },
       { property: "og:title", content: "Atendimento — Jornada clínica Dr. João Falcão" },
       { property: "og:description", content: "Etapas do atendimento clínico." },
@@ -62,6 +69,7 @@ function JornadaDetail({ id }: { id: string }) {
   const obter = useServerFn(obterJornada);
   const guardar = useServerFn(guardarJornada);
   const preview = useServerFn(previewHtml);
+  const atualizar = useServerFn(abrirAnaliseDaConsulta);
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["jornada", id],
@@ -76,14 +84,49 @@ function JornadaDetail({ id }: { id: string }) {
   const [bio, setBio] = useState<Bio | null>(null);
   const [protocolo, setProtocolo] = useState<Protocolo | null>(null);
   const [saving, setSaving] = useState(false);
+  const [draftVersion, setDraftVersion] = useState<number | null>(null);
   const [initialised, setInitialised] = useState(false);
   const [html, setHtml] = useState<string | null>(null);
   const [htmlHash, setHtmlHash] = useState<string | null>(null);
   const [htmlVersion, setHtmlVersion] = useState<number | null>(null);
   const [htmlError, setHtmlError] = useState<string | null>(null);
+  async function refreshFromConsultation() {
+    if (!journey?.consultationId || saving) return;
+    if (
+      !window.confirm(
+        "Atualizar a análise com os dados salvos na consulta? Os ajustes desta análise serão substituídos, o protocolo voltará a rascunho e será necessária nova revisão. As aprovações anteriores serão preservadas.",
+      )
+    )
+      return;
+    setSaving(true);
+    try {
+      await prepareConsultation(journey.consultationId);
+      const result = await atualizar({
+        data: {
+          consultationId: journey.consultationId,
+          refresh: { id, expectedVersion: journey.version },
+        },
+      });
+      setDraftVersion(result.jornada.version);
+      setAnamnese(result.jornada.anamnese);
+      setBio(result.jornada.bio);
+      setProtocolo(result.jornada.protocolo ?? emptyProtocolo);
+      setHtml(null);
+      setHtmlHash(null);
+      setHtmlVersion(null);
+      setStep(1);
+      await refetch();
+      toast.success("Dados da consulta carregados. Confira e confirme a revisão.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     if (!journey || initialised) return;
+    setDraftVersion(journey.version);
     setAnamnese(journey.anamnese);
     setBio(journey.bio);
     setProtocolo(journey.protocolo ?? emptyProtocolo);
@@ -94,7 +137,7 @@ function JornadaDetail({ id }: { id: string }) {
   const maxReached = useMemo<JourneyStep>(() => {
     if (!journey) return 1;
     const natural = statusToStep(journey);
-    return (Math.max(natural, step) as JourneyStep);
+    return Math.max(natural, step) as JourneyStep;
   }, [journey, step]);
 
   const journeyVersion = journey?.version ?? null;
@@ -126,12 +169,16 @@ function JornadaDetail({ id }: { id: string }) {
     };
   }, [step, journeyVersion, id, preview]);
 
-
-  const save = async (patch: Parameters<typeof guardarJornada>[0] extends never ? never : Record<string, unknown>) => {
+  const save = async (
+    patch: Parameters<typeof guardarJornada>[0] extends never ? never : Record<string, unknown>,
+  ) => {
     if (!journey) return false;
     setSaving(true);
     try {
-      await guardar({ data: { id, expectedVersion: journey.version, ...patch } as never });
+      const result = await guardar({
+        data: { id, expectedVersion: draftVersion, ...patch } as never,
+      });
+      setDraftVersion(result.jornada.version);
       await refetch();
       return true;
     } catch (err) {
@@ -143,7 +190,11 @@ function JornadaDetail({ id }: { id: string }) {
   };
 
   if (isPending) {
-    return <Shell><p className="text-sm text-muted-foreground">A carregar atendimento…</p></Shell>;
+    return (
+      <Shell>
+        <p className="text-sm text-muted-foreground">A carregar atendimento…</p>
+      </Shell>
+    );
   }
 
   if (isError || !journey || !anamnese || !bio) {
@@ -168,22 +219,72 @@ function JornadaDetail({ id }: { id: string }) {
     <Shell>
       <div className="flex flex-col gap-4">
         <Button asChild variant="ghost" size="sm" className="self-start px-0 text-muted-foreground">
-          <Link to="/jornada">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Todos os atendimentos
+          <Link to="/consulta" search={{ id: journey.consultationId ?? undefined }}>
+            <ArrowLeft className="mr-1 h-4 w-4" /> Voltar à Consulta do paciente
           </Link>
         </Button>
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Paciente</p>
-          <h1 className="font-serif text-3xl text-foreground">{journey.patientName || "Sem nome"}</h1>
+          <h1 className="font-serif text-3xl text-foreground">
+            {journey.patientName || "Sem nome"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Etapa {step} de 6 · {currentLabel} · versão {journey.version}
             {journey.approvedVersion === journey.version ? " (aprovada)" : ""}
           </p>
         </div>
+        {draftVersion !== journey.version && (
+          <div role="alert" className="space-y-2 rounded border border-amber-500 p-4">
+            <p>Esta análise foi alterada em outra janela. Seu rascunho local foi preservado.</p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Descartar os ajustes locais e carregar a versão salva desta análise?",
+                  )
+                ) {
+                  setAnamnese(journey.anamnese);
+                  setBio(journey.bio);
+                  setProtocolo(journey.protocolo ?? emptyProtocolo);
+                  setDraftVersion(journey.version);
+                  setStep(statusToStep(journey));
+                }
+              }}
+            >
+              Carregar versão salva
+            </Button>
+          </div>
+        )}
         <JourneyStepper current={step} maxReached={maxReached} onSelect={setStep} />
+        {journey.consultationId && (
+          <aside
+            className={`space-y-3 rounded border p-4 text-sm ${journey.sourceCurrent === false ? "border-amber-500 bg-amber-50 text-amber-950" : "border-gold/50 bg-gold-soft/20"}`}
+          >
+            <p role="status">
+              {journey.sourceCurrent === false
+                ? "A consulta recebeu novos dados. Atualize esta análise antes de salvar, gerar ou aprovar o protocolo."
+                : "Anamnese e exame carregados da consulta. Revise as respostas existentes; o paciente não precisa preencher novamente."}
+            </p>
+            <p>
+              Esta análise usa uma versão dos dados da consulta. Os ajustes feitos aqui compõem o
+              protocolo; para corrigir a ficha e o PDF de bioimpedância, volte à consulta.
+            </p>
+            <Button
+              variant="outline"
+              disabled={saving}
+              onClick={() => void refreshFromConsultation()}
+            >
+              Atualizar com dados da consulta
+            </Button>
+          </aside>
+        )}
       </div>
 
-      <div className="mt-8">
+      <fieldset
+        disabled={saving || journey.sourceCurrent === false || draftVersion !== journey.version}
+        className="mt-8 min-w-0"
+      >
         {step === 1 && (
           <StepAnamnese
             journey={journey}
@@ -237,12 +338,24 @@ function JornadaDetail({ id }: { id: string }) {
             saving={saving}
             onBack={() => setStep(3)}
             onRefresh={() => {
-              setInitialised(false);
-              void refetch();
+              void refetch().then((result) => {
+                const updated = result.data?.jornada;
+                if (!updated) return;
+                setAnamnese(updated.anamnese);
+                setBio(updated.bio);
+                setProtocolo(updated.protocolo ?? emptyProtocolo);
+                setDraftVersion(updated.version);
+                setStep(statusToStep(updated));
+              });
             }}
-            onSave={() => void save({ protocolo: protocolo ?? emptyProtocolo, status: "protocolo" })}
+            onSave={() =>
+              void save({ protocolo: protocolo ?? emptyProtocolo, status: "protocolo" })
+            }
             onContinue={async () => {
-              const ok = await save({ protocolo: protocolo ?? emptyProtocolo, status: "protocolo" });
+              const ok = await save({
+                protocolo: protocolo ?? emptyProtocolo,
+                status: "protocolo",
+              });
               if (ok) setStep(5);
             }}
           />
@@ -256,7 +369,6 @@ function JornadaDetail({ id }: { id: string }) {
             htmlHash={htmlHash}
             htmlVersion={htmlVersion}
             htmlError={htmlError}
-
             onBack={() => setStep(4)}
             onApproved={async () => {
               await refetch();
@@ -266,7 +378,7 @@ function JornadaDetail({ id }: { id: string }) {
         )}
 
         {step === 6 && <StepHtml journey={journey} onBack={() => setStep(4)} />}
-      </div>
+      </fieldset>
     </Shell>
   );
 }

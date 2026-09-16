@@ -51,7 +51,10 @@ async function core() {
 }
 
 const idSchema = z.object({ id: z.string().uuid() });
-const versionedSchema = z.object({ id: z.string().uuid(), expectedVersion: z.number().int().min(1) });
+const versionedSchema = z.object({
+  id: z.string().uuid(),
+  expectedVersion: z.number().int().min(1),
+});
 
 /* ------------------------------- leitura ------------------------------ */
 
@@ -71,6 +74,40 @@ export const obterJornada = createServerFn({ method: "POST" })
     const { getJourney, reviewIssues } = await core();
     const jornada = await getJourney(context.supabase, context.userId, data.id);
     return { jornada, issues: reviewIssues(jornada) };
+  });
+
+const consultationSchema = z.object({ consultationId: z.string().uuid() });
+export const obterAnaliseDaConsulta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => consultationSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as Ctx);
+    const { findConsultationJourney } = await import("./journey/consultation.server");
+    return {
+      jornada: await findConsultationJourney(context.supabase, context.userId, data.consultationId),
+    };
+  });
+
+export const abrirAnaliseDaConsulta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    consultationSchema
+      .extend({
+        refresh: versionedSchema.optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as Ctx);
+    const { openConsultationJourney } = await import("./journey/consultation.server");
+    return {
+      jornada: await openConsultationJourney(
+        context.supabase,
+        context.userId,
+        data.consultationId,
+        data.refresh,
+      ),
+    };
   });
 
 /* ------------------------------- escrita ------------------------------ */
@@ -165,13 +202,13 @@ export const extrairBioimpedancia = createServerFn({ method: "POST" })
     const { extrairBioimpedanciaSource } = await import("@/lib/journey/agent.server");
     const source =
       data.fileBase64 && data.mimeType
-        ? ({
+        ? {
             kind: "file" as const,
             fileBase64: data.fileBase64,
             mimeType: data.mimeType,
             fileName: data.fileName ?? "exame",
-          })
-        : ({ kind: "text" as const, text: data.texto ?? "" });
+          }
+        : { kind: "text" as const, text: data.texto ?? "" };
     return extrairBioimpedanciaSource(source, jornada.patientName);
   });
 
@@ -189,14 +226,22 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    await (await core()).consumeAiQuota(context.userId);
     const { getJourney, patchJourney, reviewIssues } = await core();
     const jornada = await getJourney(context.supabase, context.userId, data.id);
     if (!jornada.confirmations.revisao) {
       return { data: null, error: "Confirme a revisão dos dados antes de preparar o protocolo." };
     }
 
-    const { prepararProtocoloRascunho, anamneseParaTexto } = await import("@/lib/journey/agent.server");
+    const { assertCurrentConsultationSource } = await import("./journey/consultation.server");
+    assertCurrentConsultationSource(jornada);
+    if (jornada.version !== data.expectedVersion)
+      throw new Error("A análise mudou. Reabra a consulta antes de gerar o protocolo.");
+    const blocking = reviewIssues(jornada).blocking;
+    if (blocking.length) return { data: null, error: blocking.join(" ") };
+
+    await (await core()).consumeAiQuota(context.userId);
+    const { prepararProtocoloRascunho, anamneseParaTexto } =
+      await import("@/lib/journey/agent.server");
     const { computeEvolution } = await import("@/lib/journey/evolution");
     const evolution = computeEvolution(jornada.bio);
     const { bioResumoTexto } = await core();
@@ -302,4 +347,3 @@ export const previewHtml = createServerFn({ method: "POST" })
       };
     }
   });
-

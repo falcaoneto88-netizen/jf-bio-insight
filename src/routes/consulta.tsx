@@ -1,6 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { abrirAnaliseDaConsulta, obterAnaliseDaConsulta } from "@/lib/journey.functions";
 import { BrandHeader } from "@/components/BrandHeader";
 import { GhlIntakeSettings } from "@/components/GhlIntakeSettings";
 import { Button } from "@/components/ui/button";
@@ -35,12 +38,8 @@ function ConsultationPage() {
         </Link>
         <h1 className="font-serif text-3xl">Consulta do paciente</h1>
         <p className="text-muted-foreground">
-          Anamnese, bioimpedância e relatório no mesmo atendimento.
+          Anamnese, bioimpedância, análise e relatório no mesmo atendimento.
         </p>
-        <GhlIntakeSettings
-          key={id ?? "list"}
-          consultationId={id && z.uuid().safeParse(id).success ? id : undefined}
-        />
         {id ? (
           z.uuid().safeParse(id).success ? (
             <ConsultationDetail key={id} id={id} />
@@ -55,6 +54,15 @@ function ConsultationPage() {
         ) : (
           <ConsultationList />
         )}
+        <details className="rounded border p-4">
+          <summary className="cursor-pointer font-medium">Integração com agendamentos</summary>
+          <div className="mt-4">
+            <GhlIntakeSettings
+              key={id ?? "list"}
+              consultationId={id && z.uuid().safeParse(id).success ? id : undefined}
+            />
+          </div>
+        </details>
       </main>
     </div>
   );
@@ -108,6 +116,14 @@ function ConsultationList() {
   }
   return (
     <>
+      <nav aria-label="Históricos" className="flex flex-wrap gap-4 text-sm">
+        <Link to="/history" className="underline">
+          Histórico de relatórios
+        </Link>
+        <Link to="/jornada" className="underline">
+          Minhas análises e protocolos anteriores
+        </Link>
+      </nav>
       {error && (
         <div role="alert" className="rounded border border-destructive p-4">
           {error}{" "}
@@ -242,6 +258,30 @@ function ConsultationDetail({ id }: { id: string }) {
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Submission | null>(null);
+  const obterAnalise = useServerFn(obterAnaliseDaConsulta);
+  const abrirAnalise = useServerFn(abrirAnaliseDaConsulta);
+  const [openingAnalysis, setOpeningAnalysis] = useState(false);
+  const analysisQuery = useQuery({
+    queryKey: ["consulta-analise", id, data?.draft.version, data?.submissions[0]?.id],
+    queryFn: () => obterAnalise({ data: { consultationId: id } }),
+    enabled: !!data,
+  });
+  const analysis = analysisQuery.data?.jornada;
+  async function openAnalysis() {
+    if (openingAnalysis) return;
+    setOpeningAnalysis(true);
+    setError("");
+    try {
+      const loaded = await prepareConsultation(id);
+      setData(loaded);
+      const result = await abrirAnalise({ data: { consultationId: id } });
+      await navigate({ to: "/jornada/$id", params: { id: result.jornada.id } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível abrir a análise.");
+    } finally {
+      setOpeningAnalysis(false);
+    }
+  }
   useEffect(() => {
     let live = true;
     setError("");
@@ -261,16 +301,24 @@ function ConsultationDetail({ id }: { id: string }) {
       live = false;
     };
   }, [id, attempt]);
-  function openWorkspace(target: "/upload" | "/clinical-form" | "/review", loaded: Loaded = data!) {
+  function openWorkspace(
+    target: "/upload" | "/body-composition" | "/clinical-form" | "/review",
+    loaded: Loaded = data!,
+  ) {
     const store = useReportStore.getState();
-    if (store.consultation?.id !== id) {
-      if (
-        (store.bodyComposition || store.clinicalData) &&
-        !window.confirm("Abrir esta consulta substituirá o rascunho local atual. Continuar?")
+    const differentConsultation = store.consultation?.id !== id;
+    const differentDraft =
+      JSON.stringify(store.bodyComposition) !== JSON.stringify(loaded.draft.body_composition) ||
+      JSON.stringify(store.clinicalData) !== JSON.stringify(loaded.draft.clinical_data);
+    if (
+      (store.bodyComposition || store.clinicalData) &&
+      (differentConsultation || differentDraft) &&
+      !window.confirm(
+        "Carregar os dados salvos desta consulta substituirá os dados em edição neste navegador. Continuar?",
       )
-        return;
-      store.reset();
-    }
+    )
+      return;
+    if (differentConsultation) store.reset();
     useReportStore.setState({
       consultation: {
         id,
@@ -383,7 +431,7 @@ function ConsultationDetail({ id }: { id: string }) {
         </p>
       )}
       {notice && <p role="status">{notice}</p>}
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Anamnese</CardTitle>
@@ -467,6 +515,49 @@ function ConsultationDetail({ id }: { id: string }) {
             <Button onClick={() => openWorkspace("/upload")}>
               {data.draft.body_composition ? "Importar novo exame" : "Adicionar exame"}
             </Button>
+            {data.draft.body_composition && (
+              <Button variant="outline" onClick={() => openWorkspace("/body-composition")}>
+                Revisar exame salvo
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Análise</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>
+              {analysisQuery.isPending
+                ? "Conferindo análise…"
+                : analysisQuery.isError
+                  ? "Não foi possível carregar a análise."
+                  : !analysis
+                    ? "Ainda não iniciada"
+                    : analysis.sourceCurrent === false
+                      ? "Dados da consulta atualizados — revisão necessária"
+                      : analysis.approvedVersion === analysis.version
+                        ? "Protocolo aprovado"
+                        : "Análise em andamento"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Aproveita a anamnese e o exame desta consulta. Revise os dados e prepare o protocolo.
+            </p>
+            {analysisQuery.isError && (
+              <Button variant="outline" onClick={() => void analysisQuery.refetch()}>
+                Tentar novamente
+              </Button>
+            )}
+            <Button
+              disabled={openingAnalysis || analysisQuery.isPending || analysisQuery.isError}
+              onClick={() => void openAnalysis()}
+            >
+              {openingAnalysis ? "Abrindo…" : analysis ? "Continuar análise" : "Iniciar análise"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Sua análise permanece vinculada a este atendimento. O acesso continua restrito ao
+              profissional responsável.
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -479,12 +570,21 @@ function ConsultationDetail({ id }: { id: string }) {
                 ? `${data.reports.length} relatório(s) salvo(s)`
                 : "Ainda não gerado"}
             </p>
-            <Button
-              disabled={!data.draft.clinical_data}
-              onClick={() => openWorkspace("/clinical-form")}
-            >
+            <Button disabled={!data.draft.clinical_data} onClick={() => openWorkspace("/review")}>
+              Revisar e gerar PDF
+            </Button>
+            <Button variant="outline" onClick={() => openWorkspace("/clinical-form")}>
               Revisar ficha clínica
             </Button>
+            {analysis && (
+              <Button asChild variant="outline">
+                <Link to="/jornada/$id" params={{ id: analysis.id }}>
+                  {analysis.approvedVersion === analysis.version && analysis.sourceCurrent !== false
+                    ? "Abrir protocolo aprovado"
+                    : "Revisar protocolo para aprovação"}
+                </Link>
+              </Button>
+            )}
             <p className="text-xs text-muted-foreground">
               {data.draft.anamnesis_id
                 ? "As respostas recebidas já estão na ficha. Revise e complete somente o que faltar."

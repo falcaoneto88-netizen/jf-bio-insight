@@ -266,6 +266,10 @@ export const JOURNEY_STEPS: { step: JourneyStep; label: string; short: string }[
 
 export type Journey = {
   id: string;
+  consultationId?: string | null;
+  sourceDraftVersion?: number | null;
+  sourceReceivedId?: string | null;
+  sourceCurrent?: boolean;
   patientName: string;
   status: string;
   version: number;
@@ -285,6 +289,7 @@ export type Journey = {
 
 export type JourneySummary = {
   id: string;
+  consultationId?: string | null;
   patientName: string;
   status: string;
   version: number;

@@ -15,14 +15,39 @@ const GROUPS: { key: GroupKey; n: number; label: string; multiline?: string[] }[
   { key: "identificacao", n: 1, label: "Identificação e contexto familiar", multiline: ["outras"] },
   { key: "rotinaProfissional", n: 2, label: "Rotina profissional", multiline: ["observacoes"] },
   { key: "sono", n: 3, label: "Sono e disposição", multiline: ["observacoes"] },
-  { key: "historicoClinico", n: 4, label: "Histórico clínico", multiline: ["doencas", "familiar", "medicacoesAnteriores", "outras"] },
+  {
+    key: "historicoClinico",
+    n: 4,
+    label: "Histórico clínico",
+    multiline: ["doencas", "familiar", "medicacoesAnteriores", "outras"],
+  },
   { key: "alergias", n: 5, label: "Alergias", multiline: ["medicamentos", "alimentares"] },
-  { key: "cirurgias", n: 7, label: "Cirurgias e procedimentos", multiline: ["cirurgias", "estetica", "intercorrencias"] },
+  {
+    key: "cirurgias",
+    n: 7,
+    label: "Cirurgias e procedimentos",
+    multiline: ["cirurgias", "estetica", "intercorrencias"],
+  },
   { key: "emocional", n: 8, label: "Saúde emocional e cognitiva" },
   { key: "habitos", n: 9, label: "Hábitos" },
-  { key: "alimentacao", n: 10, label: "Alimentação, hidratação e suplementação", multiline: ["padrao", "suplementos"] },
-  { key: "queixaObjetivos", n: 11, label: "Queixa principal e objetivos", multiline: ["queixa", "objetivo", "evolucao", "tratamentos", "expectativas"] },
-  { key: "observacoesClinicas", n: 12, label: "Observações clínicas", multiline: ["adicionais", "pontosAtencao"] },
+  {
+    key: "alimentacao",
+    n: 10,
+    label: "Alimentação, hidratação e suplementação",
+    multiline: ["padrao", "suplementos"],
+  },
+  {
+    key: "queixaObjetivos",
+    n: 11,
+    label: "Queixa principal e objetivos",
+    multiline: ["queixa", "objetivo", "evolucao", "tratamentos", "expectativas"],
+  },
+  {
+    key: "observacoesClinicas",
+    n: 12,
+    label: "Observações clínicas",
+    multiline: ["adicionais", "pontosAtencao"],
+  },
 ];
 
 export function StepAnamnese({
@@ -77,35 +102,38 @@ export function StepAnamnese({
       onDraftChange(result.data);
       toast.success("Anamnese organizada. Reveja e ajuste o que for preciso.");
     } catch (err) {
-      if (mountedRef.current && requestId === requestRef.current) toast.error((err as Error).message);
+      if (mountedRef.current && requestId === requestRef.current)
+        toast.error((err as Error).message);
     } finally {
       if (mountedRef.current && requestId === requestRef.current) setOrganizing(false);
     }
   };
 
-
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-serif text-xl">Colar anamnese</CardTitle>
-          <CardDescription>
-            Cole o texto da consulta e deixe o agente organizar nos campos. O resultado fica editável.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            rows={6}
-            value={pasted}
-            placeholder="Cole aqui as suas anotações da consulta…"
-            onChange={(e) => setPasted(e.target.value)}
-          />
-          <Button variant="outline" onClick={organizar} disabled={organizing}>
-            <Sparkles className="mr-1 h-4 w-4" />
-            {organizing ? "A organizar…" : "Organizar com agente"}
-          </Button>
-        </CardContent>
-      </Card>
+      {!journey.consultationId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-serif text-xl">Colar anamnese</CardTitle>
+            <CardDescription>
+              Cole o texto da consulta e deixe o agente organizar nos campos. O resultado fica
+              editável.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea
+              rows={6}
+              value={pasted}
+              placeholder="Cole aqui as suas anotações da consulta…"
+              onChange={(e) => setPasted(e.target.value)}
+            />
+            <Button variant="outline" onClick={organizar} disabled={organizing}>
+              <Sparkles className="mr-1 h-4 w-4" />
+              {organizing ? "A organizar…" : "Organizar com agente"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -117,13 +145,17 @@ export function StepAnamnese({
               id="h-paciente"
               label="Paciente"
               value={draft.header.paciente}
-              onChange={(v) => onDraftChange({ ...draft, header: { ...draft.header, paciente: v } })}
+              onChange={(v) =>
+                onDraftChange({ ...draft, header: { ...draft.header, paciente: v } })
+              }
             />
             <FieldRow
               id="h-data"
               label="Data da consulta (DD/MM/AAAA)"
               value={draft.header.dataConsulta}
-              onChange={(v) => onDraftChange({ ...draft, header: { ...draft.header, dataConsulta: v } })}
+              onChange={(v) =>
+                onDraftChange({ ...draft, header: { ...draft.header, dataConsulta: v } })
+              }
             />
             <FieldRow
               id="h-nasc"
@@ -137,7 +169,9 @@ export function StepAnamnese({
               id="h-tel"
               label="Telefone"
               value={draft.header.telefone}
-              onChange={(v) => onDraftChange({ ...draft, header: { ...draft.header, telefone: v } })}
+              onChange={(v) =>
+                onDraftChange({ ...draft, header: { ...draft.header, telefone: v } })
+              }
             />
             <FieldRow
               id="h-email"

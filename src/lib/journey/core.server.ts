@@ -70,6 +70,10 @@ export function rowToJourney(row: Record<string, unknown>): Journey {
   const confirmations = confirmationsSchema.safeParse(row["confirmations"] ?? {});
   return {
     id: String(row["id"]),
+    consultationId: row["consultation_id"] == null ? null : String(row["consultation_id"]),
+    sourceDraftVersion:
+      row["source_draft_version"] == null ? null : Number(row["source_draft_version"]),
+    sourceReceivedId: row["source_received_id"] == null ? null : String(row["source_received_id"]),
     patientName: String(row["patient_name"] ?? ""),
     status: String(row["status"] ?? "anamnese"),
     version: Number(row["version"] ?? 1),
@@ -97,13 +101,14 @@ export function rowToJourney(row: Record<string, unknown>): Journey {
 export async function listJourneys(sb: Sb, ownerId: string, limit = 50): Promise<JourneySummary[]> {
   const { data, error } = await sb
     .from(TABLE)
-    .select("id, patient_name, status, version, approved_version, updated_at")
+    .select("id, patient_name, status, version, approved_version, updated_at, consultation_id")
     .eq("owner_id", ownerId)
     .order("updated_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 100));
   if (error) throw new JourneyError("DB", error.message);
   return (data ?? []).map((row: Record<string, unknown>) => ({
     id: String(row["id"]),
+    consultationId: row["consultation_id"] == null ? null : String(row["consultation_id"]),
     patientName: String(row["patient_name"] ?? ""),
     status: String(row["status"] ?? ""),
     version: Number(row["version"] ?? 1),
@@ -113,10 +118,20 @@ export async function listJourneys(sb: Sb, ownerId: string, limit = 50): Promise
 }
 
 export async function getJourney(sb: Sb, ownerId: string, id: string): Promise<Journey> {
-  const { data, error } = await sb.from(TABLE).select("*").eq("id", id).eq("owner_id", ownerId).maybeSingle();
+  const { data, error } = await sb
+    .from(TABLE)
+    .select("*")
+    .eq("id", id)
+    .eq("owner_id", ownerId)
+    .maybeSingle();
   if (error) throw new JourneyError("DB", error.message);
   if (!data) throw new JourneyError("NOT_FOUND", "Jornada não encontrada.");
-  return rowToJourney(data as Record<string, unknown>);
+  const journey = rowToJourney(data as Record<string, unknown>);
+  if (journey.consultationId) {
+    const { consultationSourceIsCurrent } = await import("./consultation.server");
+    journey.sourceCurrent = await consultationSourceIsCurrent(sb, journey);
+  }
+  return journey;
 }
 
 /* ------------------------------ escritas ----------------------------- */
@@ -130,10 +145,17 @@ async function writer(): Promise<Sb> {
   return supabaseAdmin as unknown as Sb;
 }
 
-export async function createJourney(sb: Sb, ownerId: string, patientName: string): Promise<Journey> {
+export async function createJourney(
+  sb: Sb,
+  ownerId: string,
+  patientName: string,
+): Promise<Journey> {
   const name = patientName.trim();
   if (!name) throw new JourneyError("VALIDATION", "Indique o nome do paciente.");
-  const anamnese: Anamnese = { ...emptyAnamnese, header: { ...emptyAnamnese.header, paciente: name, dataConsulta: todayBr() } };
+  const anamnese: Anamnese = {
+    ...emptyAnamnese,
+    header: { ...emptyAnamnese.header, paciente: name, dataConsulta: todayBr() },
+  };
   const hash = await contentHash({ patientName: name, anamnese, bio: emptyBio, protocolo: null });
   const db = await writer();
   const { data, error } = await db
@@ -176,6 +198,8 @@ export async function patchJourney(
   patch: JourneyPatch,
 ): Promise<Journey> {
   const current = await getJourney(sb, ownerId, id);
+  const { assertCurrentConsultationSource } = await import("./consultation.server");
+  assertCurrentConsultationSource(current);
   if (current.version !== expectedVersion) {
     throw new JourneyError(
       "VERSAO_DESATUALIZADA",
@@ -185,8 +209,8 @@ export async function patchJourney(
 
   const changedAnamnese = patch.anamnese !== undefined;
   const changedBio = patch.bio !== undefined;
-  const changedName = patch.patientName !== undefined && patch.patientName.trim() !== current.patientName;
-
+  const changedName =
+    patch.patientName !== undefined && patch.patientName.trim() !== current.patientName;
 
   const patientName = (patch.patientName ?? current.patientName).trim();
   const anamnese = patch.anamnese ?? current.anamnese;
@@ -197,9 +221,13 @@ export async function patchJourney(
     ...current.confirmations,
     ...(patch.confirmations ?? {}),
   };
-  if (changedAnamnese && patch.confirmations?.anamnese === undefined) confirmations.anamnese = false;
+  if (changedAnamnese && patch.confirmations?.anamnese === undefined)
+    confirmations.anamnese = false;
   if (changedBio && patch.confirmations?.bio === undefined) confirmations.bio = false;
-  if ((changedAnamnese || changedBio || changedName) && patch.confirmations?.revisao === undefined) {
+  if (
+    (changedAnamnese || changedBio || changedName) &&
+    patch.confirmations?.revisao === undefined
+  ) {
     confirmations.revisao = false;
   }
 
@@ -223,10 +251,12 @@ export async function patchJourney(
   update["approved_at"] = null;
   update["approved_by"] = null;
   update["approved_hash"] = null;
-  if (current.status === "aprovado" && (patch.status === undefined || patch.status === "aprovado")) {
+  if (
+    current.status === "aprovado" &&
+    (patch.status === undefined || patch.status === "aprovado")
+  ) {
     update["status"] = "protocolo";
   }
-
 
   const db = await writer();
   const { data, error } = await db
@@ -265,6 +295,8 @@ export type JourneyIssues = {
 export function reviewIssues(journey: Journey): JourneyIssues {
   const blocking: string[] = [];
   const warnings: string[] = [];
+  if (journey.consultationId && journey.sourceCurrent === false)
+    blocking.push("A consulta recebeu novos dados. Atualize a análise antes de continuar.");
 
   if (!journey.patientName.trim()) blocking.push("Nome do paciente em falta.");
 
@@ -281,24 +313,30 @@ export function reviewIssues(journey: Journey): JourneyIssues {
         `Identificação incompatível entre a jornada ("${journey.patientName}") e o exame ("${bioName}").`,
       );
     }
-    if (journey.bio.identityReview) blocking.push("Exame marcado para revisão de identidade (NEEDS_IDENTITY_REVIEW).");
+    if (journey.bio.identityReview)
+      blocking.push("Exame marcado para revisão de identidade (NEEDS_IDENTITY_REVIEW).");
   }
 
-  if (!journey.anamnese.queixaObjetivos.queixa.trim()) warnings.push("Queixa principal não registada.");
-  if (!journey.anamnese.queixaObjetivos.objetivo.trim()) warnings.push("Objetivo do paciente não registado.");
+  if (!journey.anamnese.queixaObjetivos.queixa.trim())
+    warnings.push("Queixa principal não registada.");
+  if (!journey.anamnese.queixaObjetivos.objetivo.trim())
+    warnings.push("Objetivo do paciente não registado.");
   if (!journey.confirmations.anamnese) warnings.push("Anamnese ainda não confirmada.");
-  if (!journey.bio.semExame && !journey.confirmations.bio) warnings.push("Bioimpedância ainda não confirmada.");
+  if (!journey.bio.semExame && !journey.confirmations.bio)
+    warnings.push("Bioimpedância ainda não confirmada.");
 
   if (journey.bio.semExame) {
     warnings.push("Jornada a seguir sem exame de bioimpedância (escolha explícita).");
   } else {
     const evolution = computeEvolution(journey.bio);
-    if (!evolution.hasTrend) warnings.push("Menos de duas datas confirmadas: sem tendência de evolução.");
+    if (!evolution.hasTrend)
+      warnings.push("Menos de duas datas confirmadas: sem tendência de evolução.");
     if (evolution.ignoredDates.length) {
       warnings.push(`Datas ilegíveis no histórico: ${evolution.ignoredDates.join(", ")}.`);
     }
     // Valores diferentes na MESMA data nunca são escolhidos em silêncio.
-    for (const conflito of evolution.conflicts) blocking.push(`Conflito no histórico — ${conflito}`);
+    for (const conflito of evolution.conflicts)
+      blocking.push(`Conflito no histórico — ${conflito}`);
     if (evolution.ignoredDatesWithValues.length) {
       blocking.push(
         `Datas inválidas com valores registados (corrija ou remova): ${evolution.ignoredDatesWithValues.join(", ")}.`,
@@ -315,7 +353,11 @@ export function reviewIssues(journey: Journey): JourneyIssues {
     for (const duvida of journey.bio.duvidas) warnings.push(`Dúvida na extração: ${duvida}`);
   }
 
-  if (journey.protocolo && journey.protocolo.sections.length > 0 && !protocoloTemConteudoRenderizavel(journey.protocolo)) {
+  if (
+    journey.protocolo &&
+    journey.protocolo.sections.length > 0 &&
+    !protocoloTemConteudoRenderizavel(journey.protocolo)
+  ) {
     blocking.push("O protocolo tem secções, mas nenhum conteúdo que apareça no documento.");
   }
 
@@ -353,7 +395,10 @@ export function buildHtml(journey: Journey, kind: "draft" | "candidate" | "final
       );
     }
     if (journey.approvedHash !== journey.contentHash) {
-      throw new JourneyError("CONTEUDO_ALTERADO", "O conteúdo mudou desde a aprovação. Aprove novamente.");
+      throw new JourneyError(
+        "CONTEUDO_ALTERADO",
+        "O conteúdo mudou desde a aprovação. Aprove novamente.",
+      );
     }
   }
   return renderProtocolHtml({
@@ -372,11 +417,14 @@ export function buildHtml(journey: Journey, kind: "draft" | "candidate" | "final
  * Documento candidato a final: exatamente o que a pessoa vê antes de aprovar.
  * A aprovação fica ligada a este hash.
  */
-export async function finalCandidate(journey: Journey): Promise<{ html: string; htmlHash: string }> {
+export async function finalCandidate(
+  journey: Journey,
+): Promise<{ html: string; htmlHash: string }> {
+  const { assertCurrentConsultationSource } = await import("./consultation.server");
+  assertCurrentConsultationSource(journey);
   const html = buildHtml(journey, "candidate");
   return { html, htmlHash: await sha256Hex(html) };
 }
-
 
 export function htmlFileName(journey: Journey, kind: "draft" | "final"): string {
   const slug =
@@ -442,6 +490,8 @@ export async function approveJourney(
   expectedHtmlHash: string,
 ): Promise<Journey> {
   const current = await getJourney(sb, ownerId, id);
+  const { assertCurrentConsultationSource } = await import("./consultation.server");
+  assertCurrentConsultationSource(current);
   // O hash guardado é reconferido contra os dados atuais: um content_hash antigo
   // deixado para trás não pode validar dados alterados.
   const recomputed = await contentHash({
@@ -507,6 +557,9 @@ export async function approveJourney(
     htmlHash,
     meta: {
       version: current.version,
+      consultationId: current.consultationId ?? null,
+      sourceDraftVersion: current.sourceDraftVersion ?? null,
+      sourceReceivedId: current.sourceReceivedId ?? null,
       approvedBy: ownerId,
       template: DOC_TEMPLATE,
       generatedAt: stableDocDate(current),
@@ -522,14 +575,19 @@ export async function approveJourney(
     _snapshot: snapshot,
   });
   if (error) {
-    if (error.message.includes("VERSAO_DESATUALIZADA") || error.message.includes("CONTEUDO_ALTERADO")) {
-      throw new JourneyError("CONTEUDO_ALTERADO", "A versão mudou entretanto. Reveja e aprove novamente.");
+    if (
+      error.message.includes("VERSAO_DESATUALIZADA") ||
+      error.message.includes("CONTEUDO_ALTERADO")
+    ) {
+      throw new JourneyError(
+        "CONTEUDO_ALTERADO",
+        "A versão mudou entretanto. Reveja e aprove novamente.",
+      );
     }
     throw new JourneyError("DB", error.message);
   }
   return getJourney(sb, ownerId, id);
 }
-
 
 /**
  * HTML final = snapshot EXATO aprovado, guardado no momento da aprovação.
@@ -544,6 +602,8 @@ export async function approvedSnapshotHtml(
   ownerId: string,
   journey: Journey,
 ): Promise<string> {
+  const { assertCurrentConsultationSource } = await import("./consultation.server");
+  assertCurrentConsultationSource(journey);
   if (journey.approvedVersion == null || journey.approvedVersion !== journey.version) {
     throw new JourneyError(
       "NAO_APROVADO",
@@ -557,10 +617,16 @@ export async function approvedSnapshotHtml(
     protocolo: journey.protocolo,
   });
   if (recomputed !== journey.contentHash || journey.approvedHash !== recomputed) {
-    throw new JourneyError("CONTEUDO_ALTERADO", "O conteúdo mudou desde a aprovação. Aprove novamente.");
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "O conteúdo mudou desde a aprovação. Aprove novamente.",
+    );
   }
   if (journey.approvedBy !== ownerId) {
-    throw new JourneyError("NAO_APROVADO", "A aprovação registada não é desta conta. Aprove novamente.");
+    throw new JourneyError(
+      "NAO_APROVADO",
+      "A aprovação registada não é desta conta. Aprove novamente.",
+    );
   }
   const journeyApprovedAt = Date.parse(String(journey.approvedAt ?? ""));
   if (!Number.isFinite(journeyApprovedAt)) {
@@ -584,22 +650,33 @@ export async function approvedSnapshotHtml(
     throw new JourneyError("CONTEUDO_ALTERADO", "A aprovação registada é de outra versão.");
   }
   if (String(row["content_hash"]) !== journey.contentHash) {
-    throw new JourneyError("CONTEUDO_ALTERADO", "A aprovação registada não corresponde ao conteúdo atual.");
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "A aprovação registada não corresponde ao conteúdo atual.",
+    );
   }
   if (String(row["approved_by"] ?? "") !== ownerId) {
     throw new JourneyError("NAO_APROVADO", "Autor da aprovação diferente do titular autenticado.");
   }
   const rowApprovedAt = Date.parse(String(row["approved_at"] ?? ""));
   if (!Number.isFinite(rowApprovedAt) || rowApprovedAt !== journeyApprovedAt) {
-    throw new JourneyError("NAO_APROVADO", "Data de aprovação inválida ou divergente. Aprove novamente.");
+    throw new JourneyError(
+      "NAO_APROVADO",
+      "Data de aprovação inválida ou divergente. Aprove novamente.",
+    );
   }
 
   const snapshot = row["snapshot"] as Record<string, unknown> | null;
   const snapAnamnese = anamneseSchema.safeParse(snapshot?.["anamnese"] ?? {});
   const snapBio = bioSchema.safeParse(snapshot?.["bio"] ?? {});
-  const snapProtocolo = snapshot?.["protocolo"] ? protocolSchema.safeParse(snapshot["protocolo"]) : null;
+  const snapProtocolo = snapshot?.["protocolo"]
+    ? protocolSchema.safeParse(snapshot["protocolo"])
+    : null;
   if (!snapAnamnese.success || !snapBio.success || snapProtocolo?.success === false) {
-    throw new JourneyError("CONTEUDO_ALTERADO", "O registo de aprovação está inválido. Aprove novamente.");
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "O registo de aprovação está inválido. Aprove novamente.",
+    );
   }
   const snapshotHash = await contentHash({
     patientName: String(snapshot?.["patientName"] ?? ""),
@@ -608,7 +685,10 @@ export async function approvedSnapshotHtml(
     protocolo: snapProtocolo ? snapProtocolo.data : null,
   });
   if (snapshotHash !== journey.contentHash) {
-    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado não corresponde ao conteúdo atual.");
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "O documento aprovado não corresponde ao conteúdo atual.",
+    );
   }
 
   const meta = (snapshot?.["meta"] ?? null) as Record<string, unknown> | null;
@@ -626,14 +706,19 @@ export async function approvedSnapshotHtml(
     throw new JourneyError("NAO_APROVADO", "O documento aprovado indica outro autor.");
   }
   if (String(meta["template"] ?? "") !== DOC_TEMPLATE) {
-    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado usa outro modelo. Aprove novamente.");
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "O documento aprovado usa outro modelo. Aprove novamente.",
+    );
   }
 
   const html = typeof snapshot?.["html"] === "string" ? (snapshot["html"] as string) : "";
   if (!html) throw new JourneyError("NAO_APROVADO", "Snapshot aprovado sem documento.");
   if ((await sha256Hex(html)) !== htmlHash) {
-    throw new JourneyError("CONTEUDO_ALTERADO", "O documento aprovado foi alterado. Aprove novamente.");
+    throw new JourneyError(
+      "CONTEUDO_ALTERADO",
+      "O documento aprovado foi alterado. Aprove novamente.",
+    );
   }
   return html;
 }
-

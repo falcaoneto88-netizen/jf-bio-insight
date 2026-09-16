@@ -1,3 +1,4 @@
+import { ConsultationRequired } from "@/components/ConsultationRequired";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -152,7 +153,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AccessProvider>
         <AccessGate>
-          <Outlet />
+          <ConsultationRequired>
+            <Outlet />
+          </ConsultationRequired>
         </AccessGate>
       </AccessProvider>
       <Toaster />
