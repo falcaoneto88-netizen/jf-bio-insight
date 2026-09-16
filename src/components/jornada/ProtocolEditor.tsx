@@ -5,7 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { ProtocolBlock, ProtocolSection } from "@/lib/journey/types";
+import {
+  protocolSectionKindSchema,
+  type ProtocolBlock,
+  type ProtocolSection,
+} from "@/lib/journey/types";
 
 /** Editor clínico por secções, parágrafos, listas e tabelas — nunca JSON cru. */
 export function ProtocolEditor({
@@ -36,6 +40,28 @@ export function ProtocolEditor({
                 value={section.title}
                 onChange={(e) => updateSection(sIndex, { ...section, title: e.target.value })}
               />
+              <Label htmlFor={`kind-${sIndex}`}>Organização no documento</Label>
+              <select
+                id={`kind-${sIndex}`}
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                value={section.kind ?? ""}
+                onChange={(e) =>
+                  updateSection(sIndex, {
+                    ...section,
+                    kind: e.target.value
+                      ? protocolSectionKindSchema.parse(e.target.value)
+                      : undefined,
+                  })
+                }
+              >
+                <option value="">Reconhecer pelo título</option>
+                <option value="objective">Objetivo</option>
+                <option value="guidelines">Orientações e rotina</option>
+                <option value="meals">Plano alimentar</option>
+                <option value="substitutions">Substituições gerais</option>
+                <option value="prescription">Prescrição e suplementação</option>
+                <option value="other">Outra seção clínica</option>
+              </select>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -63,6 +89,7 @@ export function ProtocolEditor({
                   ["list", "Lista"],
                   ["table", "Tabela"],
                   ["patientNote", "Observação ao paciente"],
+                  ["meal", "Refeição"],
                 ] as const
               ).map(([type, label]) => (
                 <Button
@@ -95,7 +122,10 @@ export function ProtocolEditor({
       <Button
         variant="outline"
         onClick={() =>
-          onChange([...sections, { id: `s${sections.length + 1}-${Date.now()}`, title: "", blocks: [] }])
+          onChange([
+            ...sections,
+            { id: `s${sections.length + 1}-${Date.now()}`, title: "", blocks: [] },
+          ])
         }
       >
         <Plus className="mr-1 h-4 w-4" /> Adicionar secção
@@ -106,6 +136,14 @@ export function ProtocolEditor({
 
 function newBlock(type: ProtocolBlock["type"]): ProtocolBlock {
   switch (type) {
+    case "meal":
+      return {
+        type: "meal",
+        liquid: false,
+        foods: [{ name: "", quantity: "" }],
+        preparation: "",
+        substitutions: { protein: [], carbohydrate: [], fat: [] },
+      };
     case "list":
       return { type: "list", items: [""] };
     case "table":
@@ -133,7 +171,11 @@ function BlockEditor({
           <Label className="text-xs text-muted-foreground">
             {block.type === "patientNote" ? "Observação ao paciente (caixa dourada)" : "Parágrafo"}
           </Label>
-          <Textarea rows={4} value={block.text} onChange={(e) => onChange({ ...block, text: e.target.value })} />
+          <Textarea
+            rows={4}
+            value={block.text}
+            onChange={(e) => onChange({ ...block, text: e.target.value })}
+          />
         </div>
       ) : block.type === "list" ? (
         <div className="space-y-2">
@@ -157,9 +199,108 @@ function BlockEditor({
               </Button>
             </div>
           ))}
-          <Button variant="outline" size="sm" onClick={() => onChange({ ...block, items: [...block.items, ""] })}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onChange({ ...block, items: [...block.items, ""] })}
+          >
             <Plus className="mr-1 h-3.5 w-3.5" /> Item
           </Button>
+        </div>
+      ) : block.type === "meal" ? (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            A refeição será numerada na ordem do plano, sem horário.
+          </p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={block.liquid}
+              onChange={(e) => onChange({ ...block, liquid: e.target.checked })}
+            />{" "}
+            Refeição líquida
+          </label>
+          {block.foods.map((food, i) => (
+            <div key={i} className="flex flex-wrap gap-2">
+              <Input
+                className="flex-1"
+                aria-label={`Alimento ${i + 1}`}
+                placeholder="Alimento"
+                value={food.name}
+                onChange={(e) =>
+                  onChange({
+                    ...block,
+                    foods: block.foods.map((f, j) =>
+                      j === i ? { ...f, name: e.target.value } : f,
+                    ),
+                  })
+                }
+              />
+              <Input
+                className="w-40"
+                aria-label={`Quantidade ${i + 1}`}
+                placeholder="Quantidade definida"
+                value={food.quantity}
+                onChange={(e) =>
+                  onChange({
+                    ...block,
+                    foods: block.foods.map((f, j) =>
+                      j === i ? { ...f, quantity: e.target.value } : f,
+                    ),
+                  })
+                }
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Remover alimento ${i + 1}`}
+                onClick={() => onChange({ ...block, foods: block.foods.filter((_, j) => j !== i) })}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={block.foods.length >= 60}
+            onClick={() =>
+              onChange({ ...block, foods: [...block.foods, { name: "", quantity: "" }] })
+            }
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" /> Alimento
+          </Button>
+          <label className="block space-y-1 text-sm">
+            <span>Preparo (quando informado)</span>
+            <Textarea
+              value={block.preparation}
+              onChange={(e) => onChange({ ...block, preparation: e.target.value })}
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {(
+              [
+                ["protein", "Proteínas"],
+                ["carbohydrate", "Carboidratos"],
+                ["fat", "Gorduras"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="space-y-1 text-sm">
+                <span>Substituições: {label}</span>
+                <Textarea
+                  rows={4}
+                  placeholder="Uma opção por linha, com a quantidade fornecida"
+                  value={block.substitutions[key].join("\n")}
+                  onChange={(e) =>
+                    onChange({
+                      ...block,
+                      substitutions: { ...block.substitutions, [key]: e.target.value.split("\n") },
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -218,7 +359,9 @@ function BlockEditor({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onChange({ ...block, rows: [...block.rows, block.columns.map(() => "")] })}
+            onClick={() =>
+              onChange({ ...block, rows: [...block.rows, block.columns.map(() => "")] })
+            }
           >
             <Plus className="mr-1 h-3.5 w-3.5" /> Linha
           </Button>

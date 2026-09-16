@@ -12,6 +12,8 @@ import {
   anamneseSchema,
   bioSchema,
   protocolSchema,
+  protocolLocaleSchema,
+  CURRENT_PROTOCOL_TEMPLATE_VERSION,
   type Anamnese,
   type Bio,
   type Protocolo,
@@ -221,6 +223,8 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
         expectedVersion: z.number().int().min(1),
         objetivo: z.enum(["hipertrofia", "recomposicao"]),
         instrucoes: z.string().max(6000).default(""),
+        locale: protocolLocaleSchema.optional(),
+        calorieTarget: z.string().trim().max(200).optional(),
       })
       .parse(input),
   )
@@ -250,6 +254,8 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
     const result = await prepararProtocoloRascunho({
       objetivo: data.objetivo,
       instrucoes: data.instrucoes,
+      locale: data.locale ?? jornada.protocolo?.locale ?? "pt-BR",
+      calorieTarget: data.calorieTarget ?? jornada.protocolo?.calorieTarget,
       anamneseResumo: anamneseParaTexto(jornada.anamnese),
       bioResumo,
       evolucaoResumo: evolution.summaryLines.join(" "),
@@ -257,9 +263,11 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
     if (!result.data) return { data: null, error: result.error };
 
     const protocolo: Protocolo = protocolSchema.parse({
-      templateVersion: "modelo-protocolo-v1",
+      templateVersion: CURRENT_PROTOCOL_TEMPLATE_VERSION,
       objetivo: data.objetivo,
       instrucoes: data.instrucoes,
+      locale: data.locale ?? jornada.protocolo?.locale ?? "pt-BR",
+      calorieTarget: data.calorieTarget ?? jornada.protocolo?.calorieTarget,
       sections: result.data.sections,
       pendencias: result.data.pendencias,
     });

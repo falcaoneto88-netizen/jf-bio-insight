@@ -68,7 +68,10 @@ export function StepAprovacao({
         <CardHeader>
           <CardTitle className="font-serif text-xl">Documento a aprovar</CardTitle>
           <CardDescription>
-            Este é exatamente o documento final que será entregue. Versão {journey.version}.
+            {aprovado
+              ? "Este é o documento preservado da aprovação, incluindo sua apresentação original."
+              : "Este é exatamente o documento final que será entregue."}{" "}
+            Versão {journey.version}.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -87,8 +90,9 @@ export function StepAprovacao({
         </CardContent>
       </Card>
 
-
-      {(issues.blocking.length > 0 || issues.warnings.length > 0 || (journey.protocolo?.pendencias.length ?? 0) > 0) && (
+      {(issues.blocking.length > 0 ||
+        issues.warnings.length > 0 ||
+        (journey.protocolo?.pendencias.length ?? 0) > 0) && (
         <Card className={issues.blocking.length ? "border-destructive/60" : "border-gold/60"}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-serif text-lg">
@@ -119,7 +123,7 @@ export function StepAprovacao({
           </CardTitle>
           <CardDescription>
             {aprovado
-              ? `Versão ${journey.version} aprovada. Qualquer edição posterior anula esta aprovação.`
+              ? `Versão ${journey.version} aprovada. Para adotar um novo modelo, volte para editar, salve uma nova versão e revise a nova prévia.`
               : "Escreva APROVAR para confirmar que reviu este conteúdo."}
           </CardDescription>
         </CardHeader>
@@ -160,7 +164,6 @@ export function StepAprovacao({
                     ? "A preparar o documento…"
                     : "Aprovar esta versão"}
             </Button>
-
           </div>
         </CardContent>
       </Card>

@@ -4,6 +4,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { DOCUMENT_TEMPLATE_VERSION, LOGO_SHA256 } from "./brand";
 import { computeEvolution } from "./evolution";
 import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { needsNumberReview, sameIdentity, todayBr } from "./format";
@@ -383,24 +384,12 @@ export function stableDocDate(journey: Journey): string {
   return todayBr();
 }
 
-export const DOC_TEMPLATE = "documento-clinico-v1";
+export const DOC_TEMPLATE = DOCUMENT_TEMPLATE_VERSION;
+const ISSUED_TEMPLATES = new Set(["documento-clinico-v1", "documento-clinico-v2"]);
 
-export function buildHtml(journey: Journey, kind: "draft" | "candidate" | "final"): string {
+/** Finais são servidos exclusivamente por approvedSnapshotHtml, nunca regenerados. */
+export function buildHtml(journey: Journey, kind: "draft" | "candidate"): string {
   const protocolo = journey.protocolo ?? emptyProtocolo;
-  if (kind === "final") {
-    if (journey.approvedVersion == null || journey.approvedVersion !== journey.version) {
-      throw new JourneyError(
-        "NAO_APROVADO",
-        "O HTML final só fica disponível depois de aprovar a versão atual na aplicação.",
-      );
-    }
-    if (journey.approvedHash !== journey.contentHash) {
-      throw new JourneyError(
-        "CONTEUDO_ALTERADO",
-        "O conteúdo mudou desde a aprovação. Aprove novamente.",
-      );
-    }
-  }
   return renderProtocolHtml({
     patientName: journey.patientName,
     objetivo: protocolo.objetivo,
@@ -512,6 +501,14 @@ export async function approveJourney(
       "O conteúdo mudou desde que abriu esta pré-visualização. Reveja e aprove novamente.",
     );
   }
+  if (current.approvedVersion === current.version) {
+    const issued = await approvedSnapshotHtml(sb, ownerId, current);
+    if ((await sha256Hex(issued)) === expectedHtmlHash) return current;
+    throw new JourneyError(
+      "BLOQUEADO",
+      "Esta versão já possui um documento aprovado. Guarde uma nova versão antes de aprovar outra apresentação.",
+    );
+  }
   const issues = reviewIssues(current);
   if (issues.blocking.length) throw new JourneyError("BLOQUEADO", issues.blocking.join(" "));
 
@@ -562,6 +559,7 @@ export async function approveJourney(
       sourceReceivedId: current.sourceReceivedId ?? null,
       approvedBy: ownerId,
       template: DOC_TEMPLATE,
+      logoSha256: LOGO_SHA256,
       generatedAt: stableDocDate(current),
     },
   };
@@ -705,10 +703,10 @@ export async function approvedSnapshotHtml(
   if (String(meta["approvedBy"] ?? "") !== ownerId) {
     throw new JourneyError("NAO_APROVADO", "O documento aprovado indica outro autor.");
   }
-  if (String(meta["template"] ?? "") !== DOC_TEMPLATE) {
+  if (!ISSUED_TEMPLATES.has(String(meta["template"] ?? ""))) {
     throw new JourneyError(
       "CONTEUDO_ALTERADO",
-      "O documento aprovado usa outro modelo. Aprove novamente.",
+      "O documento aprovado indica um modelo desconhecido. Reveja o registo de aprovação.",
     );
   }
 
@@ -719,6 +717,20 @@ export async function approvedSnapshotHtml(
       "CONTEUDO_ALTERADO",
       "O documento aprovado foi alterado. Aprove novamente.",
     );
+  }
+  // Historical finals retain their stored bytes and assets, even after a new release.
+  if (meta["template"] === "documento-clinico-v2") {
+    const logoHash = String(meta["logoSha256"] ?? "");
+    if (
+      !/^[a-f0-9]{64}$/.test(logoHash) ||
+      !html.includes(`<meta name="bioreport-template" content="${meta["template"]}" />`) ||
+      !html.includes(`<meta name="bioreport-logo-sha256" content="${logoHash}" />`)
+    ) {
+      throw new JourneyError(
+        "CONTEUDO_ALTERADO",
+        "A identidade visual não corresponde ao documento aprovado.",
+      );
+    }
   }
   return html;
 }

@@ -141,6 +141,8 @@ function JornadaDetail({ id }: { id: string }) {
   }, [journey, step]);
 
   const journeyVersion = journey?.version ?? null;
+  const approvedPreview =
+    journey?.approvedVersion != null && journey.approvedVersion === journey.version;
 
   useEffect(() => {
     if (step !== 5 || journeyVersion == null) return;
@@ -150,7 +152,7 @@ function JornadaDetail({ id }: { id: string }) {
     setHtmlHash(null);
     setHtmlVersion(null);
     setHtmlError(null);
-    void preview({ data: { id, tipo: "candidate" } })
+    void preview({ data: { id, tipo: approvedPreview ? "final" : "candidate" } })
       .then((result) => {
         if (!active) return; // resultado de pedido anterior é descartado
         if (result.html && result.htmlHash) {
@@ -167,7 +169,7 @@ function JornadaDetail({ id }: { id: string }) {
     return () => {
       active = false;
     };
-  }, [step, journeyVersion, id, preview]);
+  }, [step, journeyVersion, approvedPreview, id, preview]);
 
   const save = async (
     patch: Parameters<typeof guardarJornada>[0] extends never ? never : Record<string, unknown>,
