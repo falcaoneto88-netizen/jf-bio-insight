@@ -92,6 +92,22 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
     }
   };
 
+  const run = async (
+    action: (result: { html: string; fileName?: string | null }) => Promise<void> | void,
+  ) => {
+    const requestId = ++requestRef.current;
+    setBusy(true);
+    setErro(null);
+    try {
+      const result = await fetchHtml(requestId);
+      if (!result?.html) return;
+      if (!mountedRef.current || requestId !== requestRef.current) return;
+      await action({ html: result.html, fileName: result.fileName });
+    } finally {
+      if (mountedRef.current && requestId === requestRef.current) setBusy(false);
+    }
+  };
+
   const baixar = () =>
     run(({ html, fileName }) => {
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
