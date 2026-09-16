@@ -602,3 +602,19 @@ describe("documento", () => {
     expect(html).toContain("1788 kcal/dia");
   });
 });
+
+it("a meta profissional permanece no formulário e permite gerar novamente", async () => {
+  const first = await gerarProtocolo(
+    journey(),
+    { objetivo: "hipertrofia", instrucoes: "", mealCount: 4, calorieTarget: "1800" },
+    { config, generate: async () => output() },
+  );
+  expect(first.error).toBeNull();
+  expect(first.data?.protocolo.calorieTarget).toBe("1800 kcal/dia");
+  const second = await gerarProtocolo(journey(), first.data!.protocolo, {
+    config,
+    generate: async () => output(),
+  });
+  expect(second.error).toBeNull();
+  expect(second.data?.energy?.targetKcal).toBe(1800);
+});
