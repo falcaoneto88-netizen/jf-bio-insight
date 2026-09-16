@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { energyInputSchema } from "@/lib/journey/energy";
 import { ACCEPTED_MIMES, MAX_PASTED_TEXT } from "@/lib/journey/agent.server";
 import {
   anamneseSchema,
@@ -246,33 +247,17 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
     if (blocking.length) return { data: null, error: blocking.join(" ") };
 
     await (await core()).consumeAiQuota(context.userId);
-    const { prepararProtocoloRascunho, anamneseParaTexto } =
-      await import("@/lib/journey/agent.server");
-    const { computeEvolution } = await import("@/lib/journey/evolution");
-    const evolution = computeEvolution(jornada.bio);
-    const { bioResumoTexto } = await core();
-    const bioResumo = bioResumoTexto(jornada.bio);
-
-    const result = await prepararProtocoloRascunho({
+    const { gerarProtocolo } = await import("@/lib/journey/protocol-generation.server");
+    const result = await gerarProtocolo(jornada, {
       objetivo: data.objetivo,
       instrucoes: data.instrucoes,
       locale: data.locale ?? jornada.protocolo?.locale ?? "pt-BR",
       calorieTarget: data.calorieTarget ?? jornada.protocolo?.calorieTarget,
-      anamneseResumo: anamneseParaTexto(jornada.anamnese),
-      bioResumo,
-      evolucaoResumo: evolution.summaryLines.join(" "),
+      mealCount: data.mealCount,
+      energyInput: data.energyInput,
     });
     if (!result.data) return { data: null, error: result.error };
-
-    const protocolo: Protocolo = protocolSchema.parse({
-      templateVersion: CURRENT_PROTOCOL_TEMPLATE_VERSION,
-      objetivo: data.objetivo,
-      instrucoes: data.instrucoes,
-      locale: data.locale ?? jornada.protocolo?.locale ?? "pt-BR",
-      calorieTarget: data.calorieTarget ?? jornada.protocolo?.calorieTarget,
-      sections: result.data.sections,
-      pendencias: result.data.pendencias,
-    });
+    const protocolo: Protocolo = protocolSchema.parse(result.data.protocolo);
 
     const atualizada = await patchJourney(
       context.supabase,
