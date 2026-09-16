@@ -167,7 +167,7 @@ describe("marcador do gerador no núcleo", () => {
     await seed(protocolSchema.parse({ objetivo: "recomposicao", sections: [] }));
     const updated = await save({ protocolo: protocolSchema.parse({ objetivo: "recomposicao" }) });
     expect(updated.protocolo?.generator).toBeUndefined();
-    expect(protocolEssentialIssues(updated.protocolo!)).toEqual([]);
+    expect(updated.protocolo?.regenerationRequired).toBeUndefined();
   });
 });
 
