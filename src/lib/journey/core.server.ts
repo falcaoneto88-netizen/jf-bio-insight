@@ -8,6 +8,7 @@ import { DOCUMENT_TEMPLATE_VERSION, LOGO_SHA256 } from "./brand";
 import { computeEvolution } from "./evolution";
 import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { needsNumberReview, sameIdentity, todayBr } from "./format";
+import { isGeneratedProtocol, protocolCompletenessIssues } from "./protocol-quality";
 import {
   anamneseSchema,
   bioSchema,
