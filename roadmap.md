@@ -50,3 +50,13 @@
 - [x] Contexto da IA preserva idade/nascimentoOuIdade (sem nome/telefone/email).
 - [x] Testes: layout/escaping CSS, impressão obsoleta, preflight/permissão/fonte, revalidação, marcador, regeneração.
 - [x] Docs com limites reais (chave OpenAI ausente: chamadas reais pendentes).
+
+## Revisão f7cf9c99 (16/09/2026) — concluída na prévia
+- [x] Integridade centralizada em patchJourney (marcador, null/reset, guardrails)
+- [x] Prescrições estruturadas como fonte única em save e prévia
+- [x] Deteção de regeneração obrigatória, não removível por patch
+- [x] measuresForExam falha claro quando a data do exame não está no histórico
+- [x] Impressão fail-closed (hash ausente) e carregamento com limite finito
+- [x] Testes comportamentais novos (233 Vitest, 76 Node), tipos, lint e build
+- [ ] Chamada real à OpenAI (pendente: OPENAI_API_KEY ausente)
+- [ ] Publicação (aguarda revisão visual do proprietário)

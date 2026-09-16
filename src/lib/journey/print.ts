@@ -27,6 +27,23 @@ export async function sha256Text(
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Fail-closed: sem hash do servidor ou sem calculadora SHA disponível, o
+ * documento NÃO é entregue. Nunca se assume correspondência por omissão.
+ */
+export function htmlBytesMismatch(
+  computed: string | null,
+  expected: string | null | undefined,
+): string | null {
+  if (!expected)
+    return "O servidor não devolveu o identificador deste documento. Recarregue o atendimento antes de continuar.";
+  if (!computed)
+    return "Este navegador não permite verificar o documento recebido. Recarregue a página num navegador seguro (HTTPS) antes de baixar, copiar ou imprimir.";
+  if (computed !== expected)
+    return "O documento recebido não corresponde ao seu identificador. Recarregue o atendimento antes de continuar.";
+  return null;
+}
+
 export interface PrintFrame {
   /** Escreve o HTML e resolve quando o documento terminou de carregar. */
   load(html: string): Promise<void>;
@@ -52,7 +69,20 @@ export async function printHtmlDocument(
   limitMs = 8000,
 ): Promise<PrintOutcome> {
   try {
-    await frame.load(html);
+    // Carregamento com limite finito: um iframe que nunca dispara load não
+    // deixa o botão preso nem o iframe pendurado.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      frame.load(html),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("tempo esgotado ao preparar a impressão")),
+          limitMs,
+        );
+      }),
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
     if (!isCurrent()) {
       frame.remove();
       return "stale";
