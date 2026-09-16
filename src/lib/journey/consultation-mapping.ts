@@ -130,6 +130,8 @@ export function consultationToJourney(source: {
     bio.sexo = text(b.sex);
     bio.dataHoraExame = toBrDate(text(b.examDateTime));
     bio.taxaMetabolicaBasalKcal = text(b.basalMetabolicRate);
+    bio.massaLivreGorduraKg = text(b.fatFreeMass);
+    bio.massaGorduraKg = text(b.bodyFatMass);
     bio.nivelGorduraVisceral = text(b.visceralFat);
     const rows: BioHistoryRow[] = [];
     const add = (
