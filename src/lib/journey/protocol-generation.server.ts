@@ -5,10 +5,10 @@
  */
 import { z } from "zod";
 
-import { dateSortKey } from "./format";
 import {
   computeEnergyPlan,
   energyInputSchema,
+  measuresForExam,
   resolveFfmDetailed,
   type EnergyPlan,
 } from "./energy";
@@ -28,6 +28,8 @@ import {
   type Protocolo,
 } from "./types";
 
+export { measuresForExam };
+
 export const protocolGenerationRequestSchema = z.object({
   objetivo: z.enum(["hipertrofia", "recomposicao", "emagrecimento"]),
   instrucoes: z.string().max(6000).default(""),
@@ -40,48 +42,6 @@ export const protocolGenerationRequestSchema = z.object({
   prescriptions: z.array(prescriptionEntrySchema).max(20).optional(),
 });
 export type ProtocolGenerationRequest = z.infer<typeof protocolGenerationRequestSchema>;
-
-/**
- * Peso e PGC da MESMA data: a do exame atual, ou a data válida mais recente.
- * Posição na lista nunca decide; valores em conflito na mesma data bloqueiam.
- */
-export function measuresForExam(bio: Bio): {
-  pesoKg: string;
-  pgc: string;
-  date: string;
-  issues: string[];
-} {
-  const empty = { pesoKg: "", pgc: "", date: "", issues: [] as string[] };
-  if (bio.semExame) return empty;
-  const rows = bio.historico
-    .map((row) => ({ ...row, key: dateSortKey(String(row.data).trim().split(/[\s,]+/)[0] ?? "") }))
-    .filter((row) => row.key);
-  if (!rows.length) return empty;
-
-  const examKey = dateSortKey(String(bio.dataHoraExame ?? "").trim().split(/[\s,]+/)[0] ?? "");
-  const target = examKey && rows.some((r) => r.key === examKey)
-    ? examKey
-    : [...rows].sort((a, b) => a.key.localeCompare(b.key)).at(-1)!.key;
-
-  const sameDate = rows.filter((r) => r.key === target);
-  const issues: string[] = [];
-  const pick = (field: "peso" | "pgc", label: string) => {
-    const values = [...new Set(sameDate.map((r) => r[field].trim()).filter(Boolean))];
-    if (values.length > 1) {
-      issues.push(
-        `Conflito no histórico: há mais de um valor de ${label} para a data ${sameDate[0]!.data}. Corrija antes de calcular.`,
-      );
-      return "";
-    }
-    return values[0] ?? "";
-  };
-  return {
-    pesoKg: pick("peso", "peso"),
-    pgc: pick("pgc", "percentual de gordura"),
-    date: target,
-    issues,
-  };
-}
 
 export function resolveEnergy(bio: Bio, request: ProtocolGenerationRequest) {
   const measures = measuresForExam(bio);
