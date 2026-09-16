@@ -209,6 +209,18 @@ export function StepBio({
                   value={draft.nivelGorduraVisceral}
                   onChange={(v) => setField("nivelGorduraVisceral", v)}
                 />
+                <FieldRow
+                  id="b-ffm"
+                  label="Massa livre de gordura (kg)"
+                  value={draft.massaLivreGorduraKg ?? ""}
+                  onChange={(v) => setField("massaLivreGorduraKg", v)}
+                />
+                <FieldRow
+                  id="b-massa-gordura"
+                  label="Massa de gordura (kg)"
+                  value={draft.massaGorduraKg ?? ""}
+                  onChange={(v) => setField("massaGorduraKg", v)}
+                />
               </FieldGrid>
             </CardContent>
           </Card>
