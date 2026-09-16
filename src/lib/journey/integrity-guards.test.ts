@@ -14,8 +14,8 @@ const bio = (over: Partial<typeof emptyBio>) => ({ ...emptyBio, ...over });
 
 describe("medidas do exame atual", () => {
   const historico = [
-    { data: "01/03/2026", pesoKg: "90,0", musculoEsqueleticoKg: "38,0", pgc: "30,0" },
-    { data: "01/06/2026", pesoKg: "88,0", musculoEsqueleticoKg: "38,4", pgc: "28,0" },
+    { data: "01/03/2026", peso: "90,0", massaMuscularEsqueletica: "38,0", pgc: "30,0" },
+    { data: "01/06/2026", peso: "88,0", massaMuscularEsqueletica: "38,4", pgc: "28,0" },
   ];
 
   it("usa as medidas da mesma data do exame", () => {
