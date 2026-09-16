@@ -146,7 +146,9 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
           <CardDescription>
             {aprovado
               ? `Entrega final da versão aprovada ${journey.approvedVersion}.`
-              : "Sem aprovação em vigor: o ficheiro sai marcado como RASCUNHO."}
+              : "Sem aprovação em vigor: o ficheiro sai marcado como RASCUNHO."}{" "}
+            Versão atual {journey.version} · identificador {journey.contentHash.slice(0, 12)}.
+            Baixar, copiar e imprimir usam exatamente este documento.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
