@@ -189,6 +189,14 @@ export function buildProtocolSections(
       blocks: [{ type: "list", items: orientacoes }],
     });
 
+  // A IA não decide refeições líquidas: divergência fica registada para revisão.
+  output.refeicoes.forEach((meal, index) => {
+    if (meal.liquida && !liquidas.has(index + 1))
+      pendencias.push(
+        `Refeição ${index + 1}: a IA sugeriu refeição líquida sem indicação do profissional; foi mantida sólida.`,
+      );
+  });
+
   if (output.refeicoes.length) {
     sections.push({
       id: "plano-alimentar",
