@@ -110,6 +110,11 @@ export function buildProtocolContext(args: {
     refeicoesLiquidasIndicadas: args.liquidMealNumbers ?? [],
     metaCalorica: energyTargetLine(args.energy),
     instrucoesDoProfissional: args.instrucoes.trim(),
+    // Idade clínica preservada mesmo sem exame; ausência fica explícita, nunca inventada.
+    identificacaoClinica: {
+      idadeOuNascimento: anamnese.header.nascimentoOuIdade.trim() || null,
+      dataDaConsulta: anamnese.header.dataConsulta.trim() || null,
+    },
     anamnese: anamneseGrupos(anamnese),
     medicacoesEmUso: medicacoes,
     alergiasERestricoes: {
@@ -184,6 +189,14 @@ export function buildProtocolSections(
       blocks: [{ type: "list", items: orientacoes }],
     });
 
+  // A IA não decide refeições líquidas: divergência fica registada para revisão.
+  output.refeicoes.forEach((meal, index) => {
+    if (meal.liquida && !liquidas.has(index + 1))
+      pendencias.push(
+        `Refeição ${index + 1}: a IA sugeriu refeição líquida sem indicação do profissional; foi mantida sólida.`,
+      );
+  });
+
   if (output.refeicoes.length) {
     sections.push({
       id: "plano-alimentar",
@@ -253,9 +266,8 @@ export function buildProtocolSections(
   pendencias.push(
     ...entradas
       .filter((p) => !p.confirmada)
-      .map(
-        (p) =>
-          `Prescrição por confirmar individualmente: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
+      .map((p) =>
+        `Prescrição por confirmar individualmente: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
       ),
   );
 

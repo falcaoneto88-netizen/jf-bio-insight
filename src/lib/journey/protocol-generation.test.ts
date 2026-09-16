@@ -402,14 +402,18 @@ describe("geração do protocolo", () => {
       { ...request, mealCount: 1 },
       { config, generate: async () => liquida },
     );
-    expect(protocolEssentialIssues(semIndicacao.data!.protocolo).join(" ")).toContain("líquida");
+    // Sem indicação do profissional, a refeição não é emitida como líquida e a
+    // divergência fica registada para revisão.
+    expect(semIndicacao.data!.protocolo.pendencias.join(" ")).toContain("líquida");
+    expect(JSON.stringify(semIndicacao.data!.protocolo.sections)).toContain('"liquid":false');
 
     const indicada = await gerarProtocolo(
       journey(),
       { ...request, mealCount: 1, liquidMealNumbers: [1] },
       { config, generate: async () => liquida },
     );
-    expect(protocolEssentialIssues(indicada.data!.protocolo).join(" ")).not.toContain("líquida");
+    expect(indicada.data!.protocolo.pendencias.join(" ")).not.toContain("líquida");
+    expect(JSON.stringify(indicada.data!.protocolo.sections)).toContain('"liquid":true');
   });
 
   it("prescrições vêm do profissional e exigem confirmação individual", async () => {

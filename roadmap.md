@@ -44,3 +44,9 @@
 - [x] /review identificado como gerador antigo (secundário)
 - [ ] Cadastrar OPENAI_API_KEY em Project Settings → Secrets (sem ela não há chamada real)
 - [ ] Validação manual na prévia e publicação, só depois da revisão do proprietário
+
+## Correção 16/09/2026 (prévia, sem publicar)
+- [x] Patch do renderer html.ts: título "Protocolo avançado de X", campos ausentes, objetivo único, rodapé por página, sem logo final repetido em impressão; legado byte a byte.
+- [x] Contexto da IA preserva idade/nascimentoOuIdade (sem nome/telefone/email).
+- [x] Testes: layout/escaping CSS, impressão obsoleta, preflight/permissão/fonte, revalidação, marcador, regeneração.
+- [x] Docs com limites reais (chave OpenAI ausente: chamadas reais pendentes).

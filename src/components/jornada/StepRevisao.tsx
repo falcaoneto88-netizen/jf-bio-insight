@@ -49,8 +49,19 @@ export function StepRevisao({
           <Line label="Data da consulta" value={anamnese.header.dataConsulta} />
           <Line label="Queixa principal" value={anamnese.queixaObjetivos.queixa} />
           <Line label="Objetivo" value={anamnese.queixaObjetivos.objetivo} />
-          <Line label="Medicações em uso" value={anamnese.medicacoesEmUso.map((m) => m.nome).filter(Boolean).join(", ")} />
-          <Line label="Alergias" value={[anamnese.alergias.medicamentos, anamnese.alergias.alimentares].filter(Boolean).join(" · ")} />
+          <Line
+            label="Medicações em uso"
+            value={anamnese.medicacoesEmUso
+              .map((m) => m.nome)
+              .filter(Boolean)
+              .join(", ")}
+          />
+          <Line
+            label="Alergias"
+            value={[anamnese.alergias.medicamentos, anamnese.alergias.alimentares]
+              .filter(Boolean)
+              .join(" · ")}
+          />
         </CardContent>
       </Card>
 

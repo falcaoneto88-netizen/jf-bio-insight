@@ -34,7 +34,9 @@ function mealCountFromAnamnese(text: string): number | null {
 function parseMealNumbers(text: string): number[] {
   return [
     ...new Set(
-      (text.match(/\d+/g) ?? []).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 12),
+      (text.match(/\d+/g) ?? [])
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= 12),
     ),
   ].sort((a, b) => a - b);
 }
@@ -105,7 +107,9 @@ export function StepProtocolo({
     onDraftChange({
       ...draft,
       prescriptions: prescriptions.map((p, i) =>
-        i === index ? { ...p, ...patch, ...(patch.confirmada === undefined ? { confirmada: false } : {}) } : p,
+        i === index
+          ? { ...p, ...patch, ...(patch.confirmada === undefined ? { confirmada: false } : {}) }
+          : p,
       ),
     });
 
@@ -353,8 +357,8 @@ export function StepProtocolo({
         <CardHeader>
           <CardTitle className="font-serif text-lg">Prescrições (escritas por si)</CardTitle>
           <CardDescription>
-            Cada entrada precisa de substância, dose, via e frequência, e de confirmação
-            individual. Sem confirmação não entra no documento nem se aprova.
+            Cada entrada precisa de substância, dose, via e frequência, e de confirmação individual.
+            Sem confirmação não entra no documento nem se aprova.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -442,7 +446,10 @@ export function StepProtocolo({
             variant="outline"
             size="sm"
             onClick={() =>
-              onDraftChange({ ...draft, prescriptions: [...prescriptions, { ...emptyPrescription }] })
+              onDraftChange({
+                ...draft,
+                prescriptions: [...prescriptions, { ...emptyPrescription }],
+              })
             }
           >
             Adicionar prescrição

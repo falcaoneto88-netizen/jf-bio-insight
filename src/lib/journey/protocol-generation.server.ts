@@ -67,8 +67,7 @@ export function generationPreflight(args: {
       "Defina a meta calórica antes de gerar: escreva a meta profissional ou complete o cálculo interno.",
       ...args.pendencias,
     ].join(" ");
-  if (!args.mealCount)
-    return "Indique o número de refeições antes de gerar o plano alimentar.";
+  if (!args.mealCount) return "Indique o número de refeições antes de gerar o plano alimentar.";
   return null;
 }
 

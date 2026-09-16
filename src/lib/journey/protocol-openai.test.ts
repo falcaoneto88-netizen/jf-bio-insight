@@ -63,7 +63,15 @@ describe("chamada à OpenAI (simulada)", () => {
     }) as typeof fetch);
 
     expect(output.refeicoes).toHaveLength(1);
-    const call = seen as unknown as { url: string; body: Record<string, any>; init: RequestInit };
+    const call = seen as unknown as {
+      url: string;
+      body: {
+        store: boolean;
+        model: string;
+        text: { format: { type: string; strict: boolean; schema: unknown } };
+      };
+      init: RequestInit;
+    };
     expect(call.url).toBe("https://api.openai.com/v1/responses");
     expect(call.init.redirect).toBe("error");
     expect(call.body.store).toBe(false);
@@ -82,26 +90,36 @@ describe("chamada à OpenAI (simulada)", () => {
     };
     for (const [status, code] of Object.entries(codes)) {
       await expect(
-        requestProtocol({}, config, (async () =>
-          new Response("erro", { status: Number(status) })) as typeof fetch),
+        requestProtocol(
+          {},
+          config,
+          (async () => new Response("erro", { status: Number(status) })) as typeof fetch,
+        ),
       ).rejects.toMatchObject({ code });
     }
   });
 
   it("assinala recusa e resposta incompleta", async () => {
     await expect(
-      requestProtocol({}, config, (async () =>
-        new Response(
-          JSON.stringify({
-            status: "completed",
-            output: [{ type: "message", role: "assistant", content: [{ type: "refusal" }] }],
-          }),
-        )) as typeof fetch),
+      requestProtocol(
+        {},
+        config,
+        (async () =>
+          new Response(
+            JSON.stringify({
+              status: "completed",
+              output: [{ type: "message", role: "assistant", content: [{ type: "refusal" }] }],
+            }),
+          )) as typeof fetch,
+      ),
     ).rejects.toMatchObject({ code: "refusal" });
 
     await expect(
-      requestProtocol({}, config, (async () =>
-        new Response(JSON.stringify({ status: "incomplete" }))) as typeof fetch),
+      requestProtocol(
+        {},
+        config,
+        (async () => new Response(JSON.stringify({ status: "incomplete" }))) as typeof fetch,
+      ),
     ).rejects.toMatchObject({ code: "incomplete" });
   });
 
@@ -130,10 +148,14 @@ describe("chamada à OpenAI (simulada)", () => {
 
   it("aborta por tempo limite e devolve o código timeout", async () => {
     vi.useFakeTimers();
-    const pending = requestProtocol({}, config, ((_url, init) =>
-      new Promise((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => reject(new Error("abortado")));
-      })) as unknown as typeof fetch);
+    const pending = requestProtocol(
+      {},
+      config,
+      ((_url: unknown, init: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new Error("abortado")));
+        })) as unknown as typeof fetch,
+    );
     const assertion = expect(pending).rejects.toMatchObject({ code: "timeout" });
     await vi.advanceTimersByTimeAsync(180_000);
     await assertion;

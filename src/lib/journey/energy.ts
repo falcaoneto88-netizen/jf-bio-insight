@@ -340,14 +340,26 @@ export function measuresForExam(bio: Bio): {
   const empty = { pesoKg: "", pgc: "", date: "", issues: [] as string[] };
   if (bio.semExame) return empty;
   const rows = bio.historico
-    .map((row) => ({ ...row, key: dateSortKey(String(row.data).trim().split(/[\s,]+/)[0] ?? "") }))
+    .map((row) => ({
+      ...row,
+      key: dateSortKey(
+        String(row.data)
+          .trim()
+          .split(/[\s,]+/)[0] ?? "",
+      ),
+    }))
     .filter((row) => row.key);
   if (!rows.length) return empty;
 
-  const examKey = dateSortKey(String(bio.dataHoraExame ?? "").trim().split(/[\s,]+/)[0] ?? "");
-  const target = examKey && rows.some((r) => r.key === examKey)
-    ? examKey
-    : [...rows].sort((a, b) => a.key.localeCompare(b.key)).at(-1)!.key;
+  const examKey = dateSortKey(
+    String(bio.dataHoraExame ?? "")
+      .trim()
+      .split(/[\s,]+/)[0] ?? "",
+  );
+  const target =
+    examKey && rows.some((r) => r.key === examKey)
+      ? examKey
+      : [...rows].sort((a, b) => a.key.localeCompare(b.key)).at(-1)!.key;
 
   const sameDate = rows.filter((r) => r.key === target);
   const issues: string[] = [];
@@ -368,7 +380,6 @@ export function measuresForExam(bio: Bio): {
     issues,
   };
 }
-
 
 /**
  * Cálculo completo a partir do exame e das escolhas do profissional.

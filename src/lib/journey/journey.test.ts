@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import { computeEvolution } from "./evolution";
-import { dateSortKey, decimalComma, integerValue, isRealDate, needsNumberReview, signedDelta } from "./format";
+import {
+  dateSortKey,
+  decimalComma,
+  integerValue,
+  isRealDate,
+  needsNumberReview,
+  signedDelta,
+} from "./format";
 import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { bioSchema } from "./types";
-import { fixtureAnamnese, fixtureBio, fixtureJourney, fixtureProtocolo } from "./__fixtures__/jornada-sintetica";
+import {
+  fixtureAnamnese,
+  fixtureBio,
+  fixtureJourney,
+  fixtureProtocolo,
+} from "./__fixtures__/jornada-sintetica";
 
 describe("variação (delta) com sinal", () => {
   it("não engole variações pequenas nem inventa sinal no zero", () => {
@@ -72,10 +84,16 @@ describe("evolução", () => {
 
   it("preserva a transcrição literal na tabela", () => {
     const bio = bioSchema.parse({
-      historico: [{ data: "10/03/2026", peso: "70,0", massaMuscularEsqueletica: "34,50", pgc: "34,0" }],
+      historico: [
+        { data: "10/03/2026", peso: "70,0", massaMuscularEsqueletica: "34,50", pgc: "34,0" },
+      ],
     });
     const result = computeEvolution(bio);
-    expect(result.points[0]!.literal).toEqual({ peso: "70,0", massaMuscular: "34,50", pgc: "34,0" });
+    expect(result.points[0]!.literal).toEqual({
+      peso: "70,0",
+      massaMuscular: "34,50",
+      pgc: "34,0",
+    });
   });
 
   it("junta linhas complementares da mesma data sem perder valores", () => {
