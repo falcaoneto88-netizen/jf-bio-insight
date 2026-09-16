@@ -237,7 +237,7 @@ export const mealBlockSchema = z.object({
 export const OBJETIVOS = [
   { value: "hipertrofia", label: "Hipertrofia", available: true },
   { value: "recomposicao", label: "Recomposição corporal", available: true },
-  { value: "emagrecimento", label: "Emagrecimento", available: false },
+  { value: "emagrecimento", label: "Emagrecimento", available: true },
 ] as const;
 export type Objetivo = (typeof OBJETIVOS)[number]["value"];
 
