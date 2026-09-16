@@ -16,6 +16,7 @@ import {
   type Anamnese,
   type Bio,
   type Objetivo,
+  type PrescriptionEntry,
   type ProtocolLocale,
   type ProtocolSection,
   type Protocolo,
@@ -38,6 +39,7 @@ export const protocolAiOutputSchema = z.strictObject({
             z.strictObject({
               nome: z.string().trim().max(300),
               quantidade: z.string().trim().max(120),
+              categoria: z.enum(["proteina", "carboidrato", "gordura", "outro"]),
             }),
           )
           .max(20),
@@ -58,17 +60,6 @@ export const protocolAiOutputSchema = z.strictObject({
       }),
     )
     .max(10),
-  prescricoes: z
-    .array(
-      z.strictObject({
-        substancia: z.string().trim().max(200),
-        dose: z.string().trim().max(200),
-        via: z.string().trim().max(120),
-        frequencia: z.string().trim().max(200),
-        observacoes: z.string().trim().max(600),
-      }),
-    )
-    .max(20),
   pendencias: z.array(z.string().trim().max(600)).max(24),
 });
 export type ProtocolAiOutput = z.infer<typeof protocolAiOutputSchema>;
@@ -97,7 +88,7 @@ export function buildProtocolContext(args: {
   instrucoes: string;
   mealCount: number | null;
   energy: EnergyPlan | null;
-  calorieTarget?: string;
+  liquidMealNumbers?: number[];
   anamnese: Anamnese;
   bio: Bio;
 }) {
@@ -116,7 +107,8 @@ export function buildProtocolContext(args: {
     objetivo: args.objetivo,
     idioma: args.locale,
     numeroDeRefeicoes: args.mealCount,
-    metaCalorica: energyTargetLine(args.energy) || args.calorieTarget || "",
+    refeicoesLiquidasIndicadas: args.liquidMealNumbers ?? [],
+    metaCalorica: energyTargetLine(args.energy),
     instrucoesDoProfissional: args.instrucoes.trim(),
     anamnese: anamneseGrupos(anamnese),
     medicacoesEmUso: medicacoes,
@@ -152,13 +144,21 @@ const exactly3 = (items: string[]): string[] => items.map((i) => i.trim()).filte
 
 export function buildProtocolSections(
   output: ProtocolAiOutput,
-  args: { locale: ProtocolLocale; energy: EnergyPlan | null; calorieTarget?: string },
+  args: {
+    locale: ProtocolLocale;
+    energy: EnergyPlan | null;
+    /** Só estas refeições podem sair como líquidas — a IA não decide. */
+    liquidMealNumbers?: number[];
+    /** Prescrições escritas pelo profissional; só as confirmadas são emitidas. */
+    prescriptions?: PrescriptionEntry[];
+  },
 ): { sections: ProtocolSection[]; pendencias: string[] } {
   const t = documentLabels(args.locale);
   const sections: ProtocolSection[] = [];
   const pendencias = [...output.pendencias];
 
-  const metaLinha = energyTargetLine(args.energy) || args.calorieTarget?.trim() || "";
+  const metaLinha = energyTargetLine(args.energy);
+  const liquidas = new Set(args.liquidMealNumbers ?? []);
   const objetivoBlocos = [
     ...(output.objetivoResumo.trim()
       ? [{ type: "paragraph" as const, text: output.objetivoResumo.trim() }]
@@ -189,12 +189,17 @@ export function buildProtocolSections(
       id: "plano-alimentar",
       title: t.meals,
       kind: "meals",
-      blocks: output.refeicoes.map((meal) => ({
+      blocks: output.refeicoes.map((meal, index) => ({
         type: "meal" as const,
-        liquid: meal.liquida,
+        // Líquida apenas quando o profissional indicou aquela refeição.
+        liquid: liquidas.has(index + 1),
         foods: meal.alimentos
           .filter((f) => f.nome.trim())
-          .map((f) => ({ name: f.nome.trim(), quantity: f.quantidade.trim() })),
+          .map((f) => ({
+            name: f.nome.trim(),
+            quantity: f.quantidade.trim(),
+            category: f.categoria,
+          })),
         preparation: meal.preparo.trim(),
         substitutions: {
           protein: exactly3(meal.substituicoes.proteina),
@@ -222,8 +227,11 @@ export function buildProtocolSections(
       ],
     });
 
-  const prescricoes = output.prescricoes.filter((p) => p.substancia.trim());
-  if (prescricoes.length)
+  // Prescrições: montadas apenas a partir das entradas do profissional já
+  // confirmadas uma a uma. A IA não cria, não completa e não remonta medicação.
+  const entradas = (args.prescriptions ?? []).filter((p) => p.substancia.trim());
+  const confirmadas = entradas.filter((p) => p.confirmada);
+  if (confirmadas.length)
     sections.push({
       id: "prescricoes",
       title: t.prescription,
@@ -232,7 +240,7 @@ export function buildProtocolSections(
         {
           type: "table",
           columns: [t.name, t.dose, t.unit, t.frequency, t.reason],
-          rows: prescricoes.map((p) => [
+          rows: confirmadas.map((p) => [
             p.substancia.trim(),
             p.dose.trim(),
             p.via.trim(),
@@ -243,9 +251,12 @@ export function buildProtocolSections(
       ],
     });
   pendencias.push(
-    ...prescricoes.map((p) =>
-      `Confirme individualmente antes de emitir: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
-    ),
+    ...entradas
+      .filter((p) => !p.confirmada)
+      .map(
+        (p) =>
+          `Prescrição por confirmar individualmente: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
+      ),
   );
 
   return { sections, pendencias };
@@ -258,26 +269,29 @@ export function protocoloGerado(args: {
   mealCount: number | null;
   energy: EnergyPlan | null;
   energyInput?: Protocolo["energyInput"];
-  calorieTarget?: string;
+  liquidMealNumbers?: number[];
+  prescriptions?: PrescriptionEntry[];
   output: ProtocolAiOutput;
   extraPendencias?: string[];
 }): Protocolo {
   const { sections, pendencias } = buildProtocolSections(args.output, {
     locale: args.locale,
     energy: args.energy,
-    calorieTarget: args.calorieTarget,
+    ...(args.liquidMealNumbers ? { liquidMealNumbers: args.liquidMealNumbers } : {}),
+    ...(args.prescriptions ? { prescriptions: args.prescriptions } : {}),
   });
   return {
     templateVersion: CURRENT_PROTOCOL_TEMPLATE_VERSION,
     objetivo: args.objetivo,
     instrucoes: args.instrucoes,
     locale: args.locale,
-    ...(args.calorieTarget ? { calorieTarget: args.calorieTarget } : {}),
     sections,
     pendencias: [...(args.extraPendencias ?? []), ...pendencias].slice(0, 60),
     generator: PROTOCOL_GENERATOR_VERSION,
     ...(args.mealCount ? { mealCount: args.mealCount } : {}),
     ...(args.energy ? { energy: args.energy } : {}),
     ...(args.energyInput ? { energyInput: args.energyInput } : {}),
+    ...(args.liquidMealNumbers?.length ? { liquidMealNumbers: args.liquidMealNumbers } : {}),
+    ...(args.prescriptions?.length ? { prescriptions: args.prescriptions } : {}),
   };
 }

@@ -225,7 +225,16 @@ export const protocolSectionKindSchema = z.enum([
 export const mealBlockSchema = z.object({
   type: z.literal("meal"),
   liquid: z.boolean(),
-  foods: z.array(z.object({ name: z.string().max(600), quantity: z.string().max(200) })).max(60),
+  foods: z
+    .array(
+      z.object({
+        name: z.string().max(600),
+        quantity: z.string().max(200),
+        /** Categoria explícita do alimento (evita adivinhar gordura por palavras). */
+        category: z.enum(["proteina", "carboidrato", "gordura", "outro"]).optional(),
+      }),
+    )
+    .max(60),
   preparation: z.string().max(4000),
   substitutions: z.object({
     protein: z.array(z.string().max(600)).max(40),
@@ -263,6 +272,17 @@ export const protocolSectionSchema = z.object({
 });
 export type ProtocolSection = z.infer<typeof protocolSectionSchema>;
 
+export const prescriptionEntrySchema = z.object({
+  substancia: z.string().trim().max(200).default(""),
+  dose: z.string().trim().max(200).default(""),
+  via: z.string().trim().max(120).default(""),
+  frequencia: z.string().trim().max(200).default(""),
+  observacoes: z.string().trim().max(600).default(""),
+  /** Confirmação individual do profissional; sem ela a entrada não é emitida. */
+  confirmada: z.boolean().default(false),
+});
+export type PrescriptionEntry = z.infer<typeof prescriptionEntrySchema>;
+
 export const protocolSchema = z.object({
   templateVersion: z.string().max(64).default(PROTOCOL_TEMPLATE_VERSION),
   objetivo: z.enum(["hipertrofia", "recomposicao", "emagrecimento"]).nullable().default(null),
@@ -277,6 +297,15 @@ export const protocolSchema = z.object({
   mealCount: z.number().int().min(1).max(12).optional(),
   energy: energyPlanSchema.optional(),
   energyInput: energyInputSchema.optional(),
+  /** Avisos do painel marcados como revistos pelo profissional (não bloqueiam). */
+  pendenciasResolvidas: z.array(z.string().max(600)).max(60).optional(),
+  /** Refeições líquidas indicadas explicitamente pelo profissional (1 = primeira). */
+  liquidMealNumbers: z.array(z.number().int().min(1).max(12)).max(12).optional(),
+  /**
+   * Prescrições escritas pelo profissional. A IA nunca cria, completa nem
+   * remonta medicação: só entradas confirmadas aqui entram no documento.
+   */
+  prescriptions: z.array(prescriptionEntrySchema).max(20).optional(),
 });
 export type Protocolo = z.infer<typeof protocolSchema>;
 

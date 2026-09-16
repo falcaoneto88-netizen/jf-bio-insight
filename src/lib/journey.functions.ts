@@ -12,6 +12,7 @@ import { ACCEPTED_MIMES, MAX_PASTED_TEXT } from "@/lib/journey/agent.server";
 import {
   anamneseSchema,
   bioSchema,
+  prescriptionEntrySchema,
   protocolSchema,
   protocolLocaleSchema,
   type Anamnese,
@@ -143,13 +144,22 @@ export const guardarJornada = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => patchSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    const { patchJourney, reviewIssues } = await core();
+    const { getJourney, patchJourney, reviewIssues } = await core();
     const { id, expectedVersion, ...patch } = data;
+
+    // O marcador do gerador não se apaga por patch: as regras dos protocolos
+    // gerados continuam a aplicar-se a qualquer edição no servidor.
+    let protocolo = patch.protocolo as Protocolo | null | undefined;
+    if (protocolo) {
+      const { preserveGeneratorMarker } = await import("@/lib/journey/protocol-quality");
+      const atual = await getJourney(context.supabase, context.userId, id);
+      protocolo = preserveGeneratorMarker(atual.protocolo, protocolo);
+    }
     const jornada = await patchJourney(context.supabase, context.userId, id, expectedVersion, {
       ...patch,
       anamnese: patch.anamnese as Anamnese | undefined,
       bio: patch.bio as Bio | undefined,
-      protocolo: patch.protocolo as Protocolo | null | undefined,
+      protocolo,
     });
     return { jornada, issues: reviewIssues(jornada) };
   });
@@ -227,6 +237,8 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
         calorieTarget: z.string().trim().max(200).optional(),
         mealCount: z.number().int().min(1).max(12).optional(),
         energyInput: energyInputSchema.optional(),
+        liquidMealNumbers: z.array(z.number().int().min(1).max(12)).max(12).optional(),
+        prescriptions: z.array(prescriptionEntrySchema).max(20).optional(),
       })
       .parse(input),
   )
@@ -234,16 +246,13 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
     await assertAdmin(context as Ctx);
     const { getJourney, patchJourney, reviewIssues } = await core();
     const jornada = await getJourney(context.supabase, context.userId, data.id);
-    if (!jornada.confirmations.revisao) {
-      return { data: null, error: "Confirme a revisão dos dados antes de preparar o protocolo." };
-    }
 
-    const { assertCurrentConsultationSource } = await import("./journey/consultation.server");
-    assertCurrentConsultationSource(jornada);
-    if (jornada.version !== data.expectedVersion)
-      throw new Error("A análise mudou. Reabra a consulta antes de gerar o protocolo.");
-    const blocking = reviewIssues(jornada).blocking;
-    if (blocking.length) return { data: null, error: blocking.join(" ") };
+    // Mesmo preflight do MCP: admin/dono (acima), revisão, fonte e versão.
+    const { preflightProtocolGeneration, revalidateAfterGeneration } = await import(
+      "@/lib/journey/protocol-preflight.server"
+    );
+    const pre = await preflightProtocolGeneration(jornada, data.expectedVersion);
+    if (!pre.ok) return { data: null, error: pre.error };
 
     await (await core()).consumeAiQuota(context.userId);
     const { gerarProtocolo } = await import("@/lib/journey/protocol-generation.server");
@@ -254,8 +263,20 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
       calorieTarget: data.calorieTarget ?? jornada.protocolo?.calorieTarget,
       mealCount: data.mealCount,
       energyInput: data.energyInput,
+      liquidMealNumbers: data.liquidMealNumbers,
+      prescriptions: data.prescriptions ?? jornada.protocolo?.prescriptions,
     });
     if (!result.data) return { data: null, error: result.error };
+
+    // Depois da resposta: admin, fonte, identidade e versão outra vez.
+    await assertAdmin(context as Ctx);
+    const post = await revalidateAfterGeneration(
+      context.supabase,
+      context.userId,
+      data.id,
+      data.expectedVersion,
+    );
+    if (!post.ok) return { data: null, error: post.error };
     const protocolo: Protocolo = protocolSchema.parse(result.data.protocolo);
 
     const atualizada = await patchJourney(

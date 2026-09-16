@@ -8,7 +8,11 @@ import { DOCUMENT_TEMPLATE_VERSION, LOGO_SHA256 } from "./brand";
 import { computeEvolution } from "./evolution";
 import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { needsNumberReview, sameIdentity, todayBr } from "./format";
-import { isGeneratedProtocol, protocolCompletenessIssues } from "./protocol-quality";
+import {
+  isGeneratedProtocol,
+  protocolEssentialIssues,
+  protocolOpenWarnings,
+} from "./protocol-quality";
 import {
   anamneseSchema,
   bioSchema,
@@ -293,8 +297,12 @@ export type JourneyIssues = {
   warnings: string[];
 };
 
-/** Painel interno: lacunas essenciais e conflitos. Nunca sai no HTML. */
-export function reviewIssues(journey: Journey): JourneyIssues {
+/**
+ * Validação dos DADOS DE ORIGEM (paciente, identidade, exame, histórico).
+ * Separada da qualidade do protocolo: um rascunho incompleto nunca impede a
+ * sua própria regeneração.
+ */
+export function sourceIssues(journey: Journey): JourneyIssues {
   const blocking: string[] = [];
   const warnings: string[] = [];
   if (journey.consultationId && journey.sourceCurrent === false)
@@ -355,11 +363,20 @@ export function reviewIssues(journey: Journey): JourneyIssues {
     for (const duvida of journey.bio.duvidas) warnings.push(`Dúvida na extração: ${duvida}`);
   }
 
+  return { blocking, warnings };
+}
+
+/** Painel interno completo: dados de origem + qualidade do protocolo. */
+export function reviewIssues(journey: Journey): JourneyIssues {
+  const { blocking, warnings } = sourceIssues(journey);
+
   // Protocolos GERADOS exigem plano alimentar completo. Documentos legados
   // (sem "generator") mantêm-se exatamente como estão.
   if (journey.protocolo && isGeneratedProtocol(journey.protocolo)) {
-    blocking.push(...protocolCompletenessIssues(journey.protocolo));
-    warnings.push(...journey.protocolo.pendencias.map((p) => `Pendência do protocolo: ${p}`));
+    blocking.push(...protocolEssentialIssues(journey.protocolo));
+    warnings.push(
+      ...protocolOpenWarnings(journey.protocolo).map((p) => `Pendência do protocolo: ${p}`),
+    );
   }
 
   if (

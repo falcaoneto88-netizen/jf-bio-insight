@@ -166,9 +166,17 @@ export const prepararProtocoloTool = defineTool({
   name: "preparar_protocolo",
   title: "Preparar rascunho de protocolo",
   description:
-    "Prepara o rascunho estruturado do protocolo a partir dos dados já confirmados e das instruções do profissional. Devolve id, versão, hash e o endereço de revisão. Não prescreve e não aprova.",
+    "Prepara o rascunho estruturado do protocolo a partir dos dados já confirmados e das instruções do profissional. ATENÇÃO: envia o contexto clínico da jornada (sem nome, telefone, e-mail nem IDs de CRM nos campos estruturados) para a API da OpenAI (api.openai.com), fora do BioReport; por isso exige confirmação explícita. Devolve id, versão, hash e o endereço de revisão. Não prescreve, não cria medicação e não aprova.",
   inputSchema: {
     jornadaId: z.string().uuid(),
+    expectedVersion: z
+      .number()
+      .int()
+      .min(1)
+      .describe("Versão da jornada que o profissional está a rever. Obrigatória."),
+    confirmarEnvioParaOpenAI: z
+      .literal(true)
+      .describe("Confirmação explícita de envio do contexto clínico para a API da OpenAI."),
     objetivo: z.enum(["hipertrofia", "recomposicao", "emagrecimento"]),
     instrucoes: z.string().max(6000).default("").describe("Instruções clínicas do profissional."),
     numeroDeRefeicoes: z
@@ -179,20 +187,28 @@ export const prepararProtocoloTool = defineTool({
       .optional()
       .describe("Se omitido, usa o número já revisto na aplicação."),
   },
-  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async ({ jornadaId, objetivo, instrucoes, numeroDeRefeicoes }, ctx) => {
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  handler: async (
+    { jornadaId, expectedVersion, confirmarEnvioParaOpenAI, objetivo, instrucoes, numeroDeRefeicoes },
+    ctx,
+  ) => {
     const access = await requireJourneyAccess(ctx);
     if (!access.ok) return toolError(access.message);
+    if (confirmarEnvioParaOpenAI !== true)
+      return toolError("Confirme o envio do contexto clínico para a API da OpenAI.");
     const { getJourney, patchJourney, reviewIssues, consumeAiQuota } =
       await import("@/lib/journey/core.server");
+    const { preflightProtocolGeneration, revalidateAfterGeneration } = await import(
+      "@/lib/journey/protocol-preflight.server"
+    );
     const { gerarProtocolo } = await import("@/lib/journey/protocol-generation.server");
     const { protocolSchema } = await import("@/lib/journey/types");
     try {
-      await consumeAiQuota(access.userId);
       const jornada = await getJourney(access.supabase, access.userId, jornadaId);
-      if (!jornada.confirmations.revisao) {
-        return toolError("O profissional ainda não confirmou a revisão dos dados desta jornada.");
-      }
+      // Mesmo preflight da interface, ANTES de consumir quota ou chamar a OpenAI.
+      const pre = await preflightProtocolGeneration(jornada, expectedVersion);
+      if (!pre.ok) return toolError(pre.error);
+      await consumeAiQuota(access.userId);
       // Mesmo serviço de geração usado pela interface: regras idênticas.
       const result = await gerarProtocolo(jornada, {
         objetivo,
@@ -201,14 +217,26 @@ export const prepararProtocoloTool = defineTool({
         calorieTarget: jornada.protocolo?.calorieTarget,
         mealCount: numeroDeRefeicoes ?? jornada.protocolo?.mealCount,
         energyInput: jornada.protocolo?.energyInput,
+        liquidMealNumbers: jornada.protocolo?.liquidMealNumbers,
+        prescriptions: jornada.protocolo?.prescriptions,
       });
       if (!result.data) return toolError(result.error ?? "Não foi possível preparar o protocolo.");
+      // Depois da resposta: papel, dono, fonte, identidade e versão outra vez.
+      const again = await requireJourneyAccess(ctx);
+      if (!again.ok) return toolError(again.message);
+      const post = await revalidateAfterGeneration(
+        again.supabase,
+        again.userId,
+        jornadaId,
+        expectedVersion,
+      );
+      if (!post.ok) return toolError(post.error);
       const protocolo = protocolSchema.parse(result.data.protocolo);
       const atualizada = await patchJourney(
         access.supabase,
         access.userId,
         jornadaId,
-        jornada.version,
+        expectedVersion,
         {
           protocolo,
           status: "protocolo",
