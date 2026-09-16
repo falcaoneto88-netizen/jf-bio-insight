@@ -221,10 +221,12 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
       .object({
         id: z.string().uuid(),
         expectedVersion: z.number().int().min(1),
-        objetivo: z.enum(["hipertrofia", "recomposicao"]),
+        objetivo: z.enum(["hipertrofia", "recomposicao", "emagrecimento"]),
         instrucoes: z.string().max(6000).default(""),
         locale: protocolLocaleSchema.optional(),
         calorieTarget: z.string().trim().max(200).optional(),
+        mealCount: z.number().int().min(1).max(12).optional(),
+        energyInput: energyInputSchema.optional(),
       })
       .parse(input),
   )
