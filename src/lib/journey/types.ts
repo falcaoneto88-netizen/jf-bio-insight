@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import { energyInputSchema, energyPlanSchema } from "./energy";
+
 export const AGENT_RULES_VERSION = "agente-clinico-v1";
 
 /* ------------------------------------------------------------------ */
