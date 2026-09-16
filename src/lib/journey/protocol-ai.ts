@@ -71,8 +71,7 @@ const IDENTIFYING = new Set(["paciente", "telefone", "email", "nome"]);
 function anamneseGrupos(anamnese: Anamnese): Record<string, Record<string, string>> {
   const groups: Record<string, Record<string, string>> = {};
   for (const section of ANAMNESE_SECTIONS) {
-    // O cabeçalho é identificador: só a idade/nascimento clínicos seguem, à parte.
-    if (section.key === "medicacoesEmUso" || section.key === "header") continue;
+    if (section.key === "medicacoesEmUso") continue;
     const raw = anamnese[section.key] as Record<string, string>;
     const filled = Object.entries(raw).filter(([, value]) => value.trim());
     if (filled.length)
