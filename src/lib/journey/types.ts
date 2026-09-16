@@ -178,6 +178,8 @@ export const bioHistoryRowSchema = z.object({
 });
 export type BioHistoryRow = z.infer<typeof bioHistoryRowSchema>;
 
+const optionalTxt = z.string().trim().max(4000).optional();
+
 export const bioSchema = z.object({
   paciente: txt,
   alturaM: txt,
@@ -186,6 +188,9 @@ export const bioSchema = z.object({
   dataHoraExame: txt,
   taxaMetabolicaBasalKcal: txt,
   nivelGorduraVisceral: txt,
+  /** Opcionais: ausentes nos registos legados, por isso nunca mudam hashes antigos. */
+  massaLivreGorduraKg: optionalTxt,
+  massaGorduraKg: optionalTxt,
   historico: z.array(bioHistoryRowSchema).max(60).default([]),
   /** Metadados: nunca entram no documento do paciente. */
   fontes: z.array(z.string().max(500)).max(60).default([]),
