@@ -1,0 +1,32 @@
+{
+  "descricao": "Smoke test único de geração de protocolo com dados 100% fictícios. Sem paciente real, sem CRM, sem gravação clínica. Nenhuma credencial, header ou payload registado.",
+  "executadoEm": "2026-09-16T19:50:10.618Z",
+  "chamadaReal": true,
+  "chamadasRealizadas": 1,
+  "apiKeyPresente": true,
+  "modelo": "gpt-5.4",
+  "modeloOrigem": "padrão (OPENAI_CLINICAL_MODEL não cadastrado)",
+  "endpoint": "https://api.openai.com/v1/responses",
+  "store": false,
+  "duracaoMs": 2142,
+  "resultado": "falha",
+  "httpStatus": 429,
+  "erroCodigoSanitizado": "quota",
+  "erroMensagemUtilizador": "O limite ou os créditos da OpenAI foram atingidos. Tente mais tarde ou peça verificação da conta.",
+  "statusResposta": "não obtido (erro HTTP antes do corpo)",
+  "protocoloGerado": false,
+  "htmlGerado": false,
+  "verificacoesNaoExecutadas": [
+    "quatro refeições numeradas sem horários",
+    "porções por alimento",
+    "três substituições de proteína e de carboidrato",
+    "respeito à alergia fictícia (amendoim)",
+    "ausência de prescrições geradas pela IA",
+    "estado rascunho no documento"
+  ],
+  "preflight": {
+    "primeiraTentativa": "bloqueada localmente antes de qualquer chamada (meta calórica/fator de atividade em falta) — comportamento esperado",
+    "segundaTentativa": "preflight aprovado com fator 1,4 revisto e ajuste -20%; a chamada real seguiu e falhou no fornecedor"
+  },
+  "paradoApos": "primeira falha, sem nova tentativa"
+}
