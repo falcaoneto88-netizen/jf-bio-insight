@@ -31,7 +31,12 @@ export function FieldRow({
           onChange={(e) => onChange(e.target.value)}
         />
       ) : (
-        <Input id={id} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+        <Input
+          id={id}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
       )}
     </div>
   );

@@ -46,10 +46,7 @@ function distinct(items: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const item of items) {
-    const key = item
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
+    const key = item.trim().toLowerCase().replace(/\s+/g, " ");
     if (!key || seen.has(key)) continue;
     seen.add(key);
     out.push(item.trim());
@@ -117,7 +114,9 @@ export function protocolEssentialIssues(protocolo: Protocolo): string[] {
       if (!required && !raw.some((s) => s.trim())) return;
       const options = distinct(raw.filter((s) => s.trim()));
       if (options.length !== 3) {
-        issues.push(`Refeição ${n}: são exigidas exatamente 3 substituições de ${label} distintas.`);
+        issues.push(
+          `Refeição ${n}: são exigidas exatamente 3 substituições de ${label} distintas.`,
+        );
         return;
       }
       if (options.some((o) => !isValidSubstitution(o)))

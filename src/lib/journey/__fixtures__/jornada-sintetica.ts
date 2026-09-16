@@ -35,9 +35,20 @@ export const fixtureAnamnese = anamneseSchema.parse({
   identificacao: { estadoCivil: "Casado", filhos: "2 (8 e 12 anos)" },
   rotinaProfissional: {},
   sono: { acorda: "06:30", dorme: "23:30", qualidade: "Regular", disposicao: "6" },
-  historicoClinico: { doencas: "Hipertensão controlada", medicacoesAnteriores: "Uso anterior de losartana" },
+  historicoClinico: {
+    doencas: "Hipertensão controlada",
+    medicacoesAnteriores: "Uso anterior de losartana",
+  },
   alergias: {},
-  medicacoesEmUso: [{ nome: "Vitamina D", dose: "2000 UI", frequencia: "diária", horario: "manhã", motivo: "reposição" }],
+  medicacoesEmUso: [
+    {
+      nome: "Vitamina D",
+      dose: "2000 UI",
+      frequencia: "diária",
+      horario: "manhã",
+      motivo: "reposição",
+    },
+  ],
   cirurgias: {},
   emocional: { ansiedade: "5" },
   habitos: { treino: "Sim", modalidade: "Musculação", frequencia: "4x/semana" },

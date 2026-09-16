@@ -62,7 +62,6 @@ export function integerValue(value: string | null | undefined): string {
   return `${negative ? "-" : ""}${grouped}`;
 }
 
-
 /** Formata uma diferença numérica com sinal e vírgula decimal. */
 export function signedDelta(delta: number, digits = 1): string {
   if (!Number.isFinite(delta)) return "";
@@ -73,7 +72,6 @@ export function signedDelta(delta: number, digits = 1): string {
   if (rounded === 0) return fixed;
   return `${delta > 0 ? "+" : "−"}${fixed}`;
 }
-
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const BR_DATE = /^(\d{2})\/(\d{2})\/(\d{4})$/;

@@ -4,12 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  documentMatchesRequest,
-  printHtmlDocument,
-  sha256Text,
-  type PrintFrame,
-} from "./print";
+import { documentMatchesRequest, printHtmlDocument, sha256Text, type PrintFrame } from "./print";
 
 describe("verificação antes de baixar, copiar ou imprimir", () => {
   it("aceita apenas a versão e o conteúdo pedidos", () => {

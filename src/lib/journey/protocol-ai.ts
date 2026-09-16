@@ -266,9 +266,8 @@ export function buildProtocolSections(
   pendencias.push(
     ...entradas
       .filter((p) => !p.confirmada)
-      .map(
-        (p) =>
-          `Prescrição por confirmar individualmente: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
+      .map((p) =>
+        `Prescrição por confirmar individualmente: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
       ),
   );
 

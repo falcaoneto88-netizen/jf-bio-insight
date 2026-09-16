@@ -19,9 +19,8 @@ vi.mock("./core.server", () => ({
   getJourney: async () => journey(),
 }));
 
-const { preflightProtocolGeneration, revalidateAfterGeneration } = await import(
-  "./protocol-preflight.server"
-);
+const { preflightProtocolGeneration, revalidateAfterGeneration } =
+  await import("./protocol-preflight.server");
 
 function journey(over: Partial<Journey> = {}): Journey {
   const base = {
