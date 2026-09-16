@@ -147,14 +147,10 @@ export const guardarJornada = createServerFn({ method: "POST" })
     const { getJourney, patchJourney, reviewIssues } = await core();
     const { id, expectedVersion, ...patch } = data;
 
-    // O marcador do gerador não se apaga por patch: as regras dos protocolos
-    // gerados continuam a aplicar-se a qualquer edição no servidor.
-    let protocolo = patch.protocolo as Protocolo | null | undefined;
-    if (protocolo) {
-      const { preserveGeneratorMarker } = await import("@/lib/journey/protocol-quality");
-      const atual = await getJourney(context.supabase, context.userId, id);
-      protocolo = preserveGeneratorMarker(atual.protocolo, protocolo);
-    }
+    // Integridade (marcador do gerador, prescrições, regeneração) é aplicada
+    // dentro de patchJourney: vale para a interface, para o MCP e para
+    // qualquer patch direto, incluindo protocolo: null.
+    const protocolo = patch.protocolo as Protocolo | null | undefined;
     const jornada = await patchJourney(context.supabase, context.userId, id, expectedVersion, {
       ...patch,
       anamnese: patch.anamnese as Anamnese | undefined,
@@ -284,7 +280,7 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
       context.userId,
       data.id,
       data.expectedVersion,
-      { protocolo, status: "protocolo" },
+      { protocolo, status: "protocolo", regenerated: true },
     );
     return { data: { jornada: atualizada, issues: reviewIssues(atualizada) }, error: null };
   });

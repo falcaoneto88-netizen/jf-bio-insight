@@ -9,9 +9,11 @@ import { computeEvolution } from "./evolution";
 import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { needsNumberReview, sameIdentity, todayBr } from "./format";
 import {
+  applyProtocolIntegrity,
   isGeneratedProtocol,
   protocolEssentialIssues,
   protocolOpenWarnings,
+  rebuildPrescriptionSection,
 } from "./protocol-quality";
 import {
   anamneseSchema,
@@ -190,6 +192,11 @@ export type JourneyPatch = {
   internalNotes?: string[];
   confirmations?: Partial<Confirmations>;
   status?: string;
+  /**
+   * Só o serviço de geração do servidor usa isto. Um patch do cliente nunca o
+   * define: é o que distingue regeneração real de edição manual de texto.
+   */
+  regenerated?: boolean;
 };
 
 /**
@@ -221,7 +228,14 @@ export async function patchJourney(
   const patientName = (patch.patientName ?? current.patientName).trim();
   const anamnese = patch.anamnese ?? current.anamnese;
   const bio = patch.bio ?? current.bio;
-  const protocolo = patch.protocolo !== undefined ? patch.protocolo : current.protocolo;
+  // Integridade central: marcador do gerador, prescrições como fonte única e
+  // aviso de regeneração. Vale para null/reset e para qualquer patch direto.
+  const protocolo =
+    patch.protocolo !== undefined
+      ? applyProtocolIntegrity(current.protocolo, patch.protocolo, {
+          ...(patch.regenerated ? { regenerated: true } : {}),
+        })
+      : current.protocolo;
 
   const confirmations: Confirmations = {
     ...current.confirmations,
@@ -414,7 +428,9 @@ const ISSUED_TEMPLATES = new Set(["documento-clinico-v1", "documento-clinico-v2"
 
 /** Finais são servidos exclusivamente por approvedSnapshotHtml, nunca regenerados. */
 export function buildHtml(journey: Journey, kind: "draft" | "candidate"): string {
-  const protocolo = journey.protocolo ?? emptyProtocolo;
+  // A secção de prescrições é recriada também na prévia: o documento nunca
+  // mostra texto de prescrição que já não exista nas entradas confirmadas.
+  const protocolo = journey.protocolo ? rebuildPrescriptionSection(journey.protocolo) : emptyProtocolo;
   return renderProtocolHtml({
     patientName: journey.patientName,
     objetivo: protocolo.objetivo,

@@ -240,6 +240,7 @@ export const prepararProtocoloTool = defineTool({
         {
           protocolo,
           status: "protocolo",
+          regenerated: true,
         },
       );
       return toolJson({
