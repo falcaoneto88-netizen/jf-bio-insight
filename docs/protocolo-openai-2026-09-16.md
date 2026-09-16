@@ -101,3 +101,45 @@ Corrigido nesta prévia (não publicado):
 - O layout foi conferido com WeasyPrint local sobre dados fictícios, não em impressoras reais.
 - Executado nesta revisão: 207 testes Vitest, 76 testes Node, TypeScript e build.
 - Nada foi publicado; a produção continua na versão anterior.
+
+## Revisão f7cf9c99 — integridade no núcleo (16/09/2026)
+
+Corrigido na origem, dentro de `patchJourney` (`core.server.ts`), e não em
+invólucros do cliente:
+
+- **Marcador do gerador.** Qualquer gravação preserva a classificação de
+  protocolo gerado, incluindo `protocolo: null` (guarda protocolo vazio **com**
+  marcador) e a gravação seguinte. Não há caminho de patch que o remova.
+- **Prescrições como fonte única.** A secção de prescrição do documento é
+  recriada deterministicamente em cada gravação **e** na prévia (`buildHtml`),
+  apenas a partir de entradas confirmadas e completas. Remover a entrada remove
+  o texto; uma secção injetada pelo editor não sobrevive. Alterar substância,
+  dose, via ou frequência anula a confirmação, mesmo por patch direto.
+  `confirmada` sem campos completos bloqueia a aprovação. A IA não cria
+  prescrições.
+- **Regeneração obrigatória.** Mudar objetivo, meta calórica, número de
+  refeições, refeições líquidas, entradas de energia ou instruções depois da
+  geração marca `regenerationRequired`, que bloqueia a aprovação e não se
+  remove por patch. Só uma nova geração pelo caminho do servidor
+  (`regenerated: true`, definido apenas pelo serviço) o liberta; editar texto
+  não finge regeneração.
+- **Medidas do exame.** Cabeçalho com data válida ausente do histórico já não
+  usa um exame antigo como massa livre de gordura atual: devolve valores
+  vazios e mensagem explícita, ficando a meta profissional disponível.
+- **Impressão fail-closed.** Sem hash do servidor ou sem calculadora SHA
+  disponível, o documento não é baixado, copiado, pré-visualizado nem impresso.
+  O carregamento do iframe tem limite finito com limpeza garantida.
+
+Snapshots finais/aprovados legados continuam intactos byte a byte; RLS, grants
+e o escritor administrativo não foram alterados.
+
+### Verificação realmente executada
+
+233 testes Vitest (12 ficheiros), 76 testes Node (6 ficheiros), verificação de
+tipos, lint dos ficheiros alterados e build — todos verdes nesta prévia.
+
+### Limite real
+
+`OPENAI_API_KEY` continua ausente: **nenhuma chamada real à OpenAI foi feita**.
+Toda a cobertura da geração é por mocks e dados fictícios; o teste com chave
+real permanece pendente. Nada foi publicado.
