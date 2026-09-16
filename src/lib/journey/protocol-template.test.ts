@@ -311,8 +311,8 @@ describe("documento dos protocolos gerados", () => {
       version: 2,
     });
     expect(output).not.toMatch(/<script/);
-    const styles = output.match(/<style>[\s\S]*?<\/style>/g) ?? [];
+    const styles = output.match(/<style>([\s\S]*?)<\/style>/g) ?? [];
     expect(styles).toHaveLength(1);
-    expect(styles[0]).not.toContain("</style>");
+    expect(styles[0]!.slice(7, -8)).not.toContain("</style>");
   });
 });
