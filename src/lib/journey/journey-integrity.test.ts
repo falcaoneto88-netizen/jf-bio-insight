@@ -62,7 +62,12 @@ function geradoBase(over: Partial<Protocolo> = {}): Protocolo {
     locale: "pt-BR",
     generator: "protocolo-openai-2026-09-16-v1",
     mealCount: 1,
-    energy: { method: "cunningham", targetKcal: 2400, lines: [] },
+    energy: {
+      method: "profissional",
+      targetKcal: 2400,
+      professionalTarget: "2400 kcal",
+      source: "profissional",
+    },
     sections: [
       {
         id: "plano-alimentar",
