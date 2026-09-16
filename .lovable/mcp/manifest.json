@@ -396,11 +396,11 @@
       {
         "name": "preparar_protocolo",
         "title": "Preparar rascunho de protocolo",
-        "description": "Prepara o rascunho estruturado do protocolo a partir dos dados já confirmados e das instruções do profissional. Devolve id, versão, hash e o endereço de revisão. Não prescreve e não aprova.",
+        "description": "Prepara o rascunho estruturado do protocolo a partir dos dados já confirmados e das instruções do profissional. ATENÇÃO: envia o contexto clínico da jornada (sem nome, telefone, e-mail nem IDs de CRM nos campos estruturados) para a API da OpenAI (api.openai.com), fora do BioReport; por isso exige confirmação explícita. Devolve id, versão, hash e o endereço de revisão. Não prescreve, não cria medicação e não aprova.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
-          "openWorldHint": false
+          "openWorldHint": true
         },
         "inputSchema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -410,6 +410,17 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "expectedVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "description": "Versão da jornada que o profissional está a rever. Obrigatória."
+            },
+            "confirmarEnvioParaOpenAI": {
+              "type": "boolean",
+              "const": true,
+              "description": "Confirmação explícita de envio do contexto clínico para a API da OpenAI."
             },
             "objetivo": {
               "type": "string",
@@ -434,6 +445,8 @@
           },
           "required": [
             "jornadaId",
+            "expectedVersion",
+            "confirmarEnvioParaOpenAI",
             "objetivo"
           ]
         },
