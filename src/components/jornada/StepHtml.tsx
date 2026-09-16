@@ -104,6 +104,40 @@ export function StepHtml({ journey, onBack }: { journey: Journey; onBack: () => 
       setPreview(html);
     });
 
+  /**
+   * Impressão nativa do MESMO HTML servido para esta versão — sem serviço externo
+   * de PDF. O navegador não informa se o utilizador imprimiu ou cancelou, por isso
+   * nada é dado como impresso.
+   */
+  const imprimir = () =>
+    run(({ html }) => {
+      const frame = document.createElement("iframe");
+      frame.setAttribute("title", "Impressão do protocolo");
+      frame.setAttribute("sandbox", "allow-same-origin allow-modals");
+      frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+      frame.srcdoc = html;
+      frame.onload = () => {
+        try {
+          const view = frame.contentWindow;
+          if (!view) throw new Error("sem janela");
+          view.focus();
+          view.print();
+          toast.message("Janela de impressão aberta.", {
+            description:
+              "Escolha «Guardar como PDF» para gerar o ficheiro. Se nada apareceu, o navegador pode ter bloqueado a impressão.",
+          });
+        } catch {
+          const msg =
+            "O navegador bloqueou a impressão. Use «Visualizar» e imprima a página, ou baixe o HTML.";
+          setErro(msg);
+          toast.error(msg);
+        } finally {
+          setTimeout(() => frame.remove(), 60_000);
+        }
+      };
+      document.body.appendChild(frame);
+    });
+
   return (
     <div className="space-y-6">
       <Card>
