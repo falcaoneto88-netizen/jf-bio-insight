@@ -281,6 +281,8 @@ const bioTool = {
         dataHoraExame: str,
         taxaMetabolicaBasalKcal: str,
         nivelGorduraVisceral: str,
+        massaLivreGorduraKg: str,
+        massaGorduraKg: str,
         historico: {
           type: "array",
           items: {
@@ -367,6 +369,9 @@ export async function extrairBioimpedanciaSource(
     idadeAnos: integerValue(value.idadeAnos),
     taxaMetabolicaBasalKcal: integerValue(value.taxaMetabolicaBasalKcal),
     nivelGorduraVisceral: integerValue(value.nivelGorduraVisceral),
+    // Massa livre de gordura NÃO é massa muscular esquelética: campos distintos.
+    massaLivreGorduraKg: decimalComma(value.massaLivreGorduraKg ?? ""),
+    massaGorduraKg: decimalComma(value.massaGorduraKg ?? ""),
     historico: value.historico
       .map((row) => ({
         data: toBrDate(row.data),
