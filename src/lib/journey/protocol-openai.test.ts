@@ -63,7 +63,7 @@ describe("chamada à OpenAI (simulada)", () => {
     }) as typeof fetch);
 
     expect(output.refeicoes).toHaveLength(1);
-    const call = seen as unknown as { url: string; body: Record<string, any>; init: RequestInit };
+    const call = seen as unknown as { url: string; body: Record<string, { type?: string; strict?: boolean; schema?: unknown }> & Record<string, never>; init: RequestInit };
     expect(call.url).toBe("https://api.openai.com/v1/responses");
     expect(call.init.redirect).toBe("error");
     expect(call.body.store).toBe(false);
