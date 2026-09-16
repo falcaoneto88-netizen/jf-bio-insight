@@ -336,3 +336,30 @@ describe("regeneração obrigatória depois de mudar as entradas", () => {
     expect(igual.protocolo!.regenerationRequired).toBeUndefined();
   });
 });
+
+describe("mudança da fonte clínica após geração", () => {
+  it("editar anamnese exige regeneração mesmo após confirmar revisão", async () => {
+    const anamnese = structuredClone(fixtureAnamnese);
+    anamnese.alimentacao.refeicoes = "6";
+    const updated = await save({ anamnese, confirmations: { anamnese: true, revisao: true } });
+    expect(protocolEssentialIssues(updated.protocolo!)).toContain(REGENERATION_REQUIRED_ISSUE);
+  });
+  it("editar medidas da bioimpedância exige regeneração", async () => {
+    const bio = { ...fixtureBio, massaLivreGorduraKg: "58" };
+    const updated = await save({ bio });
+    expect(updated.protocolo?.regenerationRequired).toBe(true);
+  });
+  it("salvar a mesma fonte clínica não exige regeneração", async () => {
+    const updated = await save({
+      anamnese: structuredClone(fixtureAnamnese),
+      bio: structuredClone(fixtureBio),
+    });
+    expect(updated.protocolo?.regenerationRequired).toBeUndefined();
+  });
+  it("a regra nova não altera a classificação de documentos legados", async () => {
+    await seed(protocolSchema.parse({ objetivo: "recomposicao", sections: [] }));
+    const updated = await save({ bio: { ...fixtureBio, massaLivreGorduraKg: "58" } });
+    expect(updated.protocolo?.regenerationRequired).toBeUndefined();
+    expect(updated.protocolo?.generator).toBeUndefined();
+  });
+});

@@ -302,6 +302,9 @@ export function protocoloGerado(args: {
     generator: PROTOCOL_GENERATOR_VERSION,
     ...(args.mealCount ? { mealCount: args.mealCount } : {}),
     ...(args.energy ? { energy: args.energy } : {}),
+    ...(args.energy?.method === "profissional"
+      ? { calorieTarget: args.energy.professionalTarget }
+      : {}),
     ...(args.energyInput ? { energyInput: args.energyInput } : {}),
     ...(args.liquidMealNumbers?.length ? { liquidMealNumbers: args.liquidMealNumbers } : {}),
     ...(args.prescriptions?.length ? { prescriptions: args.prescriptions } : {}),

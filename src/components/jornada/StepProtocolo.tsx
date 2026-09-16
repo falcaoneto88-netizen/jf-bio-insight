@@ -523,6 +523,7 @@ export function StepProtocolo({
       )}
 
       <ProtocolEditor
+        structuredPrescriptions={Boolean(draft.generator)}
         sections={draft.sections}
         onChange={(sections) =>
           onDraftChange({ ...draft, templateVersion: CURRENT_PROTOCOL_TEMPLATE_VERSION, sections })

@@ -230,12 +230,20 @@ export async function patchJourney(
   const bio = patch.bio ?? current.bio;
   // Integridade central: marcador do gerador, prescrições como fonte única e
   // aviso de regeneração. Vale para null/reset e para qualquer patch direto.
-  const protocolo =
+  let protocolo =
     patch.protocolo !== undefined
       ? applyProtocolIntegrity(current.protocolo, patch.protocolo, {
           ...(patch.regenerated ? { regenerated: true } : {}),
         })
       : current.protocolo;
+
+  // Revisar novamente a fonte não torna uma dieta antiga atual: a geração
+  // depende também das respostas clínicas e das medidas, não só das opções.
+  const clinicalSourceChanged =
+    JSON.stringify(canonical(anamnese)) !== JSON.stringify(canonical(current.anamnese)) ||
+    JSON.stringify(canonical(bio)) !== JSON.stringify(canonical(current.bio));
+  if (protocolo?.generator && clinicalSourceChanged && !patch.regenerated)
+    protocolo = { ...protocolo, regenerationRequired: true };
 
   const confirmations: Confirmations = {
     ...current.confirmations,

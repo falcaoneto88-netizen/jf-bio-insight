@@ -29,8 +29,8 @@ ORIENTAÇÕES
 - "orientacoesAtividade": orientações de atividade física a partir do que foi relatado. NÃO crie cronogramas de treino, séries, reavaliações nem calendários de aplicação.
 
 PRESCRIÇÕES
-- "prescricoes" contém apenas substâncias, suplementos ou injetáveis explicitamente indicados pelo profissional nesta consulta, com os dados que ele forneceu. Nunca transforme uso relatado pelo paciente em prescrição, nunca crie doses, vias ou frequências, e nunca inclua uma tabela universal de suplementos.
-- Se não houver indicação do profissional, devolva a lista vazia.
+- As prescrições são inseridas e confirmadas pelo profissional em campos separados; o sistema as monta sem participação da IA.
+- Não gere prescrições, substâncias, doses, vias ou frequências em nenhuma seção. Não transforme medicação ou suplemento relatado em nova orientação de uso. Não inclua o campo "prescricoes" na resposta.
 
 PENDÊNCIAS
 - Liste em "pendencias" tudo o que ficou em falta ou precisa de decisão humana. Não declare que os dados estão completos.
