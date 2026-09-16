@@ -75,7 +75,10 @@ export async function printHtmlDocument(
     await Promise.race([
       frame.load(html),
       new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error("tempo esgotado ao preparar a impressão")), limitMs);
+        timer = setTimeout(
+          () => reject(new Error("tempo esgotado ao preparar a impressão")),
+          limitMs,
+        );
       }),
     ]).finally(() => {
       if (timer) clearTimeout(timer);

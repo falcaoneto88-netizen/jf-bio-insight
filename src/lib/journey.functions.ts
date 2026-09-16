@@ -244,9 +244,8 @@ export const prepararProtocolo = createServerFn({ method: "POST" })
     const jornada = await getJourney(context.supabase, context.userId, data.id);
 
     // Mesmo preflight do MCP: admin/dono (acima), revisão, fonte e versão.
-    const { preflightProtocolGeneration, revalidateAfterGeneration } = await import(
-      "@/lib/journey/protocol-preflight.server"
-    );
+    const { preflightProtocolGeneration, revalidateAfterGeneration } =
+      await import("@/lib/journey/protocol-preflight.server");
     const pre = await preflightProtocolGeneration(jornada, data.expectedVersion);
     if (!pre.ok) return { data: null, error: pre.error };
 

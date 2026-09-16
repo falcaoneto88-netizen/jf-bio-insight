@@ -125,7 +125,6 @@ export function protocolEssentialIssues(protocolo: Protocolo): string[] {
       `Prescrição incompleta: ${p.substancia.trim()} precisa de dose, via e frequência antes de ser confirmada.`,
     );
 
-
   const meals = protocolo.sections
     .flatMap((s) => s.blocks)
     .filter((b): b is Extract<ProtocolBlock, { type: "meal" }> => b.type === "meal");

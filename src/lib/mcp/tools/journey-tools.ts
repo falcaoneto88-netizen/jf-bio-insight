@@ -189,7 +189,14 @@ export const prepararProtocoloTool = defineTool({
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   handler: async (
-    { jornadaId, expectedVersion, confirmarEnvioParaOpenAI, objetivo, instrucoes, numeroDeRefeicoes },
+    {
+      jornadaId,
+      expectedVersion,
+      confirmarEnvioParaOpenAI,
+      objetivo,
+      instrucoes,
+      numeroDeRefeicoes,
+    },
     ctx,
   ) => {
     const access = await requireJourneyAccess(ctx);
@@ -198,9 +205,8 @@ export const prepararProtocoloTool = defineTool({
       return toolError("Confirme o envio do contexto clínico para a API da OpenAI.");
     const { getJourney, patchJourney, reviewIssues, consumeAiQuota } =
       await import("@/lib/journey/core.server");
-    const { preflightProtocolGeneration, revalidateAfterGeneration } = await import(
-      "@/lib/journey/protocol-preflight.server"
-    );
+    const { preflightProtocolGeneration, revalidateAfterGeneration } =
+      await import("@/lib/journey/protocol-preflight.server");
     const { gerarProtocolo } = await import("@/lib/journey/protocol-generation.server");
     const { protocolSchema } = await import("@/lib/journey/types");
     try {

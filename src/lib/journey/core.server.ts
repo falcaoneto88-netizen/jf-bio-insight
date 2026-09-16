@@ -430,7 +430,9 @@ const ISSUED_TEMPLATES = new Set(["documento-clinico-v1", "documento-clinico-v2"
 export function buildHtml(journey: Journey, kind: "draft" | "candidate"): string {
   // A secção de prescrições é recriada também na prévia: o documento nunca
   // mostra texto de prescrição que já não exista nas entradas confirmadas.
-  const protocolo = journey.protocolo ? rebuildPrescriptionSection(journey.protocolo) : emptyProtocolo;
+  const protocolo = journey.protocolo
+    ? rebuildPrescriptionSection(journey.protocolo)
+    : emptyProtocolo;
   return renderProtocolHtml({
     patientName: journey.patientName,
     objetivo: protocolo.objetivo,
