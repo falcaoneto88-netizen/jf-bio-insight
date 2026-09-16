@@ -270,6 +270,11 @@ export const protocolSchema = z.object({
   sections: z.array(protocolSectionSchema).max(40).default([]),
   /** Painel interno — NUNCA exportado para o HTML. */
   pendencias: z.array(z.string().max(600)).max(60).default([]),
+  /** Opcionais e sem default: documentos legados continuam com o mesmo hash. */
+  generator: z.string().max(64).optional(),
+  mealCount: z.number().int().min(1).max(12).optional(),
+  energy: energyPlanSchema.optional(),
+  energyInput: energyInputSchema.optional(),
 });
 export type Protocolo = z.infer<typeof protocolSchema>;
 
