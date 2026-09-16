@@ -191,3 +191,96 @@ export function protocolOpenWarnings(protocolo: Protocolo): string[] {
     (p) => p.trim() && !resolved.has(p.trim()) && !essential.has(p),
   );
 }
+
+/* --------------------- integridade dos protocolos --------------------- */
+
+/**
+ * Secção de prescrições recriada deterministicamente a partir das entradas
+ * confirmadas e completas. Apagar ou editar uma entrada apaga o texto antigo,
+ * porque a secção é sempre reconstruída — nunca editada à parte.
+ * Documentos legados (sem "generator") não são tocados.
+ */
+export function rebuildPrescriptionSection(protocolo: Protocolo): Protocolo {
+  if (!isGeneratedProtocol(protocolo)) return protocolo;
+  const t = documentLabels(protocolo.locale ?? "pt-BR");
+  const sections = protocolo.sections.filter(
+    (s) => s.kind !== "prescription" && s.id !== "prescricoes",
+  );
+  const emitidas = (protocolo.prescriptions ?? []).filter(
+    (p) => p.substancia.trim() && p.confirmada && prescriptionIsComplete(p),
+  );
+  if (emitidas.length) {
+    const section: ProtocolSection = {
+      id: "prescricoes",
+      title: t.prescription,
+      kind: "prescription",
+      blocks: [
+        {
+          type: "table",
+          columns: [t.name, t.dose, t.unit, t.frequency, t.reason],
+          rows: emitidas.map((p) => [
+            p.substancia.trim(),
+            p.dose.trim(),
+            p.via.trim(),
+            p.frequencia.trim(),
+            p.observacoes.trim(),
+          ]),
+        },
+      ],
+    };
+    sections.push(section);
+  }
+  return { ...protocolo, sections };
+}
+
+/** Entradas que, mudando depois da geração, tornam o plano alimentar desatualizado. */
+export function protocolInputSignature(protocolo: Protocolo): string {
+  return JSON.stringify({
+    objetivo: protocolo.objetivo,
+    calorieTarget: (protocolo.calorieTarget ?? "").trim(),
+    mealCount: protocolo.mealCount ?? null,
+    liquid: [...(protocolo.liquidMealNumbers ?? [])].sort((a, b) => a - b),
+    energyInput: protocolo.energyInput ?? null,
+    energyTarget: protocolo.energy?.targetKcal ?? null,
+    instrucoes: protocolo.instrucoes.trim(),
+  });
+}
+
+/**
+ * Integridade central, aplicada em TODAS as gravações (interface, MCP ou patch
+ * direto): marcador do gerador, prescrições como fonte única, e aviso de
+ * regeneração obrigatória quando as entradas mudam depois da geração.
+ * `regenerated` só é verdadeiro no caminho de geração do servidor.
+ */
+export function applyProtocolIntegrity(
+  current: Protocolo | null | undefined,
+  next: Protocolo | null,
+  options: { regenerated?: boolean } = {},
+): Protocolo | null {
+  // Limpar o protocolo não apaga a classificação: volta a um protocolo vazio
+  // com o mesmo marcador, para as regras continuarem a aplicar-se.
+  if (next === null) {
+    if (!current?.generator) return null;
+    return { ...emptyProtocolo, generator: current.generator };
+  }
+
+  let result = preserveGeneratorMarker(current, next);
+  const prescriptions = applyPrescriptionRules(current?.prescriptions, result.prescriptions);
+  if (prescriptions) result = { ...result, prescriptions };
+  result = rebuildPrescriptionSection(result);
+
+  if (!isGeneratedProtocol(result)) return result;
+
+  if (options.regenerated) {
+    const { regenerationRequired: _drop, ...clean } = result;
+    return clean;
+  }
+  const inputsChanged = Boolean(
+    current?.generator && protocolInputSignature(current) !== protocolInputSignature(result),
+  );
+  // O aviso não se remove por patch: uma vez marcado, só nova geração o limpa.
+  if (current?.regenerationRequired || inputsChanged)
+    return { ...result, regenerationRequired: true };
+  const { regenerationRequired: _unused, ...clean } = result;
+  return clean;
+}
