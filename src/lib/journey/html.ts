@@ -198,7 +198,16 @@ function definitionList(entries: [string, string][]): string {
     ? `<dl class="fields">${filled.map(([k, v]) => `<div class="field"><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v).replace(/\n/g, "<br />")}</dd></div>`).join("")}</dl>`
     : "";
 }
-function renderAnamnese(anamnese: Anamnese, locale: ProtocolLocale): string {
+function missingValue(locale: ProtocolLocale): string {
+  return locale === "es" ? "No informado" : locale === "en" ? "Not provided" : "Não informado";
+}
+/** CSS strings must not allow user text to close the enclosing style tag. */
+function cssText(value: string): string {
+  return JSON.stringify(value.replace(/[\r\n\f]/g, " "))
+    .replace(/</g, "\\3c ")
+    .replace(/>/g, "\\3e ");
+}
+function renderAnamnese(anamnese: Anamnese, locale: ProtocolLocale, showMissing = false): string {
   const t = documentLabels(locale);
   const cards: { html: string; wide: boolean }[] = [];
   ANAMNESE_SECTIONS.forEach((section, index) => {
@@ -206,19 +215,24 @@ function renderAnamnese(anamnese: Anamnese, locale: ProtocolLocale): string {
     if (section.key === "medicacoesEmUso") {
       body = table(
         [t.name, t.dose, t.frequency, t.time, t.reason],
-        anamnese.medicacoesEmUso.map((m) => [m.nome, m.dose, m.frequencia, m.horario, m.motivo]),
+        anamnese.medicacoesEmUso.map((m) =>
+          [m.nome, m.dose, m.frequencia, m.horario, m.motivo].map((v) =>
+            showMissing && !v.trim() ? missingValue(locale) : v,
+          ),
+        ),
       );
     } else {
       const raw = anamnese[section.key] as Record<string, string>;
       body = definitionList(
         Object.entries(raw).map(([key, value]) => [
           anamnesisFieldLabel(key, locale),
-          section.key === "alimentacao" && (key === "refeicoes" || key === "padrao")
+          (section.key === "alimentacao" && (key === "refeicoes" || key === "padrao")
             ? hideMealTimes(value)
-            : value,
+            : value) || (showMissing ? missingValue(locale) : ""),
         ]),
       );
     }
+    if (!body && showMissing) body = `<p>${missingValue(locale)}</p>`;
     if (!body) return;
     const wide = section.key === "medicacoesEmUso" || body.replace(/<[^>]+>/g, "").length > 700;
     cards.push({
@@ -254,7 +268,7 @@ function renderAnamnese(anamnese: Anamnese, locale: ProtocolLocale): string {
   flush();
   return rows.length ? `<div class="anamnesis-cards">${rows.join("\n")}</div>` : "";
 }
-function renderBio(bio: Bio, locale: ProtocolLocale): string {
+function renderBio(bio: Bio, locale: ProtocolLocale, showMissing = false): string {
   const t = documentLabels(locale);
   const fields = [
     [t.exam, documentDate(bio.dataHoraExame, locale), ""],
@@ -263,10 +277,12 @@ function renderBio(bio: Bio, locale: ProtocolLocale): string {
     [t.fatMass, decimalComma(bio.massaGorduraKg ?? ""), "kg"],
     [t.bmr, integerValue(bio.taxaMetabolicaBasalKcal), "kcal"],
     [t.visceral, integerValue(bio.nivelGorduraVisceral), ""],
-  ].filter((row) => row[1].trim());
+  ]
+    .filter((row) => showMissing || row[1].trim())
+    .map((row) => [row[0], row[1].trim() || missingValue(locale), row[1].trim() ? row[2] : ""]);
   const rows = evolutionTableRows(computeEvolution(bio)).map((row) => [
     documentDate(row[0], locale),
-    ...row.slice(1),
+    ...row.slice(1).map((value) => (showMissing && !value.trim() ? missingValue(locale) : value)),
   ]);
   return (
     table([t.indicator, t.value, t.unit], fields) +
@@ -372,32 +388,52 @@ export function renderProtocolHtml(input: RenderHtmlInput): string {
     locale,
   );
   const generatedAt = documentDate(input.generatedAt || todayBr(), locale);
-  const anamnesis = renderAnamnese(input.anamnese, locale);
-  const bio = input.bio.semExame ? "" : renderBio(input.bio, locale);
+  const generated = Boolean(input.protocolo.generator);
+  const anamnesis = renderAnamnese(input.anamnese, locale, generated);
+  const bio = input.bio.semExame
+    ? generated
+      ? `<p>${missingValue(locale)}</p>`
+      : ""
+    : renderBio(input.bio, locale, generated);
   const goal = input.objetivo
     ? { hipertrofia: t.hypertrophy, recomposicao: t.recomposition, emagrecimento: t.weightLoss }[
         input.objetivo
       ]
     : "";
-  const goalFields = definitionList([
-    [t.objective, goal],
-    [t.calories, input.protocolo.calorieTarget ?? ""],
-  ]);
+  const title =
+    generated && goal
+      ? `${locale === "es" ? "Protocolo avanzado de" : locale === "en" ? "Advanced protocol for" : "Protocolo avançado de"} ${goal}`
+      : t.title;
+  const hasObjective = input.protocolo.sections.some(
+    (section) =>
+      sectionKind(section) === "objective" &&
+      section.blocks.some((block) => renderBlock(block, locale).trim()),
+  );
+  const goalFields =
+    generated && hasObjective
+      ? ""
+      : definitionList([
+          [t.objective, goal],
+          [t.calories, input.protocolo.calorieTarget ?? ""],
+        ]);
   const brand = `<div class="brand-mark"><img src="${LOGO_DATA_URI}" width="1535" height="270" alt="Dr. João Falcão — Estética Avançada" /></div>`;
-  const pageCss = `@page { @bottom-center { content: "${t.page} " counter(page) " ${t.of} " counter(pages); } }`;
+  const pagePrefix = generated
+    ? `${patient} · ${t.version} ${input.version ?? ""}${input.draft ? ` · ${t.draft}` : ""} · ${t.page} `
+    : `${t.page} `;
+  const pageCss = `@page { @bottom-center { content: ${cssText(pagePrefix)} counter(page) " ${t.of} " counter(pages); } }${generated ? "\n@media print { .doc-footer { display: none; } }" : ""}`;
   return `<!doctype html>
 <html lang="${locale}">
 <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="bioreport-template" content="${DOCUMENT_TEMPLATE_VERSION}" /><meta name="bioreport-logo-sha256" content="${LOGO_SHA256}" />
-<title>${escapeHtml(`${t.title} — ${patient || t.patient}`)}</title><style>${CSS}\n${pageCss}</style></head>
+<title>${escapeHtml(`${title} — ${patient || t.patient}`)}</title><style>${CSS}\n${pageCss}</style></head>
 <body><main class="page-shell">
 ${input.draft ? `<div class="draft-banner">${t.draft}</div>` : ""}
 ${brand}
-<header class="doc-header"><h1>${t.title}</h1>${definitionList([
+<header class="doc-header"><h1>${escapeHtml(title)}</h1>${definitionList([
     [t.patient, patient],
     [t.date, date],
-    [t.sex, input.bio.semExame ? "" : input.bio.sexo],
-    [t.age, age],
+    [t.sex, (input.bio.semExame ? "" : input.bio.sexo) || (generated ? missingValue(locale) : "")],
+    [t.age, age || (generated ? missingValue(locale) : "")],
   ])}</header>
 ${anamnesis ? `<section><h2>${t.anamnesis}</h2>${anamnesis}</section>` : ""}
 ${bio ? `<section><h2>${t.bio}</h2>${bio}${renderEvolution(input.bio, locale)}</section>` : ""}
