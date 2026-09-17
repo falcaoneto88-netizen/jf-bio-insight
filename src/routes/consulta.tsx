@@ -22,6 +22,7 @@ import { useReportStore, type BodyCompositionData, type ClinicalData } from "@/s
 import type { Submission } from "@/lib/consultations/types";
 import {
   consultationPrimaryAction,
+  consultationReportState,
   isCurrentApprovedProtocol,
   type ConsultationPrimaryAction,
 } from "@/lib/clinical-navigation";
@@ -163,7 +164,7 @@ function ConsultationList() {
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Em andamento
+              Consultas recentes
             </p>
             <h2 id="recentes-title" className="mt-1 font-serif text-2xl">
               Retomar consulta
@@ -474,6 +475,11 @@ function ConsultationDetail({ id }: { id: string }) {
       "O nome informado na anamnese difere do cadastro da consulta. Confira a identidade antes de carregar.",
     );
   const selectedApplied = !!selected && data.draft.anamnesis_id === selected.id;
+  const reportState = consultationReportState({
+    analysisPending: analysisQuery.isPending,
+    analysisError: analysisQuery.isError,
+    analysis,
+  });
   const primaryAction = consultationPrimaryAction({
     analysisPending: analysisQuery.isPending,
     analysisError: analysisQuery.isError,
@@ -633,11 +639,13 @@ function ConsultationDetail({ id }: { id: string }) {
                   ? `${data.submissions.length} versão(ões) recebida(s)`
                   : "Aguardando preenchimento"}
               </p>
-              <Button asChild variant="outline">
-                <Link to="/anamnese" search={{ consulta: id }}>
-                  {data.submissions.length ? "Registrar nova versão" : "Preencher anamnese"}
-                </Link>
-              </Button>
+              {!data.submissions.length && (
+                <Button asChild variant="outline">
+                  <Link to="/anamnese" search={{ consulta: id }}>
+                    Preencher anamnese
+                  </Link>
+                </Button>
+              )}
               {data.consultation.invite_email && (
                 <>
                   <p className="break-words text-sm text-muted-foreground">
@@ -709,8 +717,13 @@ function ConsultationDetail({ id }: { id: string }) {
                     {busy
                       ? "Carregando…"
                       : selectedApplied
-                        ? "Revisar respostas na ficha"
+                        ? "Revisar respostas recebidas"
                         : "Usar esta versão na ficha"}
+                  </Button>
+                  <Button asChild variant="ghost" className="text-muted-foreground">
+                    <Link to="/anamnese" search={{ consulta: id }}>
+                      Registrar nova versão
+                    </Link>
                   </Button>
                 </>
               )}
@@ -784,10 +797,17 @@ function ConsultationDetail({ id }: { id: string }) {
               <CardTitle className="font-serif text-xl">Relatório</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p>
-                {data.reports.length
-                  ? `${data.reports.length} relatório(s) salvo(s)`
-                  : "Ainda não gerado"}
+              <p role="status">
+                {
+                  {
+                    loading: "Conferindo o protocolo…",
+                    error: "Não foi possível conferir o protocolo.",
+                    stale: "Dados atualizados — revise a análise antes de continuar.",
+                    approved: "Protocolo atual aprovado — disponível para impressão.",
+                    draft: "Rascunho preparado — aguarda revisão e aprovação.",
+                    missing: "Protocolo ainda não preparado.",
+                  }[reportState]
+                }
               </p>
               {analysis && !analysisQuery.isPending && !analysisQuery.isError && (
                 <Button asChild variant="outline">
@@ -795,13 +815,23 @@ function ConsultationDetail({ id }: { id: string }) {
                     to="/jornada/$id"
                     params={{ id: analysis.id }}
                     search={{
-                      // Aprovado e atual: abre direto no documento para imprimir.
-                      etapa: isCurrentApprovedProtocol(analysis) ? 6 : 5,
+                      etapa:
+                        reportState === "approved"
+                          ? 6
+                          : reportState === "stale"
+                            ? undefined
+                            : reportState === "draft"
+                              ? 5
+                              : 4,
                     }}
                   >
-                    {isCurrentApprovedProtocol(analysis)
+                    {reportState === "approved"
                       ? "Abrir protocolo aprovado"
-                      : "Gerar, revisar e imprimir protocolo"}
+                      : reportState === "stale"
+                        ? "Revisar dados atualizados"
+                        : reportState === "draft"
+                          ? "Revisar e aprovar protocolo"
+                          : "Preparar protocolo"}
                   </Link>
                 </Button>
               )}
@@ -840,15 +870,20 @@ function ConsultationDetail({ id }: { id: string }) {
             </Button>
           </div>
           {data.reports.length > 0 && (
-            <ul className="divide-y rounded-md border">
-              {data.reports.map((r) => (
-                <li className="break-words p-3 text-xs" key={r.id}>
-                  {r.pdf_file_name}
-                  <br />
-                  {new Date(r.generated_at).toLocaleString("pt-BR")}
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {data.reports.length} documento(s) do gerador anterior
+              </p>
+              <ul className="divide-y rounded-md border">
+                {data.reports.map((r) => (
+                  <li className="break-words p-3 text-xs" key={r.id}>
+                    {r.pdf_file_name}
+                    <br />
+                    {new Date(r.generated_at).toLocaleString("pt-BR")}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       </details>
