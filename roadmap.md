@@ -68,3 +68,4 @@
 - [ ] Cobrir estados prioritários e conclusão do progresso com testes comportamentais
 - [ ] Validar teclado, contraste e layouts 390/768/1440 com dados sintéticos
 - [ ] Executar TypeScript, build e testes relevantes; não publicar
+- [ ] Entregar a prévia concreta após validação, sem nova pausa de aprovação
