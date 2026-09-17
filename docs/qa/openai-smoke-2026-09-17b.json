@@ -1,0 +1,51 @@
+{
+  "descricao": "Smoke técnico único com dados 100% fictícios. Sem validade clínica, sem paciente real, sem CRM, sem gravação em banco.",
+  "executadoEm": "2026-09-17T22:43:34.676Z",
+  "chamadaReal": true,
+  "chamadasRealizadas": 1,
+  "store": false,
+  "endpoint": "https://api.openai.com/v1/responses",
+  "apiKeyPresente": true,
+  "modelo": "gpt-5.4",
+  "modeloOrigem": "padrão (OPENAI_CLINICAL_MODEL não cadastrado)",
+  "duracaoMs": 18634,
+  "resultado": "sucesso",
+  "protocoloGerado": true,
+  "energia": {
+    "method": "profissional",
+    "targetKcal": 1800,
+    "professionalTarget": "1800 kcal/dia",
+    "source": "profissional"
+  },
+  "contagens": {
+    "refeicoes": 4,
+    "secoes": 4,
+    "pendencias": 4
+  },
+  "verificacoes": {
+    "schemaProducao": true,
+    "quatroRefeicoes": true,
+    "refeicoesNumeradasSemHorario": true,
+    "porcoesEmTodosAlimentos": true,
+    "tresSubstituicoesProteina": true,
+    "tresSubstituicoesCarboidrato": true,
+    "substituicoesComPorcao": true,
+    "alergiaAmendoimRespeitada": true,
+    "semPrescricoesInventadas": true,
+    "metaAplicada": true
+  },
+  "pendenciasEssenciais": [],
+  "avisosAbertos": [
+    "Confirmar gramagens e distribuição energética final de cada refeição conforme revisão profissional.",
+    "Validar preferências alimentares, aversões, rotina de preparo e contexto social para personalização adicional do plano.",
+    "Confirmar se há outras restrições alimentares além de amendoim, incluindo risco de contaminação cruzada em produtos industrializados.",
+    "Definir, em revisão humana, eventuais ajustes específicos para dias de treino e dias sem treino, se necessário."
+  ],
+  "pendencias": [
+    "Confirmar gramagens e distribuição energética final de cada refeição conforme revisão profissional.",
+    "Validar preferências alimentares, aversões, rotina de preparo e contexto social para personalização adicional do plano.",
+    "Confirmar se há outras restrições alimentares além de amendoim, incluindo risco de contaminação cruzada em produtos industrializados.",
+    "Definir, em revisão humana, eventuais ajustes específicos para dias de treino e dias sem treino, se necessário."
+  ],
+  "htmlBytes": 942235
+}
