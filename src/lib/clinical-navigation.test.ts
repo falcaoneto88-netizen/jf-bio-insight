@@ -101,4 +101,17 @@ describe("progresso persistido da jornada", () => {
     expect(journeyCompletedSteps(staleSource).has(5)).toBe(false);
     expect(journeyNaturalStep(staleSource)).toBe(5);
   });
+
+  it("marca a aprovação atual sem declarar a etapa HTML concluída", () => {
+    const approved = {
+      ...fixtureJourney,
+      version: 8,
+      approvedVersion: 8,
+      sourceCurrent: true,
+    };
+    const completed = journeyCompletedSteps(approved);
+    expect(completed.has(5)).toBe(true);
+    expect(completed.has(6)).toBe(false);
+    expect(journeyNaturalStep(approved)).toBe(6);
+  });
 });

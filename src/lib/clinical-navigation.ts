@@ -83,7 +83,6 @@ export function journeyCompletedSteps(journey: Journey): ReadonlySet<JourneyStep
   if (journey.protocolo && journey.protocolo.sections.length > 0) completed.add(4);
   if (isCurrentApprovedProtocol(journey)) {
     completed.add(5);
-    completed.add(6);
   }
   return completed;
 }
