@@ -149,6 +149,30 @@
   --sidebar-ring: oklch(0.74 0.12 80);
 }
 
+/* Escopo visual das áreas de consulta e atendimento; não afeta impressão. */
+.clinical-workspace {
+  --background: oklch(0.982 0.007 88);
+  --foreground: oklch(0.285 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.285 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.285 0 0);
+  --primary: oklch(0.178 0 0);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.955 0.006 88);
+  --secondary-foreground: oklch(0.178 0 0);
+  --muted: oklch(0.955 0.006 88);
+  --muted-foreground: oklch(0.44 0.01 80);
+  --accent: oklch(0.935 0.025 82);
+  --accent-foreground: oklch(0.24 0.02 75);
+  --border: oklch(0.895 0.008 82);
+  --input: oklch(0.875 0.008 82);
+  --ring: oklch(0.72 0.075 78);
+  --gold: oklch(0.72 0.075 78);
+  --gold-foreground: oklch(0.178 0 0);
+  --gold-soft: oklch(0.94 0.03 83);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
