@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   consultationPrimaryAction,
+  consultationReportState,
   journeyCompletedSteps,
   journeyNaturalStep,
 } from "./clinical-navigation";
@@ -113,5 +114,42 @@ describe("progresso persistido da jornada", () => {
     expect(completed.has(5)).toBe(true);
     expect(completed.has(6)).toBe(false);
     expect(journeyNaturalStep(approved)).toBe(6);
+  });
+});
+
+describe("estado do relatório atual", () => {
+  const input = { analysisPending: false, analysisError: false };
+  it("reconhece protocolo aprovado sem depender de PDFs históricos", () => {
+    expect(consultationReportState({ ...input, analysis: analysis({ approvedVersion: 4 }) })).toBe(
+      "approved",
+    );
+  });
+  it("distingue rascunho, ausência de protocolo e ausência de análise", () => {
+    expect(consultationReportState({ ...input, analysis: analysis() })).toBe("draft");
+    expect(consultationReportState({ ...input, analysis: analysis({ protocolo: null }) })).toBe(
+      "missing",
+    );
+    expect(consultationReportState({ ...input, analysis: null })).toBe("missing");
+  });
+  it("não anuncia impressão para aprovação antiga ou fonte desatualizada", () => {
+    expect(consultationReportState({ ...input, analysis: analysis({ approvedVersion: 3 }) })).toBe(
+      "draft",
+    );
+    expect(
+      consultationReportState({
+        ...input,
+        analysis: analysis({ approvedVersion: 4, sourceCurrent: false }),
+      }),
+    ).toBe("stale");
+  });
+  it("não confunde carregamento e erro com protocolo ausente", () => {
+    expect(consultationReportState({ ...input, analysisPending: true })).toBe("loading");
+    expect(
+      consultationReportState({
+        ...input,
+        analysisError: true,
+        analysis: analysis({ approvedVersion: 4 }),
+      }),
+    ).toBe("error");
   });
 });

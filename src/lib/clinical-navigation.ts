@@ -66,6 +66,20 @@ export function isCurrentApprovedProtocol(
   return analysis.approvedVersion === analysis.version && analysis.sourceCurrent !== false;
 }
 
+/** Estado do protocolo atual; PDFs históricos não indicam se esta análise já foi gerada. */
+export function consultationReportState(input: {
+  analysisPending: boolean;
+  analysisError: boolean;
+  analysis?: AnalysisSummary | null;
+}): "loading" | "error" | "stale" | "approved" | "draft" | "missing" {
+  if (input.analysisPending) return "loading";
+  if (input.analysisError) return "error";
+  if (!input.analysis) return "missing";
+  if (input.analysis.sourceCurrent === false) return "stale";
+  if (isCurrentApprovedProtocol(input.analysis)) return "approved";
+  return input.analysis.protocolo?.sections.length ? "draft" : "missing";
+}
+
 export function journeyNaturalStep(journey: Journey): JourneyStep {
   if (isCurrentApprovedProtocol(journey)) return 6;
   if (journey.protocolo && journey.protocolo.sections.length > 0) return 5;

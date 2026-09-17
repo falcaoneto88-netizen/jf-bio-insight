@@ -167,7 +167,7 @@
   --accent-foreground: oklch(0.24 0.02 75);
   --border: oklch(0.895 0.008 82);
   --input: oklch(0.875 0.008 82);
-  --ring: oklch(0.72 0.075 78);
+  --ring: #765d3d;
   --gold: oklch(0.72 0.075 78);
   --gold-foreground: oklch(0.178 0 0);
   --gold-soft: oklch(0.94 0.03 83);
