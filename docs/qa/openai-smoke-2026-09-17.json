@@ -1,0 +1,51 @@
+{
+  "descricao": "Smoke técnico único com dados 100% fictícios. Sem validade clínica, sem paciente real, sem CRM, sem gravação em banco.",
+  "executadoEm": "2026-09-17T22:12:05.620Z",
+  "chamadaReal": true,
+  "chamadasRealizadas": 1,
+  "store": false,
+  "endpoint": "https://api.openai.com/v1/responses",
+  "apiKeyPresente": true,
+  "modelo": "gpt-5.4",
+  "modeloOrigem": "padrão (OPENAI_CLINICAL_MODEL não cadastrado)",
+  "duracaoMs": 18757,
+  "resultado": "sucesso",
+  "protocoloGerado": true,
+  "energia": {
+    "method": "profissional",
+    "targetKcal": 1800,
+    "professionalTarget": "1800 kcal/dia",
+    "source": "profissional"
+  },
+  "contagens": {
+    "refeicoes": 4,
+    "secoes": 4,
+    "pendencias": 4
+  },
+  "verificacoes": {
+    "schemaProducao": true,
+    "quatroRefeicoes": true,
+    "refeicoesNumeradasSemHorario": true,
+    "porcoesEmTodosAlimentos": true,
+    "tresSubstituicoesProteina": true,
+    "tresSubstituicoesCarboidrato": true,
+    "substituicoesComPorcao": true,
+    "alergiaAmendoimRespeitada": true,
+    "semPrescricoesInventadas": true,
+    "metaAplicada": true
+  },
+  "pendenciasEssenciais": [],
+  "avisosAbertos": [
+    "Validar com o profissional se as porções propostas estão adequadas à meta calórica de 1800 kcal/dia, pois não foi fornecida distribuição de macros ou gramagem prescrita pelo profissional.",
+    "Confirmar preferência alimentar, aceitação, intolerâncias adicionais e contexto de rotina para personalização mais precisa do plano.",
+    "Definir com o profissional se há necessidade de ajustar refeições para dias de treino e dias sem treino.",
+    "Confirmar se há necessidade de excluir outras oleaginosas por risco de contaminação cruzada, considerando a alergia a amendoim relatada."
+  ],
+  "pendencias": [
+    "Validar com o profissional se as porções propostas estão adequadas à meta calórica de 1800 kcal/dia, pois não foi fornecida distribuição de macros ou gramagem prescrita pelo profissional.",
+    "Confirmar preferência alimentar, aceitação, intolerâncias adicionais e contexto de rotina para personalização mais precisa do plano.",
+    "Definir com o profissional se há necessidade de ajustar refeições para dias de treino e dias sem treino.",
+    "Confirmar se há necessidade de excluir outras oleaginosas por risco de contaminação cruzada, considerando a alergia a amendoim relatada."
+  ],
+  "htmlBytes": 942266
+}

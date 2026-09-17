@@ -1,0 +1,295 @@
+{
+  "protocolo": {
+    "templateVersion": "modelo-protocolo-v2",
+    "objetivo": "recomposicao",
+    "instrucoes": "Cenário técnico fictício de validação. Quatro refeições numeradas, sem horários. Alergia a amendoim deve ser respeitada. Sem prescrições.",
+    "locale": "pt-BR",
+    "sections": [
+      {
+        "id": "objetivo",
+        "title": "Objetivo",
+        "kind": "objective",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "Objetivo definido pelo profissional: recomposição corporal, com meta calórica de 1800 kcal/dia."
+          },
+          {
+            "type": "list",
+            "items": [
+              "Meta calórica: 1800 kcal/dia"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "orientacoes",
+        "title": "Orientações gerais e rotina",
+        "kind": "guidelines",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Manter hidratação regular ao longo do dia, priorizando água e ajustando a ingestão conforme sede, rotina e treino.",
+              "Fracionar a alimentação nas 4 refeições planejadas, evitando longos períodos de jejum não intencional.",
+              "Priorizar mastigação lenta e atenção ao sinal de fome e saciedade durante as refeições.",
+              "Dar preferência a alimentos in natura ou minimamente processados na maior parte da rotina alimentar.",
+              "Organizar compras e preparo básico dos alimentos para facilitar adesão ao plano alimentar.",
+              "Manter rotina de sono o mais regular possível, buscando horários consistentes para deitar e acordar.",
+              "Evitar consumo de alimentos com amendoim e verificar rótulos de produtos industrializados devido à alergia alimentar relatada.",
+              "Manter a prática de treino já relatada de 3x/semana, conforme tolerância e orientação do profissional responsável pela atividade física.",
+              "Buscar regularidade na rotina de exercícios, favorecendo constância semanal.",
+              "Respeitar sinais de fadiga, dor ou limitação durante a prática de atividade física.",
+              "Associar alimentação e hidratação adequadas nos dias com treino e nos dias sem treino para melhor recuperação."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "plano-alimentar",
+        "title": "Plano alimentar",
+        "kind": "meals",
+        "blocks": [
+          {
+            "type": "meal",
+            "liquid": false,
+            "foods": [
+              {
+                "name": "Ovos inteiros",
+                "quantity": "2 unidades",
+                "category": "proteina"
+              },
+              {
+                "name": "Claras de ovo",
+                "quantity": "2 unidades",
+                "category": "proteina"
+              },
+              {
+                "name": "Aveia em flocos",
+                "quantity": "40 g",
+                "category": "carboidrato"
+              },
+              {
+                "name": "Banana",
+                "quantity": "1 unidade",
+                "category": "carboidrato"
+              },
+              {
+                "name": "Chia",
+                "quantity": "10 g",
+                "category": "gordura"
+              }
+            ],
+            "preparation": "Omelete com ovos e claras; aveia pode ser consumida com banana.",
+            "substitutions": {
+              "protein": [
+                "Iogurte natural desnatado 170 g",
+                "Queijo cottage 80 g",
+                "Frango desfiado cozido 80 g"
+              ],
+              "carbohydrate": [
+                "Pão integral 2 fatias",
+                "Tapioca 60 g",
+                "Mamão 150 g"
+              ],
+              "fat": [
+                "Linhaça 10 g",
+                "Castanha-do-pará 2 unidades",
+                "Abacate 60 g"
+              ]
+            }
+          },
+          {
+            "type": "meal",
+            "liquid": false,
+            "foods": [
+              {
+                "name": "Peito de frango grelhado",
+                "quantity": "120 g",
+                "category": "proteina"
+              },
+              {
+                "name": "Arroz integral cozido",
+                "quantity": "100 g",
+                "category": "carboidrato"
+              },
+              {
+                "name": "Feijão cozido",
+                "quantity": "80 g",
+                "category": "carboidrato"
+              },
+              {
+                "name": "Azeite de oliva",
+                "quantity": "5 ml",
+                "category": "gordura"
+              },
+              {
+                "name": "Salada de folhas, tomate e pepino",
+                "quantity": "150 g",
+                "category": "outro"
+              }
+            ],
+            "preparation": "Frango grelhado; arroz e feijão cozidos; salada fresca temperada com azeite.",
+            "substitutions": {
+              "protein": [
+                "Patinho moído cozido 120 g",
+                "Tilápia grelhada 120 g",
+                "Tofu firme 120 g"
+              ],
+              "carbohydrate": [
+                "Batata-doce cozida 120 g",
+                "Quinoa cozida 100 g",
+                "Macarrão integral cozido 100 g"
+              ],
+              "fat": [
+                "Abacate 60 g",
+                "Azeitonas 30 g",
+                "Sementes de girassol 10 g"
+              ]
+            }
+          },
+          {
+            "type": "meal",
+            "liquid": false,
+            "foods": [
+              {
+                "name": "Iogurte natural desnatado",
+                "quantity": "170 g",
+                "category": "proteina"
+              },
+              {
+                "name": "Maçã",
+                "quantity": "1 unidade",
+                "category": "carboidrato"
+              },
+              {
+                "name": "Granola sem amendoim",
+                "quantity": "30 g",
+                "category": "carboidrato"
+              },
+              {
+                "name": "Castanha de caju",
+                "quantity": "15 g",
+                "category": "gordura"
+              }
+            ],
+            "preparation": "",
+            "substitutions": {
+              "protein": [
+                "Queijo cottage 80 g",
+                "Ovos cozidos 2 unidades",
+                "Atum em água drenado 80 g"
+              ],
+              "carbohydrate": [
+                "Pera 1 unidade",
+                "Aveia em flocos 30 g",
+                "Pão integral 2 fatias"
+              ],
+              "fat": [
+                "Nozes 15 g",
+                "Chia 10 g",
+                "Abacate 60 g"
+              ]
+            }
+          },
+          {
+            "type": "meal",
+            "liquid": false,
+            "foods": [
+              {
+                "name": "Salmão grelhado",
+                "quantity": "120 g",
+                "category": "proteina"
+              },
+              {
+                "name": "Batata inglesa cozida",
+                "quantity": "150 g",
+                "category": "carboidrato"
+              },
+              {
+                "name": "Legumes cozidos",
+                "quantity": "120 g",
+                "category": "outro"
+              },
+              {
+                "name": "Azeite de oliva",
+                "quantity": "5 ml",
+                "category": "gordura"
+              }
+            ],
+            "preparation": "Salmão grelhado; batata e legumes cozidos; finalizar com azeite.",
+            "substitutions": {
+              "protein": [
+                "Peito de frango grelhado 120 g",
+                "Omelete com 3 ovos",
+                "Carne bovina magra cozida 120 g"
+              ],
+              "carbohydrate": [
+                "Arroz integral cozido 100 g",
+                "Mandioquinha cozida 120 g",
+                "Quinoa cozida 100 g"
+              ],
+              "fat": [
+                "Abacate 60 g",
+                "Sementes de abóbora 10 g",
+                "Castanha-do-pará 2 unidades"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "substituicoes",
+        "title": "Tabela geral de substituições",
+        "kind": "substitutions",
+        "blocks": [
+          {
+            "type": "table",
+            "columns": [
+              "Alimento",
+              "Valor"
+            ],
+            "rows": [
+              [
+                "proteina",
+                "Frango; Peixes; Ovos; Carnes magras; Iogurte natural; Tofu"
+              ],
+              [
+                "carboidrato",
+                "Arroz integral; Batata-doce; Aveia; Frutas; Quinoa; Macarrão integral"
+              ],
+              [
+                "gordura",
+                "Azeite de oliva; Abacate; Chia; Linhaça; Castanhas sem amendoim; Sementes"
+              ]
+            ]
+          }
+        ]
+      }
+    ],
+    "pendencias": [
+      "Validar com o profissional se as porções propostas estão adequadas à meta calórica de 1800 kcal/dia, pois não foi fornecida distribuição de macros ou gramagem prescrita pelo profissional.",
+      "Confirmar preferência alimentar, aceitação, intolerâncias adicionais e contexto de rotina para personalização mais precisa do plano.",
+      "Definir com o profissional se há necessidade de ajustar refeições para dias de treino e dias sem treino.",
+      "Confirmar se há necessidade de excluir outras oleaginosas por risco de contaminação cruzada, considerando a alergia a amendoim relatada."
+    ],
+    "generator": "protocolo-openai-2026-09-16-v1",
+    "mealCount": 4,
+    "energy": {
+      "method": "profissional",
+      "targetKcal": 1800,
+      "professionalTarget": "1800 kcal/dia",
+      "source": "profissional"
+    },
+    "calorieTarget": "1800 kcal/dia",
+    "energyInput": {
+      "professionalTarget": "1800 kcal/dia"
+    }
+  },
+  "energy": {
+    "method": "profissional",
+    "targetKcal": 1800,
+    "professionalTarget": "1800 kcal/dia",
+    "source": "profissional"
+  }
+}
