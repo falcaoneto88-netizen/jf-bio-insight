@@ -78,7 +78,7 @@
 
   /* Accent dourado suave */
   --accent: oklch(0.96 0.03 85);
-  --accent-foreground: oklch(0.30 0.06 75);
+  --accent-foreground: oklch(0.3 0.06 75);
 
   --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
@@ -99,9 +99,9 @@
 
   --chart-1: oklch(0.74 0.12 80);
   --chart-2: oklch(0.55 0.08 80);
-  --chart-3: oklch(0.40 0.04 80);
+  --chart-3: oklch(0.4 0.04 80);
   --chart-4: oklch(0.85 0.08 85);
-  --chart-5: oklch(0.30 0.02 80);
+  --chart-5: oklch(0.3 0.02 80);
 
   --sidebar: oklch(0.99 0 0);
   --sidebar-foreground: oklch(0.16 0 0);
@@ -125,17 +125,17 @@
   --secondary: oklch(0.22 0 0);
   --secondary-foreground: oklch(0.98 0 0);
   --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.70 0 0);
-  --accent: oklch(0.30 0.04 80);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.3 0.04 80);
   --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.65 0.20 27);
+  --destructive: oklch(0.65 0.2 27);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.74 0.12 80);
   --gold: oklch(0.78 0.13 80);
   --gold-foreground: oklch(0.12 0 0);
-  --gold-soft: oklch(0.40 0.08 85);
+  --gold-soft: oklch(0.4 0.08 85);
   --success: oklch(0.68 0.11 150);
   --success-foreground: oklch(0.12 0 0);
   --success-soft: oklch(0.32 0.06 150);
@@ -185,7 +185,10 @@
     font-feature-settings: "ss01", "cv11";
   }
 
-  h1, h2, h3, .font-serif {
+  h1,
+  h2,
+  h3,
+  .font-serif {
     font-family: var(--font-serif);
     letter-spacing: -0.01em;
   }
