@@ -74,6 +74,6 @@
 - [x] Refinar o atendimento e representar conclusão persistida no progresso
 - [x] Preservar ferramentas antigas e históricos numa área secundária expansível
 - [x] Cobrir estados prioritários e conclusão do progresso com testes comportamentais
-- [ ] Validar teclado, contraste e layouts 390/768/1440 com dados sintéticos
+- [x] Validar teclado, contraste e layouts 390/768/1440 com dados sintéticos
 - [x] Executar TypeScript e testes relevantes; não publicar
-- [ ] Entregar a prévia concreta após validação, sem nova pausa de aprovação
+- [x] Entregar a prévia concreta após validação, sem nova pausa de aprovação

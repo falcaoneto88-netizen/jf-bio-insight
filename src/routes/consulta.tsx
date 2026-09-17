@@ -755,7 +755,7 @@ function ConsultationDetail({ id }: { id: string }) {
                       ? "Ainda não iniciada"
                       : analysis.sourceCurrent === false
                         ? "Dados da consulta atualizados — revisão necessária"
-                        : analysis.approvedVersion === analysis.version
+                        : isCurrentApprovedProtocol(analysis)
                           ? "Protocolo aprovado"
                           : "Análise em andamento"}
               </p>
