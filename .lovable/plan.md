@@ -1,22 +1,33 @@
-# Refinamento visual e de navegação clínica
+# Nova validação técnica com dados sintéticos
 
-## Objetivo
-Tornar `/consulta` e `/jornada/$id` mais claras para o trabalho diário, mantendo integralmente os fluxos, dados, confirmações e proteções existentes.
+Objetivo: fazer **uma única** chamada real ao serviço de geração de protocolo com uma ficha totalmente fictícia e mostrar o documento gerado, sem aprovar, sem gravar consulta e sem publicar.
 
-## Implementação
-- Reorganizar a lista para destacar consultas existentes e manter “Nova consulta” facilmente acessível, sem novas consultas ao backend.
-- No detalhe, criar uma hierarquia de paciente, data, estado e uma única próxima ação principal derivada dos dados já carregados.
-- Tratar carregamento e erro da análise separadamente; priorizar a atualização quando a fonte estiver desatualizada e só considerar aprovação atual quando versão e fonte coincidirem.
-- Destacar a revisão da anamnese recebida, preservar escolha/importação por versão e mostrar separadamente recebimento, aplicação na ficha e confirmação pendente.
-- Organizar Anamnese, Bioimpedância, Análise e Relatório como fluxo clínico; manter gerador antigo, relatórios e integrações em áreas secundárias expansíveis.
-- Atualizar o progresso da jornada para usar confirmações persistidas, protocolo, aprovação, versão e fonte, sem depender da etapa visual aberta.
-- Aplicar os tons clínicos apenas às telas abrangidas, mantendo impressão e restante aplicação intactos.
+## O que será feito
 
-## Validação
-- Adicionar testes comportamentais para prioridade da próxima ação: carregamento, erro, ausência de exame permitida, fonte desatualizada e aprovação antiga.
-- Testar que voltar no atendimento não remove indicadores de conclusão persistida.
-- Verificar navegação por teclado, foco, labels, contraste e layouts de 390, 768 e 1440 px com estados sintéticos, sem consultar ou editar pacientes reais.
-- Executar os testes relevantes, TypeScript e compilação completa.
+1. Reutilizar a ficha sintética já existente da validação de 17/09 (adulto fictício, quatro refeições, alergia a amendoim, sem prescrições, meta profissional de 1.800 kcal/dia).
+2. Executar uma única geração real pelo serviço atual (nada de simulação, nada de troca de modelo, prompt ou limites).
+3. Verificar no resultado:
+   - quatro refeições numeradas, sem horários;
+   - porções em todos os alimentos e nas substituições;
+   - três substituições de proteína e três de carboidrato por refeição;
+   - alergia respeitada;
+   - nenhuma prescrição inventada;
+   - meta calórica de 1.800 kcal/dia refletida.
+4. Gerar o documento em HTML como rascunho de teste e disponibilizá-lo para leitura, marcado como cenário técnico sem validade clínica.
+5. Registar evidência sanitizada (modelo, duração, situação da resposta, contagens e pendências) junto aos ficheiros de validação já existentes.
 
-## Limites
-Nenhuma alteração em backend, APIs, banco, segurança, cálculos clínicos, geração, aprovação, versionamento ou impressão. Nenhuma chamada à OpenAI, CRM ou mensagens. A alteração permanecerá somente na prévia e não será publicada.
+## Regras respeitadas
+
+- Sem aprovação, sem assinatura, sem gravação em consulta.
+- Sem dados de pacientes reais, sem CRM, sem mensagens ou automações.
+- Sem alterar código do produto, base de dados, permissões ou segredos.
+- Sem publicar. Uma só chamada: em caso de falha, paro e reporto apenas a situação e o código de erro.
+- Resultado é validação técnica do fluxo, não validação clínica do conteúdo.
+
+## Detalhes técnicos
+
+- Execução temporária no servidor usando `gerarProtocolo` / `requestProtocol`
+  (`src/lib/journey/protocol-generation.server.ts`, `protocol-openai.server.ts`),
+  contexto via `buildProtocolContext`, repositório apenas em memória.
+- Renderização com o renderer atual (`src/lib/journey/html.ts`), estado rascunho.
+- Artefactos em `docs/qa/` (JSON de evidência, protocolo estruturado, HTML de rascunho), sem segredos.
