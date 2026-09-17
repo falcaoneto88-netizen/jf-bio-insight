@@ -31,6 +31,7 @@ import {
   type JourneyStep,
   type Protocolo,
 } from "@/lib/journey/types";
+import { journeyCompletedSteps, journeyNaturalStep } from "@/lib/clinical-navigation";
 
 const searchSchema = z.object({
   /** Etapa inicial pedida por quem abriu o link (1 a 6). */
@@ -55,15 +56,6 @@ export const Route = createFileRoute("/_authenticated/jornada/$id")({
   }),
   component: JornadaDetailPage,
 });
-
-function statusToStep(journey: Journey): JourneyStep {
-  if (journey.approvedVersion === journey.version) return 6;
-  if (journey.protocolo && journey.protocolo.sections.length > 0) return 5;
-  if (journey.confirmations.revisao) return 4;
-  if (journey.confirmations.bio) return 3;
-  if (journey.confirmations.anamnese) return 2;
-  return 1;
-}
 
 function JornadaDetailPage() {
   const { id } = useParams({ from: "/_authenticated/jornada/$id" });
@@ -139,14 +131,14 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
     setBio(journey.bio);
     setProtocolo(journey.protocolo ?? emptyProtocolo);
     // Etapa pedida no link (aprovação/impressão), sem passar do ponto já atingido.
-    const natural = statusToStep(journey);
+    const natural = journeyNaturalStep(journey);
     setStep(etapaInicial ? (Math.min(etapaInicial, natural) as JourneyStep) : natural);
     setInitialised(true);
   }, [journey, initialised, etapaInicial]);
 
   const maxReached = useMemo<JourneyStep>(() => {
     if (!journey) return 1;
-    const natural = statusToStep(journey);
+    const natural = journeyNaturalStep(journey);
     return Math.max(natural, step) as JourneyStep;
   }, [journey, step]);
 
@@ -226,23 +218,26 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
   }
 
   const currentLabel = JOURNEY_STEPS.find((s) => s.step === step)?.label ?? "";
+  const completedSteps = journeyCompletedSteps(journey);
 
   return (
     <Shell>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
         <Button asChild variant="ghost" size="sm" className="self-start px-0 text-muted-foreground">
           <Link to="/consulta" search={{ id: journey.consultationId ?? undefined }}>
             <ArrowLeft className="mr-1 h-4 w-4" /> Voltar à Consulta do paciente
           </Link>
         </Button>
-        <div>
+        <div className="border-b border-border pb-6">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Paciente</p>
-          <h1 className="font-serif text-3xl text-foreground">
+          <h1 className="font-serif text-3xl text-foreground sm:text-4xl">
             {journey.patientName || "Sem nome"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Etapa {step} de 6 · {currentLabel} · versão {journey.version}
-            {journey.approvedVersion === journey.version ? " (aprovada)" : ""}
+            {currentLabel} · versão {journey.version}
+            {journey.approvedVersion === journey.version && journey.sourceCurrent !== false
+              ? " · Aprovada"
+              : " · Em andamento"}
           </p>
         </div>
         {draftVersion !== journey.version && (
@@ -272,10 +267,15 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
             </Button>
           </div>
         )}
-        <JourneyStepper current={step} maxReached={maxReached} onSelect={setStep} />
+        <JourneyStepper
+          current={step}
+          maxReached={maxReached}
+          completedSteps={completedSteps}
+          onSelect={setStep}
+        />
         {journey.consultationId && (
           <aside
-            className={`space-y-3 rounded border p-4 text-sm ${journey.sourceCurrent === false ? "border-amber-500 bg-amber-50 text-amber-950" : "border-gold/50 bg-gold-soft/20"}`}
+            className={`space-y-3 rounded-md border p-5 text-sm ${journey.sourceCurrent === false ? "border-amber-500 bg-amber-50 text-amber-950" : "border-border bg-card text-foreground"}`}
           >
             <p role="status">
               {journey.sourceCurrent === false
@@ -287,7 +287,7 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
               protocolo; para corrigir a ficha e o PDF de bioimpedância, volte à consulta.
             </p>
             <Button
-              variant="outline"
+              variant={journey.sourceCurrent === false ? "default" : "outline"}
               disabled={saving}
               onClick={() => void refreshFromConsultation()}
             >
@@ -361,7 +361,7 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
                 setBio(updated.bio);
                 setProtocolo(updated.protocolo ?? emptyProtocolo);
                 setDraftVersion(updated.version);
-                setStep(statusToStep(updated));
+                setStep(journeyNaturalStep(updated));
               });
             }}
             onSave={() =>
@@ -401,9 +401,9 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="clinical-workspace min-h-screen bg-background text-foreground">
       <BrandHeader />
-      <main className="mx-auto w-full max-w-4xl px-6 py-10">{children}</main>
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { ArrowLeft, ArrowRight, CalendarDays, ChevronDown } from "lucide-react";
 import { abrirAnaliseDaConsulta, obterAnaliseDaConsulta } from "@/lib/journey.functions";
 import { BrandHeader } from "@/components/BrandHeader";
 import { GhlIntakeSettings } from "@/components/GhlIntakeSettings";
@@ -19,27 +20,52 @@ import { identityWarnings, mapAnamnesis, parseSavedAnswers } from "@/lib/consult
 import { anamnesisSections, formatAnswer, isFieldVisible } from "@/lib/anamnesis/form";
 import { useReportStore, type BodyCompositionData, type ClinicalData } from "@/store/report-store";
 import type { Submission } from "@/lib/consultations/types";
+import {
+  consultationPrimaryAction,
+  isCurrentApprovedProtocol,
+  type ConsultationPrimaryAction,
+} from "@/lib/clinical-navigation";
 export const Route = createFileRoute("/consulta")({
   validateSearch: (search: Record<string, unknown>) => ({
     id: typeof search.id === "string" ? search.id : undefined,
   }),
-  head: () => ({ meta: [{ title: "Consulta do paciente — BioReport Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Consulta do paciente — BioReport Studio" },
+      {
+        name: "description",
+        content: "Organize anamnese, bioimpedância, análise clínica e relatório do atendimento.",
+      },
+      { property: "og:title", content: "Consulta do paciente — BioReport Studio" },
+      { property: "og:description", content: "Área clínica de atendimento do paciente." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ConsultationPage,
 });
 type Loaded = Awaited<ReturnType<typeof loadConsultation>>;
 function ConsultationPage() {
   const { id } = Route.useSearch();
   return (
-    <div className="min-h-screen bg-background">
+    <div className="clinical-workspace min-h-screen bg-background text-foreground">
       <BrandHeader />
-      <main className="mx-auto max-w-6xl space-y-6 px-6 py-10">
-        <Link to="/" className="text-sm underline">
-          Início
+      <main className="mx-auto max-w-6xl space-y-7 px-4 py-8 sm:px-6 sm:py-10">
+        <Link
+          to="/"
+          className="inline-flex min-h-10 items-center gap-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Início
         </Link>
-        <h1 className="font-serif text-3xl">Consulta do paciente</h1>
-        <p className="text-muted-foreground">
-          Anamnese, bioimpedância, análise e relatório no mesmo atendimento.
-        </p>
+        <div className="max-w-2xl border-b border-border pb-6">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Área clínica
+          </p>
+          <h1 className="mt-2 font-serif text-3xl sm:text-4xl">Consulta do paciente</h1>
+          <p className="mt-2 text-muted-foreground">
+            Anamnese, bioimpedância, análise e relatório no mesmo atendimento.
+          </p>
+        </div>
         {id ? (
           z.uuid().safeParse(id).success ? (
             <ConsultationDetail key={id} id={id} />
@@ -54,8 +80,11 @@ function ConsultationPage() {
         ) : (
           <ConsultationList />
         )}
-        <details className="rounded border p-4">
-          <summary className="cursor-pointer font-medium">Integração com agendamentos</summary>
+        <details className="group rounded-md border bg-card p-4">
+          <summary className="flex cursor-pointer list-none items-center justify-between font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            Integração com agendamentos
+            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
           <div className="mt-4">
             <GhlIntakeSettings
               key={id ?? "list"}

@@ -5,7 +5,7 @@ import {
   journeyCompletedSteps,
   journeyNaturalStep,
 } from "./clinical-navigation";
-import { syntheticJourney } from "./journey/__fixtures__/jornada-sintetica";
+import { fixtureJourney } from "./journey/__fixtures__/jornada-sintetica";
 
 const analysis = (overrides: Record<string, unknown> = {}) => ({
   id: "analise-ficticia",
@@ -13,7 +13,7 @@ const analysis = (overrides: Record<string, unknown> = {}) => ({
   approvedVersion: null,
   sourceCurrent: true,
   confirmations: { anamnese: true, bio: true, revisao: true },
-  protocolo: { sections: [{ id: "a", title: "A", blocks: [] }] },
+  protocolo: fixtureJourney.protocolo,
   ...overrides,
 });
 
@@ -78,7 +78,7 @@ describe("próxima ação da consulta", () => {
 describe("progresso persistido da jornada", () => {
   it("mantém etapas confirmadas concluídas ao voltar visualmente", () => {
     const journey = {
-      ...syntheticJourney,
+      ...fixtureJourney,
       version: 7,
       approvedVersion: null,
       sourceCurrent: true,
@@ -90,9 +90,9 @@ describe("progresso persistido da jornada", () => {
   });
 
   it("não marca aprovação antiga ou fonte desatualizada como concluída", () => {
-    const oldApproval = { ...syntheticJourney, version: 8, approvedVersion: 7 };
+    const oldApproval = { ...fixtureJourney, version: 8, approvedVersion: 7 };
     const staleSource = {
-      ...syntheticJourney,
+      ...fixtureJourney,
       version: 8,
       approvedVersion: 8,
       sourceCurrent: false,
