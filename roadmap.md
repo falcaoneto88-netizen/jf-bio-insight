@@ -62,10 +62,10 @@
 - [ ] Publicação (aguarda revisão visual do proprietário)
 
 ## Refinamento visual e de navegação (17/09/2026, somente prévia)
-- [ ] Reorganizar a lista e o detalhe de consultas com uma única próxima ação baseada nos estados existentes
-- [ ] Refinar o atendimento e representar conclusão persistida no progresso
-- [ ] Preservar ferramentas antigas e históricos numa área secundária expansível
-- [ ] Cobrir estados prioritários e conclusão do progresso com testes comportamentais
+- [x] Reorganizar a lista e o detalhe de consultas com uma única próxima ação baseada nos estados existentes
+- [x] Refinar o atendimento e representar conclusão persistida no progresso
+- [x] Preservar ferramentas antigas e históricos numa área secundária expansível
+- [x] Cobrir estados prioritários e conclusão do progresso com testes comportamentais
 - [ ] Validar teclado, contraste e layouts 390/768/1440 com dados sintéticos
-- [ ] Executar TypeScript, build e testes relevantes; não publicar
+- [x] Executar TypeScript e testes relevantes; não publicar
 - [ ] Entregar a prévia concreta após validação, sem nova pausa de aprovação
