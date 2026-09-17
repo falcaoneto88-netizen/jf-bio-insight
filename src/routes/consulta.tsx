@@ -144,34 +144,65 @@ function ConsultationList() {
     }
   }
   return (
-    <>
-      <nav aria-label="Históricos" className="flex flex-wrap gap-4 text-sm">
-        <Link to="/history" className="underline">
-          Histórico de relatórios
-        </Link>
-        <Link to="/jornada" className="underline">
-          Minhas análises e protocolos anteriores
-        </Link>
-      </nav>
+    <div className="space-y-8">
       {error && (
-        <div role="alert" className="rounded border border-destructive p-4">
-          {error}{" "}
-          <Button variant="outline" onClick={() => setAttempt((a) => a + 1)}>
-            Tentar novamente
-          </Button>
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/50 bg-card p-4">
+          <span>{error}</span>
+          <Button variant="outline" onClick={() => setAttempt((a) => a + 1)}>Tentar novamente</Button>
         </div>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Nova consulta</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={create} className="grid gap-4 sm:grid-cols-2">
+      <section aria-labelledby="recentes-title">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Em andamento</p>
+            <h2 id="recentes-title" className="mt-1 font-serif text-2xl">Retomar consulta</h2>
+          </div>
+          <span className="text-sm text-muted-foreground">Até 100 consultas recentes</span>
+        </div>
+        {!items && !error && <p role="status" className="rounded-md border bg-card p-5 text-sm text-muted-foreground">Carregando consultas…</p>}
+        {items?.consultations.length ? (
+          <ul className="grid gap-3 lg:grid-cols-2">
+            {items.consultations.map((c) => (
+              <li key={c.id}>
+                <Card className="h-full rounded-md shadow-sm transition-shadow hover:shadow-md">
+                  <CardContent className="flex h-full flex-col justify-between gap-5 p-5 sm:flex-row sm:items-center">
+                    <div className="min-w-0">
+                      <strong className="block truncate text-base">{c.patient_name}</strong>
+                      <span className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                        {c.consultation_date.split("-").reverse().join("/")}
+                      </span>
+                      <small className="mt-2 block truncate text-muted-foreground">
+                        {c.invite_email || "Preenchimento na clínica"}
+                      </small>
+                    </div>
+                    <Button asChild className="shrink-0">
+                      <Link to="/consulta" search={{ id: c.id }}>
+                        Retomar <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        ) : items ? (
+          <div className="rounded-md border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">Nenhuma consulta cadastrada.</div>
+        ) : null}
+      </section>
+
+      <details className="group rounded-md border bg-card shadow-sm">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between px-5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span>Nova consulta</span>
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="border-t p-5">
+          <form onSubmit={create} className="grid gap-5 sm:grid-cols-2">
             <label className="space-y-2">
               Paciente
               <select
                 disabled={busy}
-                className="block w-full rounded border p-3"
+                className="block w-full rounded-md border bg-background p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={patient}
                 onChange={(e) => {
                   setPatient(e.target.value);
@@ -192,7 +223,7 @@ function ConsultationList() {
             <label>
               Nome completo
               <input
-                className="mt-2 block w-full rounded border p-3"
+                className="mt-2 block w-full rounded-md border bg-background p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 required
                 minLength={2}
                 maxLength={150}
@@ -207,7 +238,7 @@ function ConsultationList() {
             <label>
               E-mail para o convite
               <input
-                className="mt-2 block w-full rounded border p-3"
+                className="mt-2 block w-full rounded-md border bg-background p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 type="email"
                 maxLength={254}
                 disabled={busy}
@@ -224,7 +255,7 @@ function ConsultationList() {
             <label>
               Data da consulta
               <input
-                className="mt-2 block w-full rounded border p-3"
+                className="mt-2 block w-full rounded-md border bg-background p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 type="date"
                 required
                 disabled={busy}
@@ -239,44 +270,20 @@ function ConsultationList() {
               {busy ? "Salvando…" : "Criar consulta"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-      {!items && !error && <p>Carregando consultas…</p>}
-      {items && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Consultas recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4 text-xs text-muted-foreground">
-              Até 100 consultas recentes e 200 pacientes para seleção.
-            </p>
-            {items.consultations.length ? (
-              <ul className="divide-y">
-                {items.consultations.map((c) => (
-                  <li key={c.id} className="flex flex-wrap justify-between gap-3 py-4">
-                    <span>
-                      <strong>{c.patient_name}</strong> ·{" "}
-                      {c.consultation_date.split("-").reverse().join("/")}
-                      <small className="block text-muted-foreground">
-                        {c.invite_email || "Preenchimento na clínica"}
-                      </small>
-                    </span>
-                    <Button asChild variant="outline">
-                      <Link to="/consulta" search={{ id: c.id }}>
-                        Abrir consulta
-                      </Link>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>Nenhuma consulta cadastrada.</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </>
+        </div>
+      </details>
+
+      <details className="group rounded-md border bg-card p-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          Históricos e ferramentas anteriores
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <nav aria-label="Históricos" className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm sm:flex-row sm:gap-6">
+          <Link to="/history" className="underline underline-offset-4">Histórico de relatórios</Link>
+          <Link to="/jornada" className="underline underline-offset-4">Análises e protocolos anteriores</Link>
+        </nav>
+      </details>
+    </div>
   );
 }
 function ConsultationDetail({ id }: { id: string }) {

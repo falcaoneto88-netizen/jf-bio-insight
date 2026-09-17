@@ -256,7 +256,7 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
                   setProtocolo(journey.protocolo ?? emptyProtocolo);
                   setDraftVersion(journey.version);
                   // Etapa pedida no link (aprovação/impressão), sem passar do ponto já atingido.
-                  const natural = statusToStep(journey);
+                  const natural = journeyNaturalStep(journey);
                   setStep(
                     etapaInicial ? (Math.min(etapaInicial, natural) as JourneyStep) : natural,
                   );
