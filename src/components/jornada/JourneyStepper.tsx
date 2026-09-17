@@ -36,7 +36,10 @@ export function JourneyStepper({
                   !reachable && "cursor-not-allowed opacity-50",
                 )}
               >
-                <span className="grid h-5 w-5 shrink-0 place-content-center rounded-full border border-current text-[10px]" aria-hidden="true">
+                <span
+                  className="grid h-5 w-5 shrink-0 place-content-center rounded-full border border-current text-[10px]"
+                  aria-hidden="true"
+                >
                   {isDone ? <Check className="h-3 w-3" /> : step}
                 </span>
                 <span className="whitespace-nowrap">{label}</span>

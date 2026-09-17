@@ -83,7 +83,10 @@ function ConsultationPage() {
         <details className="group rounded-md border bg-card p-4">
           <summary className="flex cursor-pointer list-none items-center justify-between font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             Integração com agendamentos
-            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+            <ChevronDown
+              className="h-4 w-4 transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
           </summary>
           <div className="mt-4">
             <GhlIntakeSettings
@@ -146,20 +149,33 @@ function ConsultationList() {
   return (
     <div className="space-y-8">
       {error && (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/50 bg-card p-4">
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/50 bg-card p-4"
+        >
           <span>{error}</span>
-          <Button variant="outline" onClick={() => setAttempt((a) => a + 1)}>Tentar novamente</Button>
+          <Button variant="outline" onClick={() => setAttempt((a) => a + 1)}>
+            Tentar novamente
+          </Button>
         </div>
       )}
       <section aria-labelledby="recentes-title">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Em andamento</p>
-            <h2 id="recentes-title" className="mt-1 font-serif text-2xl">Retomar consulta</h2>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Em andamento
+            </p>
+            <h2 id="recentes-title" className="mt-1 font-serif text-2xl">
+              Retomar consulta
+            </h2>
           </div>
           <span className="text-sm text-muted-foreground">Até 100 consultas recentes</span>
         </div>
-        {!items && !error && <p role="status" className="rounded-md border bg-card p-5 text-sm text-muted-foreground">Carregando consultas…</p>}
+        {!items && !error && (
+          <p role="status" className="rounded-md border bg-card p-5 text-sm text-muted-foreground">
+            Carregando consultas…
+          </p>
+        )}
         {items?.consultations.length ? (
           <ul className="grid gap-3 lg:grid-cols-2">
             {items.consultations.map((c) => (
@@ -187,14 +203,19 @@ function ConsultationList() {
             ))}
           </ul>
         ) : items ? (
-          <div className="rounded-md border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">Nenhuma consulta cadastrada.</div>
+          <div className="rounded-md border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
+            Nenhuma consulta cadastrada.
+          </div>
         ) : null}
       </section>
 
       <details className="group rounded-md border bg-card shadow-sm">
         <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between px-5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <span>Nova consulta</span>
-          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+          <ChevronDown
+            className="h-4 w-4 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
         </summary>
         <div className="border-t p-5">
           <form onSubmit={create} className="grid gap-5 sm:grid-cols-2">
@@ -276,11 +297,21 @@ function ConsultationList() {
       <details className="group rounded-md border bg-card p-4">
         <summary className="flex cursor-pointer list-none items-center justify-between font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           Históricos e ferramentas anteriores
-          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+          <ChevronDown
+            className="h-4 w-4 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
         </summary>
-        <nav aria-label="Históricos" className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm sm:flex-row sm:gap-6">
-          <Link to="/history" className="underline underline-offset-4">Histórico de relatórios</Link>
-          <Link to="/jornada" className="underline underline-offset-4">Análises e protocolos anteriores</Link>
+        <nav
+          aria-label="Históricos"
+          className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm sm:flex-row sm:gap-6"
+        >
+          <Link to="/history" className="underline underline-offset-4">
+            Histórico de relatórios
+          </Link>
+          <Link to="/jornada" className="underline underline-offset-4">
+            Análises e protocolos anteriores
+          </Link>
         </nav>
       </details>
     </div>
@@ -496,24 +527,40 @@ function ConsultationDetail({ id }: { id: string }) {
     }
     return (
       <Button asChild>
-        <Link to="/anamnese" search={{ consulta: id }}>{action.label}</Link>
+        <Link to="/anamnese" search={{ consulta: id }}>
+          {action.label}
+        </Link>
       </Button>
     );
   }
   return (
     <div className="space-y-6">
-      <section className="flex flex-col justify-between gap-5 border-b border-border pb-6 sm:flex-row sm:items-end" aria-labelledby="patient-title">
+      <section
+        className="flex flex-col justify-between gap-5 border-b border-border pb-6 sm:flex-row sm:items-end"
+        aria-labelledby="patient-title"
+      >
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Atendimento</p>
-          <h2 id="patient-title" className="mt-1 font-serif text-3xl">{data.consultation.patient_name}</h2>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Atendimento
+          </p>
+          <h2 id="patient-title" className="mt-1 font-serif text-3xl">
+            {data.consultation.patient_name}
+          </h2>
           <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarDays className="h-4 w-4" aria-hidden="true" />
-            {data.consultation.consultation_date.split("-").reverse().join("/")} · Paciente {data.consultation.patient_id.slice(0, 8)}
+            {data.consultation.consultation_date.split("-").reverse().join("/")} · Paciente{" "}
+            {data.consultation.patient_id.slice(0, 8)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" onClick={() => setAttempt((a) => a + 1)}>Atualizar dados</Button>
-          <Button asChild variant="outline"><Link to="/consulta" search={{ id: undefined }}>Todas as consultas</Link></Button>
+          <Button variant="ghost" onClick={() => setAttempt((a) => a + 1)}>
+            Atualizar dados
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/consulta" search={{ id: undefined }}>
+              Todas as consultas
+            </Link>
+          </Button>
         </div>
       </section>
       {error && (
@@ -521,11 +568,20 @@ function ConsultationDetail({ id }: { id: string }) {
           {error}
         </p>
       )}
-      {notice && <p role="status" className="rounded-md border bg-card p-4 text-sm">{notice}</p>}
+      {notice && (
+        <p role="status" className="rounded-md border bg-card p-4 text-sm">
+          {notice}
+        </p>
+      )}
 
-      <section aria-labelledby="next-action" className="rounded-md border border-gold/50 bg-card p-5 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6">
+      <section
+        aria-labelledby="next-action"
+        className="rounded-md border border-gold/50 bg-card p-5 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6"
+      >
         <div className="mb-4 sm:mb-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Próxima ação</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Próxima ação
+          </p>
           <h3 id="next-action" className="mt-1 font-serif text-xl">
             {primaryAction.kind === "analysis-loading"
               ? "Verificando o atendimento"
@@ -556,190 +612,240 @@ function ConsultationDetail({ id }: { id: string }) {
 
       <section aria-labelledby="workflow-title">
         <div className="mb-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Fluxo clínico</p>
-          <h3 id="workflow-title" className="mt-1 font-serif text-2xl">Atendimento</h3>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Fluxo clínico
+          </p>
+          <h3 id="workflow-title" className="mt-1 font-serif text-2xl">
+            Atendimento
+          </h3>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-        <Card className="rounded-md shadow-sm">
-          <CardHeader className="pb-4">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">01</span>
-            <CardTitle className="font-serif text-xl">Anamnese</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm font-medium">
-              {data.submissions.length
-                ? `${data.submissions.length} versão(ões) recebida(s)`
-                : "Aguardando preenchimento"}
-            </p>
-            <Button asChild variant="outline">
-              <Link to="/anamnese" search={{ consulta: id }}>
-                {data.submissions.length ? "Registrar nova versão" : "Preencher anamnese"}
-              </Link>
-            </Button>
-            {data.consultation.invite_email && (
-              <>
-                <p className="break-words text-sm text-muted-foreground">
-                  Convite: {data.consultation.invite_email}<br />Válido até{" "}
-                  {new Date(data.consultation.invite_expires_at).toLocaleDateString("pt-BR")}
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(
-                        `${window.location.origin}/anamnese?consulta=${id}`,
-                      );
-                      setNotice("Link copiado. O paciente precisa entrar com o e-mail do convite.");
-                    } catch {
-                      setNotice(
-                        "Não foi possível copiar. Use o endereço do botão Preencher anamnese.",
-                      );
-                    }
-                  }}
-                >
-                  Copiar link do paciente
-                </Button>
-              </>
-            )}
-            {data.submissions.length > 0 && (
-              <>
-                <label className="block text-sm">
-                  Versão
-                  <select
-                    className="mt-2 block w-full rounded-md border bg-background p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    value={selected?.id ?? ""}
-                    onChange={(e) =>
-                      setSelected(data.submissions.find((s) => s.id === e.target.value) ?? null)
-                    }
-                  >
-                    {data.submissions.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {new Date(s.confirmed_at).toLocaleString("pt-BR")}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                  <p>Recebida em {selected ? new Date(selected.confirmed_at).toLocaleString("pt-BR") : "—"}</p>
-                  <p className="mt-1">Ficha clínica: {selectedApplied ? "esta versão está aplicada" : "esta versão ainda não foi aplicada"}</p>
-                  <p className="mt-1">Confirmação: {selected?.accepted ? "confirmada pelo paciente" : "confirmação pendente"}</p>
-                </div>
-                <Button variant="outline" disabled={busy || !!invalid} onClick={() => void importSubmission()}>
-                  {busy ? "Carregando…" : selectedApplied ? "Revisar respostas na ficha" : "Usar esta versão na ficha"}
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="rounded-md shadow-sm">
-          <CardHeader className="pb-4">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">02</span>
-            <CardTitle className="font-serif text-xl">Bioimpedância</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p>{data.draft.body_composition ? "Dados do exame salvos" : "Aguardando exame"}</p>
-            <p className="text-sm text-muted-foreground">
-              Importe o exame e confira as medidas antes de salvar.
-            </p>
-            <Button variant="outline" onClick={() => openWorkspace("/upload")}>
-              {data.draft.body_composition ? "Importar novo exame" : "Adicionar exame"}
-            </Button>
-            {data.draft.body_composition && (
-              <Button variant="outline" onClick={() => openWorkspace("/body-composition")}>
-                Revisar exame salvo
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="rounded-md shadow-sm">
-          <CardHeader className="pb-4">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">03</span>
-            <CardTitle className="font-serif text-xl">Análise</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p>
-              {analysisQuery.isPending
-                ? "Conferindo análise…"
-                : analysisQuery.isError
-                  ? "Não foi possível carregar a análise."
-                  : !analysis
-                    ? "Ainda não iniciada"
-                    : analysis.sourceCurrent === false
-                      ? "Dados da consulta atualizados — revisão necessária"
-                      : analysis.approvedVersion === analysis.version
-                        ? "Protocolo aprovado"
-                        : "Análise em andamento"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Aproveita a anamnese e o exame desta consulta. Revise os dados e prepare o protocolo.
-            </p>
-            {analysis && !analysisQuery.isError && !analysisQuery.isPending && (
+          <Card className="rounded-md shadow-sm">
+            <CardHeader className="pb-4">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                01
+              </span>
+              <CardTitle className="font-serif text-xl">Anamnese</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm font-medium">
+                {data.submissions.length
+                  ? `${data.submissions.length} versão(ões) recebida(s)`
+                  : "Aguardando preenchimento"}
+              </p>
               <Button asChild variant="outline">
-                <Link to="/jornada/$id" params={{ id: analysis.id }}>Abrir análise</Link>
-              </Button>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Sua análise permanece vinculada a este atendimento. O acesso continua restrito ao
-              profissional responsável.
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-md shadow-sm">
-          <CardHeader className="pb-4">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">04</span>
-            <CardTitle className="font-serif text-xl">Relatório</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p>
-              {data.reports.length
-                ? `${data.reports.length} relatório(s) salvo(s)`
-                : "Ainda não gerado"}
-            </p>
-            {analysis && !analysisQuery.isPending && !analysisQuery.isError && (
-              <Button asChild variant="outline">
-                <Link
-                  to="/jornada/$id"
-                  params={{ id: analysis.id }}
-                  search={{
-                    // Aprovado e atual: abre direto no documento para imprimir.
-                    etapa:
-                       isCurrentApprovedProtocol(analysis)
-                        ? 6
-                        : 5,
-                  }}
-                >
-                  {isCurrentApprovedProtocol(analysis)
-                    ? "Abrir protocolo aprovado"
-                    : "Gerar, revisar e imprimir protocolo"}
+                <Link to="/anamnese" search={{ consulta: id }}>
+                  {data.submissions.length ? "Registrar nova versão" : "Preencher anamnese"}
                 </Link>
               </Button>
-            )}
-            <p className="text-xs text-muted-foreground">
-              {data.draft.anamnesis_id
-                ? "As respostas recebidas já estão na ficha. Revise e complete somente o que faltar."
-                : "Adicione um exame ou aguarde a anamnese para revisar a ficha."}
-            </p>
-          </CardContent>
-        </Card>
+              {data.consultation.invite_email && (
+                <>
+                  <p className="break-words text-sm text-muted-foreground">
+                    Convite: {data.consultation.invite_email}
+                    <br />
+                    Válido até{" "}
+                    {new Date(data.consultation.invite_expires_at).toLocaleDateString("pt-BR")}
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(
+                          `${window.location.origin}/anamnese?consulta=${id}`,
+                        );
+                        setNotice(
+                          "Link copiado. O paciente precisa entrar com o e-mail do convite.",
+                        );
+                      } catch {
+                        setNotice(
+                          "Não foi possível copiar. Use o endereço do botão Preencher anamnese.",
+                        );
+                      }
+                    }}
+                  >
+                    Copiar link do paciente
+                  </Button>
+                </>
+              )}
+              {data.submissions.length > 0 && (
+                <>
+                  <label className="block text-sm">
+                    Versão
+                    <select
+                      className="mt-2 block w-full rounded-md border bg-background p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={selected?.id ?? ""}
+                      onChange={(e) =>
+                        setSelected(data.submissions.find((s) => s.id === e.target.value) ?? null)
+                      }
+                    >
+                      {data.submissions.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {new Date(s.confirmed_at).toLocaleString("pt-BR")}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                    <p>
+                      Recebida em{" "}
+                      {selected ? new Date(selected.confirmed_at).toLocaleString("pt-BR") : "—"}
+                    </p>
+                    <p className="mt-1">
+                      Ficha clínica:{" "}
+                      {selectedApplied
+                        ? "esta versão está aplicada"
+                        : "esta versão ainda não foi aplicada"}
+                    </p>
+                    <p className="mt-1">
+                      Confirmação:{" "}
+                      {selected?.accepted ? "confirmada pelo paciente" : "confirmação pendente"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    disabled={busy || !!invalid}
+                    onClick={() => void importSubmission()}
+                  >
+                    {busy
+                      ? "Carregando…"
+                      : selectedApplied
+                        ? "Revisar respostas na ficha"
+                        : "Usar esta versão na ficha"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="rounded-md shadow-sm">
+            <CardHeader className="pb-4">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                02
+              </span>
+              <CardTitle className="font-serif text-xl">Bioimpedância</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p>{data.draft.body_composition ? "Dados do exame salvos" : "Aguardando exame"}</p>
+              <p className="text-sm text-muted-foreground">
+                Importe o exame e confira as medidas antes de salvar.
+              </p>
+              <Button variant="outline" onClick={() => openWorkspace("/upload")}>
+                {data.draft.body_composition ? "Importar novo exame" : "Adicionar exame"}
+              </Button>
+              {data.draft.body_composition && (
+                <Button variant="outline" onClick={() => openWorkspace("/body-composition")}>
+                  Revisar exame salvo
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="rounded-md shadow-sm">
+            <CardHeader className="pb-4">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                03
+              </span>
+              <CardTitle className="font-serif text-xl">Análise</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p>
+                {analysisQuery.isPending
+                  ? "Conferindo análise…"
+                  : analysisQuery.isError
+                    ? "Não foi possível carregar a análise."
+                    : !analysis
+                      ? "Ainda não iniciada"
+                      : analysis.sourceCurrent === false
+                        ? "Dados da consulta atualizados — revisão necessária"
+                        : analysis.approvedVersion === analysis.version
+                          ? "Protocolo aprovado"
+                          : "Análise em andamento"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Aproveita a anamnese e o exame desta consulta. Revise os dados e prepare o
+                protocolo.
+              </p>
+              {analysis && !analysisQuery.isError && !analysisQuery.isPending && (
+                <Button asChild variant="outline">
+                  <Link to="/jornada/$id" params={{ id: analysis.id }}>
+                    Abrir análise
+                  </Link>
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Sua análise permanece vinculada a este atendimento. O acesso continua restrito ao
+                profissional responsável.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-md shadow-sm">
+            <CardHeader className="pb-4">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                04
+              </span>
+              <CardTitle className="font-serif text-xl">Relatório</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p>
+                {data.reports.length
+                  ? `${data.reports.length} relatório(s) salvo(s)`
+                  : "Ainda não gerado"}
+              </p>
+              {analysis && !analysisQuery.isPending && !analysisQuery.isError && (
+                <Button asChild variant="outline">
+                  <Link
+                    to="/jornada/$id"
+                    params={{ id: analysis.id }}
+                    search={{
+                      // Aprovado e atual: abre direto no documento para imprimir.
+                      etapa: isCurrentApprovedProtocol(analysis) ? 6 : 5,
+                    }}
+                  >
+                    {isCurrentApprovedProtocol(analysis)
+                      ? "Abrir protocolo aprovado"
+                      : "Gerar, revisar e imprimir protocolo"}
+                  </Link>
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {data.draft.anamnesis_id
+                  ? "As respostas recebidas já estão na ficha. Revise e complete somente o que faltar."
+                  : "Adicione um exame ou aguarde a anamnese para revisar a ficha."}
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
       <details className="group rounded-md border bg-card shadow-sm">
         <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between px-5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           Ferramentas anteriores e histórico
-          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+          <ChevronDown
+            className="h-4 w-4 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
         </summary>
         <div className="space-y-4 border-t p-5">
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => openWorkspace("/clinical-form")}>Revisar ficha clínica</Button>
-            <Button variant="outline" disabled={!data.draft.clinical_data} onClick={() => openWorkspace("/review")}>Gerador antigo de PDF</Button>
-            <Button asChild variant="ghost"><Link to="/history">Abrir histórico completo</Link></Button>
+            <Button variant="outline" onClick={() => openWorkspace("/clinical-form")}>
+              Revisar ficha clínica
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!data.draft.clinical_data}
+              onClick={() => openWorkspace("/review")}
+            >
+              Gerador antigo de PDF
+            </Button>
+            <Button asChild variant="ghost">
+              <Link to="/history">Abrir histórico completo</Link>
+            </Button>
           </div>
           {data.reports.length > 0 && (
             <ul className="divide-y rounded-md border">
               {data.reports.map((r) => (
                 <li className="break-words p-3 text-xs" key={r.id}>
-                  {r.pdf_file_name}<br />{new Date(r.generated_at).toLocaleString("pt-BR")}
+                  {r.pdf_file_name}
+                  <br />
+                  {new Date(r.generated_at).toLocaleString("pt-BR")}
                 </li>
               ))}
             </ul>
@@ -760,7 +866,7 @@ function ConsultationDetail({ id }: { id: string }) {
               Confirmada por {selected.confirmed_name} em{" "}
               {new Date(selected.confirmed_at).toLocaleString("pt-BR")}.{" "}
               {data.draft.anamnesis_id === selected.id
-                 ? "Respostas aplicadas na ficha clínica. A revisão profissional continua disponível."
+                ? "Respostas aplicadas na ficha clínica. A revisão profissional continua disponível."
                 : "Esta versão não é a utilizada na ficha atual."}
             </p>
           </CardHeader>

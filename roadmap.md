@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Concluído (fluxo legado)
+
 - [x] Marcar falcaoneto88@gmail.com como administrador (tabela de papéis + atribuição no primeiro login)
 - [x] Publicar o site
 - [x] Guiar a ligação do assistente ao /mcp com login Google, com regra de acesso segura (só administradores)
@@ -9,6 +10,7 @@
 - [x] Melhorias em list_reports e get_report
 
 ## Nova jornada clínica (Agente Clínico Dr. João Falcão)
+
 - [x] Tabelas isoladas jornadas_clinicas + jornada_aprovacoes com RLS admin+owner e aprovação atómica no servidor
 - [x] Regras versionadas do agente: schemas, prompts, formatação, evolução, HTML premium
 - [x] Server functions autenticadas (admin + owner + expectedVersion)
@@ -17,6 +19,7 @@
 - [x] Etapas 4 (protocolo), 5 (aprovação) e 6 (HTML) na interface
 
 ## Correções pedidas na revisão do Codex (11/09/2026)
+
 - [x] Formatação por campo/unidade: TMB inteiro (1365 → "1.365"), nunca "1,365"; preservar casas originais de PGC e peso
 - [x] dateSortKey deve validar calendário real (rejeitar 31/02, tratar ano bissexto), sem alterar datas por fuso
 - [x] Evolução: separar transcrição literal normalizada dos cálculos, sem perder precisão exibida
@@ -31,11 +34,13 @@
 - [x] docs/JORNADA_CLINICA.md e docs/VALIDACAO_JORNADA.md
 
 ## Por fazer
+
 - [ ] Validação manual na aplicação com dados sintéticos (lista em docs/VALIDACAO_JORNADA.md)
 - [ ] Conversão WeasyPrint verificada fora do sandbox (não há WeasyPrint disponível aqui)
 - [ ] Publicação, só depois da revisão do proprietário
 
 ## Geração do protocolo pela OpenAI (16/09/2026, só prévia)
+
 - [x] Cálculo energético determinístico revisável (Cunningham, MLG do exame ou derivada)
 - [x] Geração completa do plano alimentar pela Responses API, sem fallback para outro fornecedor
 - [x] Mesmo serviço na aplicação e no assistente MCP, com quota, versão e aprovação humana
@@ -46,12 +51,14 @@
 - [ ] Validação manual na prévia e publicação, só depois da revisão do proprietário
 
 ## Correção 16/09/2026 (prévia, sem publicar)
+
 - [x] Patch do renderer html.ts: título "Protocolo avançado de X", campos ausentes, objetivo único, rodapé por página, sem logo final repetido em impressão; legado byte a byte.
 - [x] Contexto da IA preserva idade/nascimentoOuIdade (sem nome/telefone/email).
 - [x] Testes: layout/escaping CSS, impressão obsoleta, preflight/permissão/fonte, revalidação, marcador, regeneração.
 - [x] Docs com limites reais (chave OpenAI ausente: chamadas reais pendentes).
 
 ## Revisão f7cf9c99 (16/09/2026) — concluída na prévia
+
 - [x] Integridade centralizada em patchJourney (marcador, null/reset, guardrails)
 - [x] Prescrições estruturadas como fonte única em save e prévia
 - [x] Deteção de regeneração obrigatória, não removível por patch
@@ -62,6 +69,7 @@
 - [ ] Publicação (aguarda revisão visual do proprietário)
 
 ## Refinamento visual e de navegação (17/09/2026, somente prévia)
+
 - [x] Reorganizar a lista e o detalhe de consultas com uma única próxima ação baseada nos estados existentes
 - [x] Refinar o atendimento e representar conclusão persistida no progresso
 - [x] Preservar ferramentas antigas e históricos numa área secundária expansível

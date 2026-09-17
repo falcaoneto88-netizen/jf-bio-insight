@@ -25,8 +25,7 @@ export function consultationPrimaryAction(input: {
   hasBodyComposition: boolean;
 }): ConsultationPrimaryAction {
   if (input.analysisPending) return { kind: "analysis-loading", label: "Conferindo análise…" };
-  if (input.analysisError)
-    return { kind: "analysis-error", label: "Tentar carregar análise" };
+  if (input.analysisError) return { kind: "analysis-error", label: "Tentar carregar análise" };
 
   if (input.analysis) {
     if (input.analysis.sourceCurrent === false) {
