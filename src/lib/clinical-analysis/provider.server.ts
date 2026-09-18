@@ -54,7 +54,9 @@ export async function requestAnalysis(
           ? "credentials"
           : response.status === 429
             ? "quota"
-            : "unavailable",
+            : response.status >= 300 && response.status < 500
+              ? "rejected"
+              : "unavailable",
       );
     }
     // Bound successful bodies too; never include provider error bodies or clinical
