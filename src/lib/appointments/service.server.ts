@@ -180,15 +180,23 @@ export type AppointmentsResult = {
 
 export async function listConfirmedAppointments(
   db: SupabaseClient,
-  range: Range,
+  requestedRange: Range | undefined,
   options: { fetcher?: typeof fetch; env?: Record<string, string | undefined>; now?: number } = {},
 ): Promise<AppointmentsResult> {
-  const fetcher = options.fetcher ?? fetch;
+  const transport = options.fetcher ?? fetch;
+  const deadline = AbortSignal.timeout(45_000);
+  const fetcher: typeof fetch = (input, init) =>
+    transport(input, {
+      ...init,
+      signal: AbortSignal.any([deadline, ...(init?.signal ? [init.signal] : [])]),
+    });
   const env = options.env ?? (process.env as Record<string, string | undefined>);
-  assertRange(range);
+  if (requestedRange) assertRange(requestedRange);
   const { key, calendarId, locationId } = requireEnv(env);
 
   const timezone = await clinicTimezone(locationId, key, fetcher);
+  const today = todayIso(new Date(options.now ?? Date.now()), timezone);
+  const range = requestedRange ?? { from: today, to: plusDaysIso(today, 29) };
   const window = utcWindow(range);
   const payload = eventsPayloadSchema.safeParse(
     await ghlGet(
@@ -237,34 +245,41 @@ export async function listConfirmedAppointments(
       .from("intake_invitations")
       .select(
         "id,location_id,appointment_id,contact_id,appointment_start,consultation_id,expires_at,revoked_at,submitted_at,submission_id",
+        { count: "exact" },
       )
       .eq("location_id", locationId)
       .in("appointment_id", appointmentIds)
       .limit(1000);
-    if (invitationQuery.error) {
+    if (incomplete(invitationQuery)) {
       progressUnavailable = true;
-      warnings.push("Não foi possível ler os convites. O estado da anamnese ficou indisponível.");
+      warnings.push(
+        "Não foi possível conferir todos os convites. Reduza o período ou tente atualizar; o estado da anamnese ficou indisponível.",
+      );
     } else {
       invitations = (invitationQuery.data ?? []) as InvitationRow[];
       const consultationIds = [...new Set(invitations.map((i) => i.consultation_id))];
       if (consultationIds.length > 0) {
         const [consultationQuery, submissionQuery, draftQuery] = await Promise.all([
-          db.from("consultations").select("id,patient_name").in("id", consultationIds).limit(1000),
+          db
+            .from("consultations")
+            .select("id,patient_name", { count: "exact" })
+            .in("id", consultationIds)
+            .limit(1000),
           db
             .from("anamnesis_submissions")
-            .select("id,consultation_id,invitation_id,confirmed_at")
+            .select("id,consultation_id,invitation_id,confirmed_at", { count: "exact" })
             .in("consultation_id", consultationIds)
-            .limit(2000),
+            .limit(1000),
           db
             .from("consultation_drafts")
-            .select("consultation_id,anamnesis_id")
+            .select("consultation_id,anamnesis_id", { count: "exact" })
             .in("consultation_id", consultationIds)
             .limit(1000),
         ]);
-        if (consultationQuery.error || submissionQuery.error || draftQuery.error) {
+        if (incomplete(consultationQuery) || incomplete(submissionQuery) || incomplete(draftQuery)) {
           progressUnavailable = true;
           warnings.push(
-            "Não foi possível ler o progresso da anamnese no banco. Tente atualizar em instantes.",
+            "O histórico da anamnese está incompleto ou indisponível. Reduza o período ou tente atualizar.",
           );
         } else {
           for (const c of consultationQuery.data ?? [])
@@ -281,7 +296,10 @@ export async function listConfirmedAppointments(
       selection.events
         .filter((e) => {
           const invitation = invitations.find(
-            (i) => i.appointment_id === e.id && i.contact_id === e.contactId,
+            (i) =>
+              i.appointment_id === e.id &&
+              i.contact_id === e.contactId &&
+              sameInstant(i.appointment_start, e.startTime),
           );
           return !invitation || !consultationNames.get(invitation.consultation_id);
         })
@@ -290,10 +308,12 @@ export async function listConfirmedAppointments(
   ];
   const lookup =
     missingName.length > 0
-      ? await contactNames(missingName, key, fetcher)
+      ? await contactNames(missingName, locationId, key, fetcher, deadline)
       : { names: new Map<string, string>(), truncated: false };
   if (lookup.truncated)
-    warnings.push("Alguns nomes não foram consultados por limite de leituras. Reduza o período.");
+    warnings.push(
+      "Alguns nomes não puderam ser confirmados no GHL. Tente atualizar ou reduza o período.",
+    );
 
   const rows = buildRows({
     events: selection.events,
