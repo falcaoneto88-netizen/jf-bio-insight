@@ -11,6 +11,10 @@ import {
   eventsPayloadSchema,
   selectConfirmedEvents,
   totals,
+  localParts,
+  todayIso,
+  plusDaysIso,
+  sameInstant,
   utcWindow,
   type AppointmentRow,
   type DraftRow,
@@ -59,16 +63,32 @@ async function ghlGet(
         : "A agenda do GHL está indisponível no momento.",
     );
   }
-  const text = await response.text();
-  if (text.length > MAX_BYTES)
-    throw new AppointmentsError(
-      "too_large",
-      "O período devolveu dados demais. Escolha um intervalo menor.",
-    );
+  const reader = response.body?.getReader();
+  if (!reader) throw new AppointmentsError("ghl_invalid", "O GHL devolveu uma resposta vazia.");
+  let text = "";
+  let size = 0;
+  const decoder = new TextDecoder();
   try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_BYTES) {
+        await reader.cancel();
+        throw new AppointmentsError(
+          "too_large",
+          "O período devolveu dados demais. Escolha um intervalo menor.",
+        );
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
     return JSON.parse(text) as unknown;
-  } catch {
+  } catch (error) {
+    if (error instanceof AppointmentsError) throw error;
     throw new AppointmentsError("ghl_invalid", "O GHL devolveu uma resposta inválida.");
+  } finally {
+    reader.releaseLock();
   }
 }
 
@@ -94,15 +114,23 @@ async function clinicTimezone(locationId: string, key: string, fetcher: typeof f
     .safeParse(await ghlGet(`locations/${encodeURIComponent(locationId)}`, {}, key, fetcher));
   if (!parsed.success || parsed.data.location.id !== locationId)
     throw new AppointmentsError("invalid_timezone", "Confira o fuso horário da clínica no GHL.");
+  localParts(new Date().toISOString(), parsed.data.location.timezone);
   return parsed.data.location.timezone;
 }
 
 /** Nomes vindos do GHL, com concorrência e volume limitados. Falha individual não derruba a lista. */
-async function contactNames(ids: string[], key: string, fetcher: typeof fetch) {
+async function contactNames(
+  ids: string[],
+  locationId: string,
+  key: string,
+  fetcher: typeof fetch,
+  deadline: AbortSignal,
+) {
   const names = new Map<string, string>();
   const pending = ids.slice(0, MAX_NAME_LOOKUPS);
   const worker = async () => {
     for (;;) {
+      if (deadline.aborted) return;
       const id = pending.shift();
       if (!id) return;
       try {
@@ -110,6 +138,7 @@ async function contactNames(ids: string[], key: string, fetcher: typeof fetch) {
           .object({
             contact: z.object({
               id: z.string(),
+              locationId: z.string(),
               name: z.string().nullish(),
               firstName: z.string().nullish(),
               lastName: z.string().nullish(),
@@ -118,6 +147,7 @@ async function contactNames(ids: string[], key: string, fetcher: typeof fetch) {
           .safeParse(await ghlGet(`contacts/${encodeURIComponent(id)}`, {}, key, fetcher));
         if (!parsed.success) continue;
         const c = parsed.data.contact;
+        if (c.id !== id || c.locationId !== locationId) continue;
         const name = ([c.firstName, c.lastName].filter(Boolean).join(" ") || c.name || "")
           .trim()
           .replace(/\s+/g, " ");
@@ -128,7 +158,14 @@ async function contactNames(ids: string[], key: string, fetcher: typeof fetch) {
     }
   };
   await Promise.all([worker(), worker(), worker()]);
-  return { names, truncated: ids.length > MAX_NAME_LOOKUPS };
+  return { names, truncated: names.size < ids.length };
+}
+
+/** Uma resposta limitada ou sem contagem não é prova de ausência de anamnese. */
+function incomplete(result: { error: unknown; count: number | null; data: unknown[] | null }) {
+  return (
+    !!result.error || result.count === null || !result.data || result.count !== result.data.length
+  );
 }
 
 export type AppointmentsResult = {
