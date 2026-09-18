@@ -87,6 +87,10 @@ describe("chamada à OpenAI (simulada)", () => {
       403: "credentials",
       429: "quota",
       500: "unavailable",
+      // redirect "manual": a redireção nunca é seguida com a credencial.
+      302: "rejected",
+      400: "rejected",
+      404: "rejected",
     };
     for (const [status, code] of Object.entries(codes)) {
       await expect(
