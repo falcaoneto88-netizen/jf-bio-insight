@@ -15,8 +15,5 @@ export default defineConfig({
   },
   vite: {
     plugins: [mcpPlugin()],
-    // O handler real de agendamentos é testado em vitest.appointments.config.ts,
-    // sem a transformação RPC do TanStack Start.
-    test: { exclude: ["**/node_modules/**", "**/dist/**", "src/lib/appointments/functions.test.ts"] },
   },
 });
