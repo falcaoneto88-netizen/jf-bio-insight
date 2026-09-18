@@ -1,0 +1,321 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useMemo, useState } from "react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
+
+import { BrandHeader } from "@/components/BrandHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  STAGE_LABEL,
+  plusDaysIso,
+  todayIso,
+  type AppointmentRow,
+  type Stage,
+} from "@/lib/appointments/core";
+import { listarAgendamentosConfirmados } from "@/lib/appointments/functions";
+
+export const Route = createFileRoute("/_authenticated/agendamentos")({
+  head: () => ({
+    meta: [
+      { title: "Agendamentos — Harmonização Glútea | BioReport Studio" },
+      {
+        name: "description",
+        content:
+          "Acompanhamento somente leitura dos agendamentos confirmados de Harmonização Glútea e do progresso da anamnese.",
+      },
+      { property: "og:title", content: "Agendamentos — Harmonização Glútea" },
+      {
+        property: "og:description",
+        content: "Agendamentos confirmados e situação da anamnese de cada paciente.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: AppointmentsPage,
+});
+
+const STAGE_TONE: Record<Stage, string> = {
+  sem_convite: "border-border text-muted-foreground",
+  convite_criado: "border-gold/60 text-foreground",
+  convite_expirado: "border-destructive/40 text-destructive",
+  convite_revogado: "border-destructive/40 text-destructive",
+  recebida: "border-gold text-foreground",
+  aplicada: "border-foreground/40 text-foreground",
+  nova_versao: "border-gold text-foreground",
+  conflito: "border-destructive/60 text-destructive",
+  indisponivel: "border-border text-muted-foreground",
+};
+
+const FILTERS: (Stage | "todas")[] = [
+  "todas",
+  "sem_convite",
+  "convite_criado",
+  "recebida",
+  "aplicada",
+  "nova_versao",
+  "convite_expirado",
+  "convite_revogado",
+  "conflito",
+  "indisponivel",
+];
+
+function formatDate(iso: string) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+function formatStamp(iso: string, timezone: string) {
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone: timezone,
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+function AppointmentsPage() {
+  const today = todayIso();
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(plusDaysIso(today, 29));
+  const [applied, setApplied] = useState({ from: today, to: plusDaysIso(today, 29) });
+  const [name, setName] = useState("");
+  const [stage, setStage] = useState<Stage | "todas">("todas");
+
+  const listar = useServerFn(listarAgendamentosConfirmados);
+  const query = useQuery({
+    // A chave inclui o período: uma resposta antiga nunca sobrescreve a busca atual.
+    queryKey: ["agendamentos", applied.from, applied.to],
+    queryFn: () => listar({ data: applied }),
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  });
+
+  const payload = query.data?.ok ? query.data.data : null;
+  const failure = query.data && !query.data.ok ? query.data : null;
+
+  const rows = useMemo(() => {
+    const all: AppointmentRow[] = payload?.rows ?? [];
+    const term = name.trim().toLowerCase();
+    return all.filter(
+      (r) =>
+        (stage === "todas" || r.stage === stage) &&
+        (!term || (r.patientName ?? "").toLowerCase().includes(term)),
+    );
+  }, [payload, name, stage]);
+
+  const counts = useMemo(() => {
+    const map = new Map<Stage, number>();
+    for (const r of rows) map.set(r.stage, (map.get(r.stage) ?? 0) + 1);
+    return [...map.entries()];
+  }, [rows]);
+
+  return (
+    <div className="clinical-workspace min-h-screen bg-background text-foreground">
+      <BrandHeader />
+      <main className="mx-auto max-w-6xl space-y-7 px-4 py-8 sm:px-6 sm:py-10">
+        <Link
+          to="/consulta"
+          search={{ id: undefined }}
+          className="inline-flex min-h-10 items-center gap-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Consulta do paciente
+        </Link>
+
+        <div className="max-w-2xl border-b border-border pb-6">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Área clínica — somente leitura
+          </p>
+          <h1 className="mt-2 font-serif text-3xl sm:text-4xl">Harmonização Glútea</h1>
+          <p className="mt-2 text-muted-foreground">Agendamentos confirmados e anamnese</p>
+        </div>
+
+        <form
+          className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setApplied({ from, to });
+          }}
+        >
+          <label className="text-sm">
+            <span className="mb-1 block font-medium">De</span>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} required />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium">Até</span>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} required />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium">Nome do paciente</span>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Filtrar por nome"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium">Etapa</span>
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={stage}
+              onChange={(e) => setStage(e.target.value as Stage | "todas")}
+            >
+              {FILTERS.map((option) => (
+                <option key={option} value={option}>
+                  {option === "todas" ? "Todas as etapas" : STAGE_LABEL[option]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
+            <Button type="submit">Aplicar período</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void query.refetch()}
+              disabled={query.isFetching}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+              {query.isFetching ? "Atualizando…" : "Atualizar agora"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Período limitado a 31 dias. Padrão: próximos 30 dias.
+            </p>
+          </div>
+        </form>
+
+        <div role="status" aria-live="polite" className="space-y-4">
+          {query.isPending && (
+            <p className="rounded-md border bg-card p-4 text-sm text-muted-foreground">
+              Consultando a agenda da clínica…
+            </p>
+          )}
+
+          {query.isError && (
+            <div className="rounded-md border border-destructive/50 bg-card p-4">
+              <p className="text-sm text-destructive">
+                A conexão falhou antes de consultar a agenda. Verifique a internet e tente de novo.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => void query.refetch()}
+              >
+                Tentar novamente
+              </Button>
+            </div>
+          )}
+
+          {failure && (
+            <div className="rounded-md border border-destructive/50 bg-card p-4">
+              <p className="text-sm text-destructive">{failure.message}</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                {failure.code === "unauthorized" ? (
+                  <Button asChild size="sm">
+                    <a href="/login?returnTo=%2Fhistory">Entrar novamente</a>
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
+                    Tentar novamente
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {payload && (
+            <>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border bg-card p-4 text-sm">
+                <span className="font-medium">
+                  {rows.length} agendamento(s) confirmados no período e filtros
+                </span>
+                {counts.map(([key, count]) => (
+                  <span key={key} className="text-muted-foreground">
+                    {STAGE_LABEL[key]}: {count}
+                  </span>
+                ))}
+                <span className="text-xs text-muted-foreground">
+                  Período {formatDate(payload.range.from)} a {formatDate(payload.range.to)} · fuso
+                  da clínica {payload.timezone} · última consulta aos serviços{" "}
+                  {formatStamp(payload.fetchedAt, payload.timezone)}
+                </span>
+              </div>
+
+              {payload.warnings.map((w) => (
+                <p key={w} className="rounded-md border border-gold/60 bg-card p-3 text-sm">
+                  Resultado parcial: {w}
+                </p>
+              ))}
+
+              {rows.length === 0 ? (
+                <p className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+                  Nenhum agendamento confirmado neste período e filtros.
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {rows.map((row) => (
+                    <li
+                      key={`${row.appointmentId}-${row.startIso}`}
+                      className="rounded-md border bg-card p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-serif text-lg">
+                            {row.patientName ?? "Nome indisponível neste momento"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(row.localDate)} às {row.localTime} ({payload.timezone})
+                            {row.nameSource === "cadastro"
+                              ? " · nome do cadastro da consulta"
+                              : row.nameSource === "ghl"
+                                ? " · nome do contato na agenda"
+                                : " · não foi possível confirmar o nome"}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs ${STAGE_TONE[row.stage]}`}
+                        >
+                          {STAGE_LABEL[row.stage]}
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                        {row.receivedAt && (
+                          <p>Recebida em {formatStamp(row.receivedAt, payload.timezone)}</p>
+                        )}
+                        {row.stage === "aplicada" && <p>Versão recebida atual aplicada à ficha.</p>}
+                        {row.stage === "nova_versao" && (
+                          <p>A ficha usa uma versão anterior. Revise a versão mais recente.</p>
+                        )}
+                        {row.expiresAt && !row.receivedAt && (
+                          <p>Convite válido até {formatStamp(row.expiresAt, payload.timezone)}</p>
+                        )}
+                        {row.note && <p>{row.note}</p>}
+                      </div>
+                      {row.consultationId && (
+                        <Button asChild variant="outline" size="sm" className="mt-3">
+                          <Link to="/consulta" search={{ id: row.consultationId }}>
+                            Abrir consulta
+                          </Link>
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Esta página é somente leitura: não cria convites, não envia mensagens e não altera
+                agendamentos. A criação de um convite não comprova envio ou entrega ao paciente.
+              </p>
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

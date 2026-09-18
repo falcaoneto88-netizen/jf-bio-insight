@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, CalendarDays, ChevronDown } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarCheck, CalendarDays, ChevronDown } from "lucide-react";
 import { abrirAnaliseDaConsulta, obterAnaliseDaConsulta } from "@/lib/journey.functions";
 import { BrandHeader } from "@/components/BrandHeader";
 import { GhlIntakeSettings } from "@/components/GhlIntakeSettings";
@@ -66,6 +66,15 @@ function ConsultationPage() {
           <p className="mt-2 text-muted-foreground">
             Anamnese, bioimpedância, análise e relatório no mesmo atendimento.
           </p>
+          <nav aria-label="Acompanhamento" className="mt-4">
+            <Link
+              to="/agendamentos"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-gold px-4 text-sm font-medium text-foreground underline-offset-4 hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <CalendarCheck className="h-4 w-4" aria-hidden="true" />
+              Agendamentos confirmados e anamnese
+            </Link>
+          </nav>
         </div>
         {id ? (
           z.uuid().safeParse(id).success ? (
