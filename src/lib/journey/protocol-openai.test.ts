@@ -73,7 +73,7 @@ describe("chamada à OpenAI (simulada)", () => {
       init: RequestInit;
     };
     expect(call.url).toBe("https://api.openai.com/v1/responses");
-    expect(call.init.redirect).toBe("error");
+    expect(call.init.redirect).toBe("manual");
     expect(call.body.store).toBe(false);
     expect(call.body.model).toBe("gpt-5.4");
     expect(call.body.text.format.type).toBe("json_schema");

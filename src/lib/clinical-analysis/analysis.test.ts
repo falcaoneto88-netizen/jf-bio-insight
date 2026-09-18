@@ -322,7 +322,7 @@ describe("Responses API", () => {
     const [url, options] = fetcher.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(String(options.body));
     expect(url).toBe("https://api.openai.com/v1/responses");
-    expect(options.redirect).toBe("error");
+    expect(options.redirect).toBe("manual");
     expect(body.store).toBe(false);
     expect(body.tools).toBeUndefined();
     expect(body.text.format.strict).toBe(true);

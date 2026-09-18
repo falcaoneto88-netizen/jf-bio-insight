@@ -139,7 +139,7 @@ test("não envia registro inexistente ou anamnese não confirmada", async () => 
 test("assina no servidor e nunca devolve assinatura ou segredo", async () => {
   globalThis.fetch = async (url, init) => {
     assert.equal(url, "https://jornada-ai-conecta.lovable.app/api/public/bioreport-event");
-    assert.equal(init.redirect, "error");
+    assert.equal(init.redirect, "manual");
     assert.equal(
       init.headers["x-bioreport-signature"],
       createHmac("sha256", "a".repeat(64)).update(init.body).digest("hex"),
