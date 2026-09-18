@@ -26,6 +26,10 @@ export const PROTOCOL_GENERATOR_VERSION = "protocolo-openai-2026-09-16-v1";
 
 const line = z.string().trim().max(1200);
 
+/** Formato exigido em cada substituição: quantidade + unidade + alimento. */
+const SUBSTITUTION_HINT =
+  'Quantidade + unidade + alimento, ex.: "120 g de frango grelhado", "2 fatias de pão integral". Nunca apenas o nome do alimento.';
+
 export const protocolAiOutputSchema = z.strictObject({
   objetivoResumo: z.string().trim().max(3000),
   orientacoesGerais: z.array(line).max(24),
@@ -45,9 +49,9 @@ export const protocolAiOutputSchema = z.strictObject({
           .max(20),
         preparo: z.string().trim().max(1500),
         substituicoes: z.strictObject({
-          proteina: z.array(line).max(3),
-          carboidrato: z.array(line).max(3),
-          gordura: z.array(line).max(3),
+          proteina: z.array(line.describe(SUBSTITUTION_HINT)).max(3).describe(SUBSTITUTION_HINT),
+          carboidrato: z.array(line.describe(SUBSTITUTION_HINT)).max(3).describe(SUBSTITUTION_HINT),
+          gordura: z.array(line.describe(SUBSTITUTION_HINT)).max(3).describe(SUBSTITUTION_HINT),
         }),
       }),
     )

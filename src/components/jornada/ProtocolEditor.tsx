@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { isValidSubstitution } from "@/lib/journey/protocol-quality";
 import {
   protocolSectionKindSchema,
   type ProtocolBlock,
@@ -297,22 +298,37 @@ function BlockEditor({
                 ["carbohydrate", "Carboidratos"],
                 ["fat", "Gorduras"],
               ] as const
-            ).map(([key, label]) => (
-              <label key={key} className="space-y-1 text-sm">
-                <span>Substituições: {label}</span>
-                <Textarea
-                  rows={4}
-                  placeholder="Uma opção por linha, com a quantidade fornecida"
-                  value={block.substitutions[key].join("\n")}
-                  onChange={(e) =>
-                    onChange({
-                      ...block,
-                      substitutions: { ...block.substitutions, [key]: e.target.value.split("\n") },
-                    })
-                  }
-                />
-              </label>
-            ))}
+            ).map(([key, label]) => {
+              const options = block.substitutions[key].filter((o) => o.trim());
+              const invalidas = options.filter((o) => !isValidSubstitution(o));
+              return (
+                <label key={key} className="space-y-1 text-sm">
+                  <span>Substituições: {label}</span>
+                  <Textarea
+                    rows={4}
+                    aria-invalid={invalidas.length > 0}
+                    className={invalidas.length ? "border-destructive" : undefined}
+                    placeholder="Uma opção por linha, ex.: 120 g de frango grelhado"
+                    value={block.substitutions[key].join("\n")}
+                    onChange={(e) =>
+                      onChange({
+                        ...block,
+                        substitutions: {
+                          ...block.substitutions,
+                          [key]: e.target.value.split("\n"),
+                        },
+                      })
+                    }
+                  />
+                  {invalidas.length > 0 && (
+                    <span className="block text-xs text-destructive">
+                      Falta a porção em: {invalidas.map((o) => o.trim()).join("; ")}. Escreva
+                      quantidade e unidade antes do alimento (ex.: 120 g de frango).
+                    </span>
+                  )}
+                </label>
+              );
+            })}
           </div>
         </div>
       ) : (
