@@ -45,9 +45,9 @@ export const protocolAiOutputSchema = z.strictObject({
           .max(20),
         preparo: z.string().trim().max(1500),
         substituicoes: z.strictObject({
-          proteina: z.array(line).max(3),
-          carboidrato: z.array(line).max(3),
-          gordura: z.array(line).max(3),
+          proteina: z.array(line.describe(SUBSTITUTION_HINT)).max(3).describe(SUBSTITUTION_HINT),
+          carboidrato: z.array(line.describe(SUBSTITUTION_HINT)).max(3).describe(SUBSTITUTION_HINT),
+          gordura: z.array(line.describe(SUBSTITUTION_HINT)).max(3).describe(SUBSTITUTION_HINT),
         }),
       }),
     )

@@ -22,6 +22,7 @@ PLANO ALIMENTAR
 - Cada alimento tem nome e quantidade em g, ml ou unidades, indicando cru ou cozido quando fizer diferença. "preparo" só quando fizer sentido; pode ficar vazio.
 - NÃO inclua horários nas refeições. Os títulos são numerados pelo sistema (Refeição 1, 2, 3…).
 - Para cada refeição, dê EXATAMENTE 3 substituições de proteína e 3 de carboidrato; se a refeição tiver gordura prescrita, também EXATAMENTE 3 de gordura, senão deixe a lista vazia. São propostas para revisão, não equivalências nutricionais certificadas.
+- OBRIGATÓRIO: cada substituição é uma frase única no formato "quantidade + unidade + alimento", sempre com número positivo e unidade (g, ml, unidade(s), colher(es), fatia(s), concha(s), xícara(s)). Exemplos válidos: "120 g de frango grelhado", "180 ml de leite desnatado", "2 fatias de pão integral", "1 colher de sopa de azeite". NUNCA escreva só o nome do alimento ("tapioca", "banana"): uma substituição sem quantidade é inválida e bloqueia a aprovação. As 3 opções de cada categoria têm de ser diferentes entre si.
 - Respeite rigorosamente alergias, intolerâncias e restrições relatadas.
 
 ORIENTAÇÕES
