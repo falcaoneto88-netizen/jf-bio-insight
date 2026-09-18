@@ -1,19 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 
 import { BrandHeader } from "@/components/BrandHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  STAGE_LABEL,
-  plusDaysIso,
-  todayIso,
-  type AppointmentRow,
-  type Stage,
-} from "@/lib/appointments/core";
+import { STAGE_LABEL, type AppointmentRow, type Stage } from "@/lib/appointments/core";
 import { listarAgendamentosConfirmados } from "@/lib/appointments/functions";
 
 export const Route = createFileRoute("/_authenticated/agendamentos")({
@@ -79,24 +73,30 @@ function formatStamp(iso: string, timezone: string) {
 }
 
 function AppointmentsPage() {
-  const today = todayIso();
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(plusDaysIso(today, 29));
-  const [applied, setApplied] = useState({ from: today, to: plusDaysIso(today, 29) });
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [applied, setApplied] = useState<{ from: string; to: string } | undefined>();
   const [name, setName] = useState("");
   const [stage, setStage] = useState<Stage | "todas">("todas");
 
   const listar = useServerFn(listarAgendamentosConfirmados);
   const query = useQuery({
     // A chave inclui o período: uma resposta antiga nunca sobrescreve a busca atual.
-    queryKey: ["agendamentos", applied.from, applied.to],
-    queryFn: () => listar({ data: applied }),
+    queryKey: ["agendamentos", applied?.from, applied?.to],
+    queryFn: () => listar({ data: applied ?? {} }),
+    retry: false,
     refetchOnWindowFocus: false,
     staleTime: 30_000,
   });
 
-  const payload = query.data?.ok ? query.data.data : null;
+  const payload = !query.isError && query.data?.ok ? query.data.data : null;
   const failure = query.data && !query.data.ok ? query.data : null;
+  useEffect(() => {
+    if (payload && !applied) {
+      setFrom((previous) => previous || payload.range.from);
+      setTo((previous) => previous || payload.range.to);
+    }
+  }, [payload, applied]);
 
   const rows = useMemo(() => {
     const all: AppointmentRow[] = payload?.rows ?? [];
@@ -198,7 +198,7 @@ function AppointmentsPage() {
           {query.isError && (
             <div className="rounded-md border border-destructive/50 bg-card p-4">
               <p className="text-sm text-destructive">
-                A conexão falhou antes de consultar a agenda. Verifique a internet e tente de novo.
+                Não foi possível atualizar a agenda. Verifique a conexão e tente novamente.
               </p>
               <Button
                 variant="outline"
@@ -217,7 +217,7 @@ function AppointmentsPage() {
               <div className="mt-3 flex flex-wrap gap-3">
                 {failure.code === "unauthorized" ? (
                   <Button asChild size="sm">
-                    <a href="/login?returnTo=%2Fhistory">Entrar novamente</a>
+                    <a href="/login?returnTo=%2Fagendamentos">Entrar novamente</a>
                   </Button>
                 ) : (
                   <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
@@ -254,7 +254,9 @@ function AppointmentsPage() {
 
               {rows.length === 0 ? (
                 <p className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  Nenhum agendamento confirmado neste período e filtros.
+                  {payload.warnings.length > 0
+                    ? "Nenhum agendamento pôde ser exibido com estes filtros. A leitura está parcial; confira os avisos acima."
+                    : "Nenhum agendamento confirmado neste período e filtros."}
                 </p>
               ) : (
                 <ul className="space-y-3">
@@ -264,7 +266,7 @@ function AppointmentsPage() {
                       className="rounded-md border bg-card p-4"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
+                        <div className="min-w-0 break-words">
                           <p className="font-serif text-lg">
                             {row.patientName ?? "Nome indisponível neste momento"}
                           </p>
@@ -292,7 +294,10 @@ function AppointmentsPage() {
                           <p>A ficha usa uma versão anterior. Revise a versão mais recente.</p>
                         )}
                         {row.expiresAt && !row.receivedAt && (
-                          <p>Convite válido até {formatStamp(row.expiresAt, payload.timezone)}</p>
+                          <p>
+                            Validade registrada do convite:{" "}
+                            {formatStamp(row.expiresAt, payload.timezone)}
+                          </p>
                         )}
                         {row.note && <p>{row.note}</p>}
                       </div>
