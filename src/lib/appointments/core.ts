@@ -22,6 +22,7 @@ export const rangeSchema = z
   .strictObject({ from: z.iso.date(), to: z.iso.date() })
   .refine((r) => r.from <= r.to, { message: "range" });
 export type Range = z.infer<typeof rangeSchema>;
+export const requestSchema = z.union([rangeSchema, z.strictObject({})]);
 
 export const eventSchema = z.object({
   id: z.string().min(1),
@@ -44,6 +45,8 @@ export function rangeDays(range: Range): number {
 }
 
 export function assertRange(range: Range): Range {
+  if (!rangeSchema.safeParse(range).success)
+    throw new AppointmentsError("invalid_range", "Confira as datas do período selecionado.");
   const days = rangeDays(range);
   if (!Number.isFinite(days) || days < 1)
     throw new AppointmentsError("invalid_range", "Confira as datas do período selecionado.");
@@ -82,7 +85,7 @@ export function localParts(iso: string, timezone: string): { date: string; time:
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      hour12: false,
+      hourCycle: "h23",
     }).formatToParts(at);
     const p = Object.fromEntries(parts.map((x) => [x.type, x.value]));
     return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
@@ -139,6 +142,20 @@ export function selectConfirmedEvents(
     }
     result.events.push({ ...event, localDate: local.date, localTime: local.time });
   }
+  // Respostas duplicadas não duplicam pacientes; identidades ambíguas não são vinculadas.
+  const unique = new Map<string, (typeof result.events)[number]>();
+  const ambiguous = new Set<string>();
+  for (const event of result.events) {
+    const previous = unique.get(event.id);
+    if (
+      previous &&
+      (previous.contactId !== event.contactId || !sameInstant(previous.startTime, event.startTime))
+    )
+      ambiguous.add(event.id);
+    unique.set(event.id, event);
+  }
+  result.invalid += ambiguous.size;
+  result.events = [...unique.values()].filter((e) => !ambiguous.has(e.id));
   result.events.sort(
     (a, b) => Date.parse(a.startTime) - Date.parse(b.startTime) || a.id.localeCompare(b.id),
   );
@@ -203,7 +220,7 @@ export type AppointmentRow = {
   note: string | null;
 };
 
-const sameInstant = (a: string, b: string) => {
+export const sameInstant = (a: string, b: string) => {
   const x = Date.parse(a);
   const y = Date.parse(b);
   return Number.isFinite(x) && Number.isFinite(y) && x === y;
@@ -261,6 +278,20 @@ export function buildRows(input: {
       (i) => i.contact_id === event.contactId && sameInstant(i.appointment_start, event.startTime),
     );
 
+    if (
+      conflicting.length > 0 ||
+      new Set(
+        forAppointment
+          .filter((i) => sameInstant(i.appointment_start, event.startTime))
+          .map((i) => i.consultation_id),
+      ).size > 1
+    )
+      return {
+        ...base,
+        stage: "conflito",
+        note: "Há vínculos divergentes para este agendamento. Confira o cadastro antes de abrir a consulta.",
+      };
+
     if (!invitation) {
       if (conflicting.length > 0)
         return {
@@ -276,6 +307,13 @@ export function buildRows(input: {
       };
     }
 
+    if (!input.consultationNames.has(invitation.consultation_id))
+      return {
+        ...base,
+        stage: "indisponivel",
+        note: "A consulta vinculada não pôde ser confirmada. Tente atualizar.",
+      };
+
     const consultationName = input.consultationNames.get(invitation.consultation_id) ?? null;
     if (consultationName) {
       base.patientName = consultationName;
@@ -290,6 +328,16 @@ export function buildRows(input: {
       .sort((a, b) => Date.parse(b.confirmed_at) - Date.parse(a.confirmed_at));
     const current = versions[0];
     const draft = input.drafts.find((d) => d.consultation_id === invitation.consultation_id);
+    if (
+      (invitation.submission_id && !versions.some((s) => s.id === invitation.submission_id)) ||
+      (invitation.submitted_at && !current) ||
+      (draft?.anamnesis_id && !versions.some((s) => s.id === draft.anamnesis_id))
+    )
+      return {
+        ...base,
+        stage: "indisponivel",
+        note: "Há uma resposta registrada, mas não foi possível conferir todas as versões.",
+      };
 
     if (current) {
       const applied = draft?.anamnesis_id ?? null;
@@ -324,8 +372,8 @@ export function totals(rows: AppointmentRow[]): { stage: Stage; count: number }[
   return [...counts.entries()].map(([stage, count]) => ({ stage, count }));
 }
 
-export function todayIso(now = new Date()): string {
-  return now.toISOString().slice(0, 10);
+export function todayIso(now: Date, timezone: string): string {
+  return localParts(now.toISOString(), timezone).date;
 }
 export function plusDaysIso(iso: string, days: number): string {
   return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);

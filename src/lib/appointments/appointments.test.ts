@@ -104,6 +104,37 @@ describe("seleção de agendamentos", () => {
 });
 
 describe("estado da anamnese", () => {
+  it("bloqueia vínculo conflitante mesmo quando também há convite compatível", () => {
+    const row = rowsFor(selection([event()]).events, {
+      invitations: [invitation(), invitation({ id: "other", contact_id: "outro" })],
+    })[0]!;
+    expect(row.stage).toBe("conflito");
+    expect(row.consultationId).toBeNull();
+  });
+
+  it("não oferece consulta que o banco não retornou", () => {
+    const row = rowsFor(selection([event()]).events, {
+      invitations: [invitation()],
+      names: new Map(),
+    })[0]!;
+    expect(row.stage).toBe("indisponivel");
+    expect(row.consultationId).toBeNull();
+  });
+
+  it("não declara pendente uma resposta cujo histórico ficou inconsistente", () => {
+    const row = rowsFor(selection([event()]).events, {
+      invitations: [invitation({ submission_id: "missing", submitted_at: "2026-09-18T09:00:00Z" })],
+    })[0]!;
+    expect(row.stage).toBe("indisponivel");
+  });
+
+  it("deduplica o evento e rejeita identidades divergentes no mesmo ID", () => {
+    expect(selection([event(), event()]).events).toHaveLength(1);
+    const conflict = selection([event(), event({ contactId: "outro" })]);
+    expect(conflict.events).toHaveLength(0);
+    expect(conflict.invalid).toBe(1);
+  });
+
   it("sinaliza ausência de convite e reagendamento sem herdar resposta", () => {
     const none = rowsFor(selection([event()]).events)[0]!;
     expect(none.stage).toBe("sem_convite");

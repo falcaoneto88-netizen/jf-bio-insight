@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { IntakeError } from "@/lib/intake-invitations/schema";
-import { AppointmentsError, rangeSchema, type AppointmentRow, type Stage } from "./core";
+import { AppointmentsError, requestSchema, type AppointmentRow, type Stage } from "./core";
 
 export type AppointmentsPayload = {
   rows: AppointmentRow[];
@@ -24,7 +24,7 @@ export type AppointmentsResponse =
  * navegador — apenas o período escolhido.
  */
 export const listarAgendamentosConfirmados = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => rangeSchema.parse(data))
+  .inputValidator((data: unknown) => data)
   .handler(async ({ data }): Promise<AppointmentsResponse> => {
     try {
       const { getRequest } = await import("@tanstack/react-start/server");
@@ -37,7 +37,13 @@ export const listarAgendamentosConfirmados = createServerFn({ method: "POST" })
       await assertIntakeAdmin(db);
 
       const { listConfirmedAppointments } = await import("./service.server");
-      const result = await listConfirmedAppointments(db, data);
+      const parsed = requestSchema.parse(data) as { from?: string; to?: string };
+      const result = await listConfirmedAppointments(
+        db,
+        typeof parsed.from === "string" && typeof parsed.to === "string"
+          ? { from: parsed.from, to: parsed.to }
+          : undefined,
+      );
       return { ok: true, data: result };
     } catch (error) {
       if (error instanceof AppointmentsError)
