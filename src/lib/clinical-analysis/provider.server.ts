@@ -27,7 +27,8 @@ export async function requestAnalysis(
   try {
     const response = await fetcher("https://api.openai.com/v1/responses", {
       method: "POST",
-      redirect: "error",
+      // workerd só aceita "follow"/"manual"; nunca seguimos redireção com a credencial.
+      redirect: "manual",
       signal: controller.signal,
       headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -53,7 +54,9 @@ export async function requestAnalysis(
           ? "credentials"
           : response.status === 429
             ? "quota"
-            : "unavailable",
+            : response.status >= 300 && response.status < 500
+              ? "rejected"
+              : "unavailable",
       );
     }
     // Bound successful bodies too; never include provider error bodies or clinical

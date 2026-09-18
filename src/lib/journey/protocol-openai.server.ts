@@ -23,6 +23,8 @@ export const protocolFailureMessages: Record<string, string> = {
   refusal: "O modelo recusou-se a produzir este conteúdo. Reveja as instruções profissionais.",
   incomplete: "A resposta ficou incompleta. Reduza as instruções e gere novamente.",
   invalid_response: "A IA não devolveu um protocolo válido. Nenhum rascunho foi gravado.",
+  rejected:
+    "O serviço de IA recusou o pedido de geração. Peça à equipa para conferir o modelo configurado.",
   unavailable: "O serviço de geração está indisponível. Tente novamente mais tarde.",
 };
 
@@ -56,7 +58,8 @@ export async function requestProtocol(
   try {
     const response = await fetcher("https://api.openai.com/v1/responses", {
       method: "POST",
-      redirect: "error",
+      // workerd só aceita "follow"/"manual"; nunca seguimos redireção com a credencial.
+      redirect: "manual",
       signal: controller.signal,
       headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -82,7 +85,9 @@ export async function requestProtocol(
           ? "credentials"
           : response.status === 429
             ? "quota"
-            : "unavailable",
+            : response.status >= 300 && response.status < 500
+              ? "rejected"
+              : "unavailable",
       );
     }
     const reader = response.body?.getReader();

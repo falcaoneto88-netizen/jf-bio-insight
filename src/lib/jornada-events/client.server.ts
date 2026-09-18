@@ -27,7 +27,8 @@ export async function sendJornadaEvent(input: SyncInput, source: Source) {
   try {
     response = await fetch(destination, {
       method: "POST",
-      redirect: "error",
+      // workerd só aceita "follow"/"manual"; a resposta 3xx é recusada abaixo.
+      redirect: "manual",
       signal: AbortSignal.timeout(15000),
       headers: { "Content-Type": "application/json", "x-bioreport-signature": signature },
       body,

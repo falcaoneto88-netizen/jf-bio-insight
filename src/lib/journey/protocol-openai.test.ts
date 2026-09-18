@@ -73,7 +73,7 @@ describe("chamada à OpenAI (simulada)", () => {
       init: RequestInit;
     };
     expect(call.url).toBe("https://api.openai.com/v1/responses");
-    expect(call.init.redirect).toBe("error");
+    expect(call.init.redirect).toBe("manual");
     expect(call.body.store).toBe(false);
     expect(call.body.model).toBe("gpt-5.4");
     expect(call.body.text.format.type).toBe("json_schema");
@@ -87,6 +87,10 @@ describe("chamada à OpenAI (simulada)", () => {
       403: "credentials",
       429: "quota",
       500: "unavailable",
+      // redirect "manual": a redireção nunca é seguida com a credencial.
+      302: "rejected",
+      400: "rejected",
+      404: "rejected",
     };
     for (const [status, code] of Object.entries(codes)) {
       await expect(

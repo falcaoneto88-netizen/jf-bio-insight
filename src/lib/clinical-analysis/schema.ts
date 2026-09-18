@@ -55,6 +55,8 @@ export const failureMessages: Record<string, string> = {
     "O limite ou os créditos da OpenAI foram atingidos. Tente mais tarde ou peça à equipe para verificar a conta.",
   timeout: "A análise demorou demais. Confira o histórico antes de gerar novamente.",
   invalid_response: "A IA não devolveu uma análise válida. Nenhum resultado foi aprovado.",
+  rejected:
+    "O serviço de IA recusou o pedido de análise. Peça à equipe para conferir o modelo configurado.",
   unavailable: "O serviço de análise está indisponível. Tente novamente mais tarde.",
   interrupted: "A geração foi interrompida. Você pode solicitar uma nova análise.",
   stale:
