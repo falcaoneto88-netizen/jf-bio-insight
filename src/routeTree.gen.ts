@@ -22,6 +22,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnamneseRouteImport } from './routes/anamnese'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedAgendamentosRouteImport } from './routes/_authenticated/agendamentos'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedJornadaIndexRouteImport } from './routes/_authenticated/jornada/index'
 import { Route as ApiPublicGhlAnamneseRouteImport } from './routes/api/public/ghl-anamnese'
@@ -93,6 +94,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAgendamentosRoute =
+  AuthenticatedAgendamentosRouteImport.update({
+    id: '/agendamentos',
+    path: '/agendamentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agendamentos': typeof AuthenticatedAgendamentosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/jornada/$id': typeof AuthenticatedJornadaIdRoute
   '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
@@ -161,6 +169,7 @@ export interface FileRoutesByTo {
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/agendamentos': typeof AuthenticatedAgendamentosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/jornada/$id': typeof AuthenticatedJornadaIdRoute
   '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
@@ -183,6 +192,7 @@ export interface FileRoutesById {
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/agendamentos': typeof AuthenticatedAgendamentosRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/jornada/$id': typeof AuthenticatedJornadaIdRoute
   '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/upload'
     | '/.well-known/oauth-protected-resource'
+    | '/agendamentos'
     | '/.lovable/oauth/consent'
     | '/jornada/$id'
     | '/api/public/anamnese-convite'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/upload'
     | '/.well-known/oauth-protected-resource'
+    | '/agendamentos'
     | '/.lovable/oauth/consent'
     | '/jornada/$id'
     | '/api/public/anamnese-convite'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/upload'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/agendamentos'
     | '/.lovable/oauth/consent'
     | '/_authenticated/jornada/$id'
     | '/api/public/anamnese-convite'
@@ -366,6 +379,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/agendamentos': {
+      id: '/_authenticated/agendamentos'
+      path: '/agendamentos'
+      fullPath: '/agendamentos'
+      preLoaderRoute: typeof AuthenticatedAgendamentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -412,11 +432,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAgendamentosRoute: typeof AuthenticatedAgendamentosRoute
   AuthenticatedJornadaIdRoute: typeof AuthenticatedJornadaIdRoute
   AuthenticatedJornadaIndexRoute: typeof AuthenticatedJornadaIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAgendamentosRoute: AuthenticatedAgendamentosRoute,
   AuthenticatedJornadaIdRoute: AuthenticatedJornadaIdRoute,
   AuthenticatedJornadaIndexRoute: AuthenticatedJornadaIndexRoute,
 }
