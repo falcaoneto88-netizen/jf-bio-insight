@@ -113,7 +113,12 @@ describe("estado da anamnese", () => {
     const moved = rowsFor(selection([event({ startTime: "2026-09-19T15:00:00+00:00" })]).events, {
       invitations: [invitation()],
       submissions: [
-        { id: "sub-1", consultation_id: "con-1", invitation_id: "inv-1", confirmed_at: "2026-09-17T10:00:00Z" },
+        {
+          id: "sub-1",
+          consultation_id: "con-1",
+          invitation_id: "inv-1",
+          confirmed_at: "2026-09-17T10:00:00Z",
+        },
       ],
     })[0]!;
     expect(moved.stage).toBe("sem_convite");
@@ -133,10 +138,12 @@ describe("estado da anamnese", () => {
     const events = selection([event()]).events;
     expect(rowsFor(events, { invitations: [invitation()] })[0]!.stage).toBe("convite_criado");
     expect(
-      rowsFor(events, { invitations: [invitation({ expires_at: "2026-09-17T00:00:00Z" })] })[0]!.stage,
+      rowsFor(events, { invitations: [invitation({ expires_at: "2026-09-17T00:00:00Z" })] })[0]!
+        .stage,
     ).toBe("convite_expirado");
     expect(
-      rowsFor(events, { invitations: [invitation({ revoked_at: "2026-09-17T00:00:00Z" })] })[0]!.stage,
+      rowsFor(events, { invitations: [invitation({ revoked_at: "2026-09-17T00:00:00Z" })] })[0]!
+        .stage,
     ).toBe("convite_revogado");
   });
 
@@ -164,7 +171,12 @@ describe("estado da anamnese", () => {
       invitations: [invitation()],
       submissions: [
         office,
-        { id: "sub-new", consultation_id: "con-1", invitation_id: "inv-1", confirmed_at: "2026-09-18T11:00:00Z" },
+        {
+          id: "sub-new",
+          consultation_id: "con-1",
+          invitation_id: "inv-1",
+          confirmed_at: "2026-09-18T11:00:00Z",
+        },
       ],
       drafts: [{ consultation_id: "con-1", anamnesis_id: "sub-office" }],
     })[0]!;

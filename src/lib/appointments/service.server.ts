@@ -39,7 +39,11 @@ async function ghlGet(
       // workerd aceita apenas "follow" ou "manual"; 3xx é rejeitado abaixo.
       redirect: "manual",
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { Authorization: `Bearer ${key}`, Version: "2021-07-28", Accept: "application/json" },
+      headers: {
+        Authorization: `Bearer ${key}`,
+        Version: "2021-07-28",
+        Accept: "application/json",
+      },
     });
   } catch {
     throw new AppointmentsError("ghl_unavailable", "Não foi possível consultar a agenda no GHL.");
@@ -179,7 +183,9 @@ export async function listConfirmedAppointments(
 
   const warnings: string[] = [];
   if (selection.invalid > 0)
-    warnings.push(`${selection.invalid} agendamento(s) vieram incompletos do GHL e não foram listados.`);
+    warnings.push(
+      `${selection.invalid} agendamento(s) vieram incompletos do GHL e não foram listados.`,
+    );
 
   const appointmentIds = selection.events.map((e) => e.id);
   let invitations: InvitationRow[] = [];
@@ -245,9 +251,10 @@ export async function listConfirmedAppointments(
         .map((e) => e.contactId),
     ),
   ];
-  const lookup = missingName.length > 0
-    ? await contactNames(missingName, key, fetcher)
-    : { names: new Map<string, string>(), truncated: false };
+  const lookup =
+    missingName.length > 0
+      ? await contactNames(missingName, key, fetcher)
+      : { names: new Map<string, string>(), truncated: false };
   if (lookup.truncated)
     warnings.push("Alguns nomes não foram consultados por limite de leituras. Reduza o período.");
 

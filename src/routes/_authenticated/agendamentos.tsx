@@ -200,7 +200,12 @@ function AppointmentsPage() {
               <p className="text-sm text-destructive">
                 A conexão falhou antes de consultar a agenda. Verifique a internet e tente de novo.
               </p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={() => void query.refetch()}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => void query.refetch()}
+              >
                 Tentar novamente
               </Button>
             </div>
@@ -235,8 +240,8 @@ function AppointmentsPage() {
                   </span>
                 ))}
                 <span className="text-xs text-muted-foreground">
-                  Período {formatDate(payload.range.from)} a {formatDate(payload.range.to)} · fuso da
-                  clínica {payload.timezone} · última consulta aos serviços{" "}
+                  Período {formatDate(payload.range.from)} a {formatDate(payload.range.to)} · fuso
+                  da clínica {payload.timezone} · última consulta aos serviços{" "}
                   {formatStamp(payload.fetchedAt, payload.timezone)}
                 </span>
               </div>

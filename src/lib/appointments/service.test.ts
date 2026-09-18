@@ -11,7 +11,12 @@ const env = { GHL_API_KEY: "chave-ficticia", BIOREPORT_GHL_PROCEDURE_CALENDAR_ID
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-function fakeFetch(handlers: { location?: unknown; events?: unknown; contact?: unknown; status?: number }) {
+function fakeFetch(handlers: {
+  location?: unknown;
+  events?: unknown;
+  contact?: unknown;
+  status?: number;
+}) {
   const calls: string[] = [];
   const fetcher = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
@@ -47,7 +52,11 @@ describe("leitura real de agendamentos (com fixtures)", () => {
   it("rejeita período maior que 31 dias antes de qualquer chamada ao GHL", async () => {
     const { fetcher, calls } = fakeFetch({});
     await expect(
-      listConfirmedAppointments(fakeDb().db, { from: "2026-09-01", to: "2026-10-15" }, { fetcher, env }),
+      listConfirmedAppointments(
+        fakeDb().db,
+        { from: "2026-09-01", to: "2026-10-15" },
+        { fetcher, env },
+      ),
     ).rejects.toBeInstanceOf(AppointmentsError);
     expect(calls).toHaveLength(0);
   });
@@ -92,7 +101,9 @@ describe("leitura real de agendamentos (com fixtures)", () => {
 
   it("traduz credencial inválida do GHL em erro em português", async () => {
     const { fetcher } = fakeFetch({ status: 401 });
-    await expect(listConfirmedAppointments(fakeDb().db, range, { fetcher, env })).rejects.toMatchObject({
+    await expect(
+      listConfirmedAppointments(fakeDb().db, range, { fetcher, env }),
+    ).rejects.toMatchObject({
       code: "ghl_credentials",
     });
   });

@@ -28,9 +28,8 @@ export const listarAgendamentosConfirmados = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<AppointmentsResponse> => {
     try {
       const { getRequest } = await import("@tanstack/react-start/server");
-      const { publicIntakeDb, assertIntakeAdmin } = await import(
-        "@/lib/intake-invitations/service.server"
-      );
+      const { publicIntakeDb, assertIntakeAdmin } =
+        await import("@/lib/intake-invitations/service.server");
       const authorization = getRequest().headers.get("authorization");
       if (!authorization || !/^Bearer \S+$/.test(authorization))
         throw new IntakeError("unauthorized", "Sua sessão expirou. Entre novamente.", 401);

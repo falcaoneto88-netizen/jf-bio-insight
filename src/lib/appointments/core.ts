@@ -36,7 +36,11 @@ export type CalendarEvent = z.infer<typeof eventSchema>;
 export const eventsPayloadSchema = z.object({ events: z.array(z.unknown()).max(2000) });
 
 export function rangeDays(range: Range): number {
-  return Math.round((Date.parse(`${range.to}T00:00:00Z`) - Date.parse(`${range.from}T00:00:00Z`)) / 86400000) + 1;
+  return (
+    Math.round(
+      (Date.parse(`${range.to}T00:00:00Z`) - Date.parse(`${range.from}T00:00:00Z`)) / 86400000,
+    ) + 1
+  );
 }
 
 export function assertRange(range: Range): Range {
@@ -66,7 +70,10 @@ export function utcWindow(range: Range): { startTime: number; endTime: number } 
 export function localParts(iso: string, timezone: string): { date: string; time: string } {
   const at = new Date(iso);
   if (Number.isNaN(at.getTime()))
-    throw new AppointmentsError("invalid_event", "O GHL devolveu uma data de agendamento inválida.");
+    throw new AppointmentsError(
+      "invalid_event",
+      "O GHL devolveu uma data de agendamento inválida.",
+    );
   try {
     const parts = new Intl.DateTimeFormat("en-CA", {
       timeZone: timezone,
@@ -132,7 +139,9 @@ export function selectConfirmedEvents(
     }
     result.events.push({ ...event, localDate: local.date, localTime: local.time });
   }
-  result.events.sort((a, b) => Date.parse(a.startTime) - Date.parse(b.startTime) || a.id.localeCompare(b.id));
+  result.events.sort(
+    (a, b) => Date.parse(a.startTime) - Date.parse(b.startTime) || a.id.localeCompare(b.id),
+  );
   return result;
 }
 
@@ -237,7 +246,11 @@ export function buildRows(input: {
     }
 
     if (input.progressUnavailable) {
-      return { ...base, stage: "indisponivel", note: "Não foi possível ler o progresso da anamnese." };
+      return {
+        ...base,
+        stage: "indisponivel",
+        note: "Não foi possível ler o progresso da anamnese.",
+      };
     }
 
     const forAppointment = input.invitations.filter(
@@ -280,7 +293,8 @@ export function buildRows(input: {
 
     if (current) {
       const applied = draft?.anamnesis_id ?? null;
-      const stage: Stage = applied === current.id ? "aplicada" : applied ? "nova_versao" : "recebida";
+      const stage: Stage =
+        applied === current.id ? "aplicada" : applied ? "nova_versao" : "recebida";
       return {
         ...base,
         stage,
