@@ -82,6 +82,8 @@ test("return URL accepts only application clinical pages", () => {
   ])
     assert.equal(api.safeReturnTo(value), "/history");
   assert.equal(api.safeReturnTo("/review"), "/review");
+  assert.equal(api.safeReturnTo("/agendamentos"), "/agendamentos");
+  assert.equal(api.safeReturnTo("/agendamentos?redirect=https://evil.test"), "/history");
 });
 for (const [name, config, code] of [
   ["missing session", { session: false }, "guest"],
