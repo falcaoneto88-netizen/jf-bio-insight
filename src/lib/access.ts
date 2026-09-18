@@ -19,6 +19,7 @@ export const ACCESS_EVENT = "bioreport-access-error";
 export const clinicalPaths = [
   "/consulta",
   "/jornada",
+  "/agendamentos",
   "/upload",
   "/body-composition",
   "/clinical-form",
