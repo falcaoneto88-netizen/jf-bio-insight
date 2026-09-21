@@ -34,8 +34,14 @@ export function buildEvent(
   syncInput.parse(input);
   if (source.consultationId !== input.consultationId || source.recordId !== input.recordId)
     throw new Error("O registro não pertence à consulta escolhida.");
-  z.uuid().parse(source.patientId);
-  z.uuid().parse(config.organizationId);
+  if (!z.uuid().safeParse(source.patientId).success)
+    throw new Error(
+      "O paciente da consulta não possui um identificador válido. Confira o cadastro antes de sincronizar.",
+    );
+  if (!z.uuid().safeParse(config.organizationId).success)
+    throw new Error(
+      "Integração Jornada AI não configurada: confira JORNADA_AI_ORGANIZATION_ID no cofre do BioReport.",
+    );
   if (
     !/^[A-Za-z0-9_-]{1,128}$/.test(config.locationId) ||
     !/^[A-Za-z0-9_-]{1,64}$/.test(config.keyId)
