@@ -41,3 +41,15 @@ Tentativa suportada via `codex app-server proxy` / `config/mcpServer/reload` fal
 - Nenhuma alteração clínica, aprovação, versão de protocolo, documento ou integração Ads/Meta/Google.
 
 Detalhes e histórico: [jornada-event-tool-2026-09-12.md](jornada-event-tool-2026-09-12.md).
+
+## Retomada após salvar a configuração — 21/09/2026
+
+O operador informou que salvou JORNADA_AI_ORGANIZATION_ID e o histórico do Lovable confirmou o cadastro no cofre. O valor e a chave de assinatura não foram lidos nesta retomada.
+
+O preview MCP autenticado voltou a confirmar a mesma consulta de teste e a mesma submissão aceita. A cadeia convite/submissão/consulta/contato foi revalidada no banco. Uma tentativa após o salvamento ainda retornou o erro antigo do Zod (invalid_format, uuid, path vazio) no endpoint público; nenhum recibo foi emitido. Não repetir até atualizar a implantação.
+
+Isso não demonstra que o operador salvou um valor incorreto: a configuração vigente no cofre e o runtime publicado são estados distintos. O site ainda não foi republicado nesta entrega. A ação restante é publicar a prévia revisada para aplicar a configuração e então verificar received/duplicate com os mesmos IDs autorizados.
+
+Linha de base revalidada: zero eventos, zero auditorias de recebimento, zero mensagens de saída, zero execuções de automação do contato, etapa novo_lead. Nenhuma mensagem, alteração comercial ou evento persistido. Sem rotação de chave.
+
+Durante o cadastro no Lovable a dependência de build foi novamente atualizada automaticamente. Antes de publicar, a prévia deve manter @lovable.dev/vite-tanstack-config 2.13.1, já testada. O diff funcional deve continuar limitado à sanitização dos erros do canal de eventos e seu teste; os demais arquivos alterados são documentos.
