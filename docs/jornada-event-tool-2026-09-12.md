@@ -66,3 +66,48 @@ Não foi adicionado disparo automático ao salvar a anamnese. Esta entrega cria 
 - Rotas e manifestos gerados foram atualizados pelas ferramentas oficiais; nenhum arquivo AUTO-GENERATED foi editado manualmente.
 
 Reprodução: BioReport `node --test tests/jornada-events.test.mjs`; Jornada `npx vitest run src/lib/bioreport-events.test.ts src/lib/mcp/tools/list-bioreport-events.test.ts`. Para o teste SQL, instalar `npm install --prefix test/bioreport-runtime` e executar `node test/bioreport-events.db.mjs`. O teste cria e encerra seu próprio PostgreSQL local, com dados fictícios.
+
+## Revalidação em 21/09/2026 — configuração bloqueia o envio operacional
+
+Esta seção atualiza o estado observado; as notas anteriores permanecem como histórico. Não recriar nem rotacionar a chave existente.
+
+### Revisões e alcance
+- BioReport original: fonte inicial `1897a788a4f75cb2ff1e51e47c8abd95bf7e721c`; correção mínima na prévia `1b905e4d500550c7b49c0506666d54e17bba10f4`.
+- Jornada original: fonte/receptor testados em `16491d9db3b9cfeae11c9e142d92f952f2e488fc`. O corpo da função SQL `receive_bioreport_event` no banco efetivo foi comparado e coincide com a migração dessa fonte.
+- SHA realmente publicado: não disponível nos metadados acessíveis. Não confundir `is_published` ou a etiqueta estática de build com prova do commit implantado.
+- A consulta de diagnóstico do Lovable introduziu um upgrade automático de dependência; a dependência do BioReport foi restaurada e o diff conferido contém apenas a correção e seu teste. Restauração equivalente solicitada no Jornada, sem publicação.
+
+### MCP autenticado e catálogo
+- `list_reports({limit:1})` funcionou no MCP nativo `bioreport` deste Codex e no plugin BioReport. Os dois retornaram o mesmo primeiro identificador, sem reproduzir dados clínicos no relatório.
+- `jornada_preview_consultation` funcionou pelo MCP nativo e confirmou uma anamnese aceita no registro de teste já autorizado. O vínculo foi conferido pela cadeia convite → consulta → submissão → contato GHL, não por nome.
+- MCP BioReport: 12 ferramentas disponíveis. O manifesto atual do Jornada contém 8, incluindo `list_bioreport_events` e `list_opportunities`; o plugin nesta sessão continua expondo apenas 6. `list_automations` respondeu, o que não equivale a testar a leitura de eventos.
+- A tentativa de recarregar pelo protocolo local suportado `config/mcpServer/reload` não alcançou o servidor: socket de controle local ausente. O controle do Chrome também expirou ao selecionar o editor. Atualização do catálogo no cliente permanece pendente; nenhuma credencial foi removida ou renovada.
+
+### Configuração e causa comprovada
+- Presença dos quatro nomes de configuração confirmada no cofre dos dois projetos; os valores não foram exibidos. Isso, sozinho, não prova compatibilidade.
+- Banco Jornada: uma chave ativa, uma associação de localização da mesma organização; zero eventos. `anon` e `authenticated` não têm SELECT na tabela privada.
+- Uma única tentativa operacional `anamnese_recebida` foi feita com `confirm:true` e os identificadores do teste previamente autorizado. Resultado: erro de validação `invalid_format`, formato `uuid`, caminho vazio, antes do envio HTTP.
+- Os identificadores da consulta, do paciente e da submissão foram verificados como UUIDs válidos. No código vigente, a outra validação UUID nesse ponto é `JORNADA_AI_ORGANIZATION_ID`. A configuração carregada pelo backend publicado precisa ser corrigida ou atualizada no runtime; não há evidência de falha OAuth atual nem motivo para rotacionar a assinatura.
+- Correção de código: `safeParse` mantém a validação estrita e retorna orientação em português, sem JSON técnico do Zod nem o valor inválido. Teste confirma zero chamadas de rede quando a organização é inválida.
+- Registro de teste: consulta `97507e74-f997-4e45-b8d4-764a44e347c6`, submissão `207af4c2-33d8-43d9-a90d-a265659bf8ee`; o contato exato permanece conferível no convite persistido. Não há relatório salvo nessa consulta.
+- Nenhum recibo `received` foi obtido; `duplicate` operacional não foi tentado depois dessa falha determinística. Eventos persistidos continuam zero.
+
+### Validação isolada
+- 28 testes Node no BioReport (11 de eventos e 17 de regressão MCP), executados sobre os arquivos da revisão da correção.
+- 18 testes Vitest do receptor/cadastro/leitura de eventos.
+- 43 verificações em PostgreSQL descartável com dados sintéticos e migrações da fonte fixada: HMAC sobre corpo exato, assinatura inválida, expiração, organização/location, associação, RLS, revogação, auditoria atômica, concorrência e repetição `duplicate` com uma única gravação.
+- TypeScript e ESLint do core alterado aprovados. Nenhum arquivo AUTO-GENERATED alterado manualmente.
+- Nenhuma mensagem, alteração comercial, execução de workflow ou envio automático ao salvar anamnese foi introduzido.
+
+### Estado separado
+| Item | Estado em 21/09 |
+| --- | --- |
+| Pronto no código | Canal existente; erro de configuração corrigido e testado na prévia |
+| Publicado | Aplicações respondem; correção desta sessão não publicada, SHA de produção não comprovado |
+| Configurado | Chave ativa preservada; ID da organização no runtime BioReport impede o envio; compatibilidade da assinatura entre backends ainda não demonstrada |
+| Verificado de ponta a ponta | Pendente: nenhum evento recebido; duplicação comprovada apenas no ambiente isolado |
+
+### Próximo passo privado
+No projeto original BioReport, abrir Cloud → Secrets e revisar somente `JORNADA_AI_ORGANIZATION_ID`. Usar o UUID da organização já vinculada à chave ativa no Jornada, sem aspas, rótulo, URL ou espaços. Conferir no painel privado do Jornada/documentação de configuração existente; não enviar o valor nem a chave por chat. Preservar os demais valores, sobretudo a chave funcional. Se o cofre já estiver correto, atualizar o backend publicado para carregar a configuração vigente, com publicação autorizada.
+
+Depois, repetir o preview e o mesmo evento autorizado. Somente após `received`, repetir os mesmos IDs para obter `duplicate`, conferir uma linha e uma auditoria, e comparar mensagens/execuções/etapa com o estado anterior. Atualizar o catálogo Jornada pelo cliente e validar `list_bioreport_events`. Não usar service role, não relaxar RLS e não reenviar respostas clínicas.
