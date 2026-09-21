@@ -221,3 +221,22 @@ test("preview retorna IDs limitados sem respostas clínicas", async () => {
   assert.equal(result.structuredContent.anamneses.length, 10);
   assert.equal(result.structuredContent.truncated, true);
 });
+
+test("organização inválida falha antes do envio, sem valor nem detalhes Zod", async () => {
+  process.env.JORNADA_AI_ORGANIZATION_ID = "valor-invalido-sintetico";
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("unexpected network");
+  };
+  await assert.rejects(api.sendJornadaEvent(input, source), (e) => {
+    assert.equal(
+      e.message,
+      "Integração Jornada AI não configurada: confira JORNADA_AI_ORGANIZATION_ID no cofre do BioReport.",
+    );
+    assert.doesNotMatch(e.message, /valor-invalido-sintetico/);
+    assert.doesNotMatch(e.message, /uuid|invalid_format/i);
+    return true;
+  });
+  assert.equal(fetchCalls, 0);
+});
