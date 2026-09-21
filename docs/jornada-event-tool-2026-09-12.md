@@ -111,3 +111,15 @@ Esta seção atualiza o estado observado; as notas anteriores permanecem como hi
 No projeto original BioReport, abrir Cloud → Secrets e revisar somente `JORNADA_AI_ORGANIZATION_ID`. Usar o UUID da organização já vinculada à chave ativa no Jornada, sem aspas, rótulo, URL ou espaços. Conferir no painel privado do Jornada/documentação de configuração existente; não enviar o valor nem a chave por chat. Preservar os demais valores, sobretudo a chave funcional. Se o cofre já estiver correto, atualizar o backend publicado para carregar a configuração vigente, com publicação autorizada.
 
 Depois, repetir o preview e o mesmo evento autorizado. Somente após `received`, repetir os mesmos IDs para obter `duplicate`, conferir uma linha e uma auditoria, e comparar mensagens/execuções/etapa com o estado anterior. Atualizar o catálogo Jornada pelo cliente e validar `list_bioreport_events`. Não usar service role, não relaxar RLS e não reenviar respostas clínicas.
+
+## Retomada após salvar a configuração — 21/09/2026
+
+O operador informou que salvou JORNADA_AI_ORGANIZATION_ID e o histórico do Lovable confirmou o cadastro no cofre. O valor e a chave de assinatura não foram lidos nesta retomada.
+
+O preview MCP autenticado voltou a confirmar a mesma consulta de teste e a mesma submissão aceita. A cadeia convite/submissão/consulta/contato foi revalidada no banco. Uma tentativa após o salvamento ainda retornou o erro antigo do Zod (invalid_format, uuid, path vazio) no endpoint público; nenhum recibo foi emitido. Não repetir até atualizar a implantação.
+
+Isso não demonstra que o operador salvou um valor incorreto: a configuração vigente no cofre e o runtime publicado são estados distintos. O site ainda não foi republicado nesta entrega. A ação restante é publicar a prévia revisada para aplicar a configuração e então verificar received/duplicate com os mesmos IDs autorizados.
+
+Linha de base revalidada: zero eventos, zero auditorias de recebimento, zero mensagens de saída, zero execuções de automação do contato, etapa novo_lead. Nenhuma mensagem, alteração comercial ou evento persistido. Sem rotação de chave.
+
+Durante o cadastro no Lovable a dependência de build foi novamente atualizada automaticamente. Antes de publicar, a prévia deve manter @lovable.dev/vite-tanstack-config 2.13.1, já testada. O diff funcional deve continuar limitado à sanitização dos erros do canal de eventos e seu teste; os demais arquivos alterados são documentos.
