@@ -297,3 +297,72 @@ export function syncInfo(row: OutboxStatusRow | undefined, context: SyncContext 
     outboxId: row.outbox_id,
   };
 }
+
+/**
+ * Listagem administrativa da fila, independente da leitura da agenda GHL:
+ * apenas identificadores e estado do envio, nunca respostas clínicas.
+ */
+export const adminQueueRowSchema = z.object({
+  outbox_id: z.uuid(),
+  consultation_id: z.uuid(),
+  record_id: z.uuid(),
+  status: z.string().min(1),
+  attempts: z.number().int().nonnegative(),
+  max_attempts: z.number().int().positive(),
+  enqueued_at: z.string().min(1),
+  last_attempt_at: z.string().nullable(),
+  next_attempt_at: z.string().nullable(),
+  last_error_code: z.string().nullable(),
+  sent_at: z.string().nullable(),
+});
+export const adminQueueSchema = z.object({
+  total: z.number().int().nonnegative(),
+  limit: z.number().int().nonnegative(),
+  offset: z.number().int().nonnegative(),
+  rows: z.array(adminQueueRowSchema),
+});
+
+export type AdminQueueRow = {
+  outboxId: string;
+  consultationId: string;
+  recordId: string;
+  attempts: number;
+  maxAttempts: number;
+  enqueuedAt: string;
+  sync: SyncInfo;
+};
+export type AdminQueue = {
+  total: number;
+  limit: number;
+  offset: number;
+  rows: AdminQueueRow[];
+};
+
+/** Converte a resposta do banco; uma resposta ilegível nunca vira lista vazia. */
+export function toAdminQueue(raw: unknown): AdminQueue {
+  const parsed = adminQueueSchema.parse(raw);
+  return {
+    total: parsed.total,
+    limit: parsed.limit,
+    offset: parsed.offset,
+    rows: parsed.rows.map((r) => ({
+      outboxId: r.outbox_id,
+      consultationId: r.consultation_id,
+      recordId: r.record_id,
+      attempts: r.attempts,
+      maxAttempts: r.max_attempts,
+      enqueuedAt: r.enqueued_at,
+      sync: syncInfo({
+        consultation_id: r.consultation_id,
+        record_id: r.record_id,
+        status: r.status,
+        attempts: r.attempts,
+        last_attempt_at: r.last_attempt_at,
+        next_attempt_at: r.next_attempt_at,
+        last_error_code: r.last_error_code,
+        sent_at: r.sent_at,
+        outbox_id: r.outbox_id,
+      }),
+    })),
+  };
+}
