@@ -301,4 +301,32 @@ describe("situação exibida ao administrador", () => {
     expect(blockedRow.state).toBe("pendencia_vinculo");
     expect(blockedRow.note).toMatch(/mais de um contato/);
   });
+
+  it("distingue falha com nova tentativa de falha que exige intervenção", () => {
+    const row = {
+      consultation_id: uuid(1),
+      record_id: uuid(2),
+      attempts: 6,
+      last_attempt_at: "2026-09-20T10:00:00Z",
+      next_attempt_at: "2026-09-20T10:05:00Z",
+      last_error_code: "envio_indisponivel",
+      sent_at: null,
+      outbox_id: uuid(10),
+      status: "exhausted",
+    };
+    const info = syncInfo(row);
+    expect(info.state).toBe("falha_intervencao");
+    // Tentativas esgotadas não prometem nova tentativa programada.
+    expect(info.nextAttemptAt).toBeNull();
+    expect(info.note).toMatch(/Recoloque na fila/);
+  });
+
+  it("não mascara falha de leitura nem confirmação elegível fora da fila", () => {
+    expect(syncInfo(undefined, { unavailable: true }).state).toBe("indisponivel");
+    expect(syncInfo(undefined, { eligible: true }).state).toBe("ausente_na_fila");
+    // Falha de leitura prevalece sobre qualquer linha recebida.
+    expect(syncInfo(undefined, { unavailable: true, eligible: true }).state).toBe("indisponivel");
+    // Sem elegibilidade (antes da primeira ativação) continua sendo "sem aviso a enviar".
+    expect(syncInfo(undefined, {})).toEqual(NOT_APPLICABLE);
+  });
 });
