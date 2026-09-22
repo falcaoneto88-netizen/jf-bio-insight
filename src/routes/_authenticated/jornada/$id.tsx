@@ -259,11 +259,8 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
                   setBio(journey.bio);
                   setProtocolo(journey.protocolo ?? emptyProtocolo);
                   setDraftVersion(journey.version);
-                  // Etapa pedida no link (aprovação/impressão), sem passar do ponto já atingido.
-                  const natural = journeyNaturalStep(journey);
-                  setStep(
-                    etapaInicial ? (Math.min(etapaInicial, natural) as JourneyStep) : natural,
-                  );
+                  // Etapa pedida no link, respeitando o mesmo limite da abertura.
+                  setStep(journeyInitialStep(journey, etapaInicial));
                 }
               }}
             >
@@ -390,6 +387,7 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
             htmlVersion={htmlVersion}
             htmlError={htmlError}
             onBack={() => setStep(4)}
+            onPreviewDraft={() => setStep(6)}
             onApproved={async () => {
               await refetch();
               setStep(6);
