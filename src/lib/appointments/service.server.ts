@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { INTAKE_LOCATION_ID } from "@/lib/intake-invitations/schema";
+import type { OutboxStatusRow } from "@/lib/jornada-events/outbox";
 import {
   AppointmentsError,
   MAX_EVENTS,
