@@ -1,6 +1,6 @@
 # Aviso automático `anamnese_recebida` ao Jornada AI — fila persistente
 
-Data: 20/09/2026 · Estado: **implementado na prévia, desativado**. Nada publicado; nenhum evento real enviado nesta implementação.
+Data: 22/09/2026 · Estado: **implementado na prévia, desativado**. Nada publicado; nenhum evento real enviado nesta implementação.
 
 ## O que faz
 
@@ -12,7 +12,8 @@ Quando uma anamnese é **definitivamente confirmada** (`anamnesis_submissions.ac
 | --- | --- |
 | Fila | schema privado `jornada_events` (`config`, `outbox`), sem acesso para visitantes ou utilizadores autenticados |
 | Enfileiramento | `public.jornada_enqueue_anamnese()` + gatilho AFTER INSERT em `anamnesis_submissions` (sem rede, falhas engolidas para nunca bloquear o salvamento) |
-| Reserva/conclusão | `jornada_outbox_claim` e `jornada_outbox_complete` (somente `service_role`), com lease, fencing por token e recuo exponencial 60 s → 3600 s, até 8 tentativas |
+| Reserva/conclusão | `jornada_outbox_claim_signed`, `jornada_outbox_renew_signed` e `jornada_outbox_complete_signed` (assinatura de finalidade, uso único, 2 min; bilhete de reserva curto renovado a cada envio; sem `service_role`), com fencing por token e recuo exponencial 60 s → 3600 s, até 8 tentativas; esgotadas viram `exhausted` |
+| Reconciliação | `jornada_events.reconcile` chamada por `jornada_outbox_tick`: recupera confirmações elegíveis desde a **primeira ativação** na mesma clínica e devolve à fila reservas `sending` vencidas; nunca alcança histórico anterior |
 | Trabalhador | `src/lib/jornada-events/outbox.server.ts` + `src/lib/jornada-events/outbox.ts` (núcleo puro) |
 | Endereço interno | `POST /api/public/hooks/jornada-outbox`, autenticado por credencial guardada no cofre do banco (`vault`), verificada por `jornada_worker_auth` |
 | Batida periódica | `jornada_outbox_tick()` — só chama o trabalhador quando o aviso está ativo **e** existe item vencido na fila |
@@ -80,3 +81,17 @@ Nada é apagado em nenhum desses passos.
 As tabelas técnicas do `net` (`http_request_queue`, `_http_response`) mantêm os `GRANT` a `PUBLIC` criados pela própria extensão. O perfil `postgres` do projeto **não** é membro do dono (`supabase_admin`), então o `REVOKE` não tem efeito — verificado. Mitigação comprovada: o esquema `net` não está exposto na API (`PGRST106 — Only the following schemas are exposed: public, graphql_public`), portanto não é alcançável com a chave pública. O item fica registrado como pendência de plataforma.
 
 Continua valendo: nada publicado, aviso desativado, batida periódica inativa, nenhum evento enviado, nenhum paciente histórico reprocessado, nenhum contato/CRM/mensagem alterado. Pin `@lovable.dev/vite-tanstack-config` restaurado em 2.13.1 (package.json e lockfile).
+
+
+## Revisão de 22/09/2026 — correções das regressões apontadas
+
+- `jornada_outbox_claim` só reserva com a configuração ativa e no escopo fixado da clínica; escopo divergente é recusado.
+- `jornada_outbox_tick` reconcilia ausências e recupera reservas vencidas **sempre**, mesmo quando não há nenhuma linha pendente — uma única linha travada por queda do trabalhador volta a ser processada.
+- A conclusão exige reserva viva: bilhete igual **e** prazo vigente.
+- O gatilho continua sem derrubar o salvamento da anamnese; qualquer aviso perdido é recuperado pela reconciliação, e a contagem `missing` mostra confirmações elegíveis fora da fila.
+- A lista de vínculos usa a contagem completa feita em SQL: lista truncada vira `vinculo_indisponivel`, nunca vínculo único.
+- O convite precisa apontar exatamente para a resposta gravada e registrar a confirmação correspondente.
+- O painel separa **pausado** de **configuração indisponível** e avisa quando a verificação periódica está desligada.
+- Tentativas esgotadas aparecem como falha que exige intervenção, sem prometer nova tentativa programada.
+
+Limites reais: as tabelas técnicas da extensão de rede mantêm o `GRANT PUBLIC` criado pela própria extensão e não podem ser revogadas com o perfil do projeto; o esquema não está exposto na API. Nada foi publicado, ativado ou enviado.

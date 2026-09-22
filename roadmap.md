@@ -86,5 +86,5 @@
 - [x] Validação estrita do vínculo (contato único da subconta, convite correspondente) com pendência visível
 - [x] Controles de administrador em /agendamentos: ativar/pausar, situação por consulta, recolocar na fila
 - [x] 22 testes sintéticos novos, suíte completa (300 Vitest + Node), tipos, lint e build
-- [x] docs/jornada-outbox-2026-09-20.md com ativação, reversão e limites reais
+- [x] docs/jornada-outbox-2026-09-22.md com ativação, reversão e limites reais
 - [ ] Publicação e teste autorizado ponta a ponta (aguarda confirmação do proprietário)

@@ -34,6 +34,7 @@ export type InvitationRow = {
   contact_id: string;
   consultation_id: string;
   revoked_at: string | null;
+  submitted_at: string | null;
   submission_id: string | null;
 };
 
@@ -41,6 +42,8 @@ export type Chain = {
   submission: SubmissionRow | null;
   consultation: ConsultationRow | null;
   links: LinkRow[];
+  /** Contagem de contatos distintos calculada no SQL completo, sem truncamento. */
+  link_contacts: number;
   invitation: InvitationRow | null;
 };
 
@@ -59,7 +62,10 @@ export const batchItemSchema = claimSchema.extend({
     })
     .nullable(),
   consultation: z.object({ id: z.uuid(), patient_id: z.string() }).nullable(),
-  links: z.array(z.object({ location_id: z.string(), contact_id: z.string(), patient_id: z.string() })),
+  links: z.array(
+    z.object({ location_id: z.string(), contact_id: z.string(), patient_id: z.string() }),
+  ),
+  link_contacts: z.number().int().nonnegative(),
   invitation: z
     .object({
       id: z.uuid(),
@@ -67,6 +73,7 @@ export const batchItemSchema = claimSchema.extend({
       contact_id: z.string(),
       consultation_id: z.uuid(),
       revoked_at: z.string().nullable(),
+      submitted_at: z.string().nullable(),
       submission_id: z.uuid().nullable(),
     })
     .nullable(),
@@ -75,8 +82,8 @@ export type BatchItem = z.infer<typeof batchItemSchema>;
 
 /** Separa a reserva da cadeia administrativa validada. */
 export function splitBatchItem(item: BatchItem): { claim: OutboxClaim; chain: Chain } {
-  const { submission, consultation, links, invitation, ...claim } = item;
-  return { claim, chain: { submission, consultation, links, invitation } };
+  const { submission, consultation, links, link_contacts, invitation, ...claim } = item;
+  return { claim, chain: { submission, consultation, links, link_contacts, invitation } };
 }
 
 export type Resolution =
@@ -108,6 +115,8 @@ export function resolveDispatch(
     (l) => l.location_id === expectedLocationId && l.patient_id === c.patient_id,
   );
   const contacts = new Set(links.map((l) => l.contact_id));
+  // A contagem vem do SQL completo: lista truncada nunca é lida como vínculo único.
+  if (chain.link_contacts !== contacts.size) return blocked("vinculo_indisponivel");
   if (contacts.size === 0) return blocked("vinculo_ausente");
   if (contacts.size > 1) return blocked("vinculo_ambiguo");
   const contactId = [...contacts][0] as string;
@@ -119,10 +128,15 @@ export function resolveDispatch(
       i.location_id !== expectedLocationId ||
       i.consultation_id !== claim.consultation_id ||
       i.contact_id !== contactId ||
-      (i.submission_id !== null && i.submission_id !== s.id)
+      // Após a gravação, o convite tem de apontar exatamente para esta resposta.
+      i.submission_id !== s.id
     )
       return blocked("convite_divergente");
     if (i.revoked_at) return blocked("convite_revogado");
+    if (!i.submitted_at || !Number.isFinite(Date.parse(i.submitted_at)))
+      return blocked("convite_nao_confirmado");
+    if (Date.parse(i.submitted_at) !== Date.parse(s.confirmed_at))
+      return blocked("convite_divergente");
   }
 
   return {
@@ -152,20 +166,33 @@ export const BLOCK_REASON: Record<string, string> = {
   paciente_invalido: "O paciente da consulta não tem identificador válido.",
   vinculo_ausente: "Não há vínculo persistido entre o paciente e um contato da clínica.",
   vinculo_ambiguo: "Há mais de um contato vinculado a este paciente. Confira o cadastro.",
+  vinculo_indisponivel: "Não foi possível conferir os vínculos deste paciente por completo.",
   convite_ausente: "O convite indicado na resposta não foi encontrado.",
   convite_divergente: "O convite não corresponde à consulta ou ao contato vinculado.",
+  convite_nao_confirmado: "O convite não registra a confirmação desta resposta.",
   convite_revogado: "O convite desta resposta foi revogado.",
 };
 
 /** Situação da sincronização mostrada ao administrador, separada da etapa da anamnese. */
-export type SyncState = "nao_aplicavel" | "pendente" | "confirmada" | "falha" | "pendencia_vinculo";
+export type SyncState =
+  | "nao_aplicavel"
+  | "pendente"
+  | "confirmada"
+  | "falha"
+  | "falha_intervencao"
+  | "pendencia_vinculo"
+  | "ausente_na_fila"
+  | "indisponivel";
 
 export const SYNC_LABEL: Record<SyncState, string> = {
   nao_aplicavel: "Sem aviso a enviar",
   pendente: "Aviso na fila",
   confirmada: "Aviso confirmado",
   falha: "Falha no envio — nova tentativa programada",
+  falha_intervencao: "Falha no envio — precisa de intervenção",
   pendencia_vinculo: "Pendência de vínculo — não enviado",
+  ausente_na_fila: "Confirmação elegível fora da fila — reconciliação pendente",
+  indisponivel: "Situação do aviso indisponível nesta leitura",
 };
 
 export type OutboxStatusRow = {
@@ -198,17 +225,40 @@ export const NOT_APPLICABLE: SyncInfo = {
   outboxId: null,
 };
 
+const withState = (state: SyncState, note: string | null): SyncInfo => ({
+  ...NOT_APPLICABLE,
+  state,
+  note,
+});
+
+/**
+ * Contexto da leitura: `unavailable` quando a consulta da situação falhou e
+ * `eligible` quando a confirmação está dentro da janela da primeira ativação.
+ * Nenhum dos dois pode virar "Sem aviso a enviar".
+ */
+export type SyncContext = { unavailable?: boolean; eligible?: boolean };
+
 /** Mapeia a linha persistida da fila para a situação exibida; nunca inventa vínculo. */
-export function syncInfo(row: OutboxStatusRow | undefined): SyncInfo {
-  if (!row) return NOT_APPLICABLE;
+export function syncInfo(row: OutboxStatusRow | undefined, context: SyncContext = {}): SyncInfo {
+  if (context.unavailable)
+    return withState("indisponivel", "Tente atualizar para conferir a situação do aviso.");
+  if (!row)
+    return context.eligible
+      ? withState(
+          "ausente_na_fila",
+          "Confirmação elegível que ainda não entrou na fila. A reconciliação periódica a recupera.",
+        )
+      : NOT_APPLICABLE;
   const state: SyncState =
     row.status === "sent"
       ? "confirmada"
       : row.status === "blocked"
         ? "pendencia_vinculo"
-        : row.status === "failed"
-          ? "falha"
-          : "pendente";
+        : row.status === "exhausted"
+          ? "falha_intervencao"
+          : row.status === "failed"
+            ? "falha"
+            : "pendente";
   return {
     state,
     attempts: row.attempts,
@@ -218,7 +268,9 @@ export function syncInfo(row: OutboxStatusRow | undefined): SyncInfo {
       state === "pendencia_vinculo"
         ? (BLOCK_REASON[row.last_error_code ?? ""] ??
           "Pendência de vínculo. Confira o cadastro do paciente.")
-        : null,
+        : state === "falha_intervencao"
+          ? "As tentativas automáticas terminaram. Recoloque na fila depois de conferir."
+          : null,
     outboxId: row.outbox_id,
   };
 }

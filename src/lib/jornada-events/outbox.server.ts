@@ -19,6 +19,8 @@ export type WorkerDeps = {
   db: Db;
   send: (input: SyncInput, source: Source) => Promise<{ status: "received" | "duplicate" }>;
   locationId: string;
+  /** Impressão digital (SHA-256) da organização de destino: escopo fixado no banco. */
+  orgFingerprint: string;
   wakeup: Wakeup;
   limit?: number;
 };
@@ -50,12 +52,14 @@ export type WorkerSummary = {
 
 export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> {
   const summary: WorkerSummary = { claimed: 0, sent: 0, duplicate: 0, blocked: 0, failed: 0 };
-  // Reserva assinada: o banco verifica a assinatura de uso único e devolve, no
-  // mesmo passo, a reserva com bilhete (lease) e a cadeia administrativa.
+  // Reserva assinada: o banco verifica a assinatura de uso único, confere o
+  // escopo fixado (clínica + organização) e devolve a reserva com bilhete
+  // (lease) e a cadeia administrativa. Sem config ativa, nada é reservado.
   const claimed = await deps.db.rpc("jornada_outbox_claim_signed", {
     _epoch: deps.wakeup.ts,
     _nonce: deps.wakeup.nonce,
     _sig: deps.wakeup.sig,
+    _org_fp: deps.orgFingerprint,
     _limit: Math.max(1, Math.min(deps.limit ?? 10, 25)),
   });
   if (claimed.error) throw new Error("wakeup");
@@ -66,6 +70,13 @@ export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> 
     if (!parsed.success) continue;
     const { claim, chain } = splitBatchItem(parsed.data);
     summary.claimed += 1;
+
+    // Reserva curta renovada antes de cada envio: o bilhete não vence no meio do lote.
+    const renewed = await deps.db.rpc("jornada_outbox_renew_signed", {
+      _id: claim.id,
+      _lease: claim.lease_token,
+    });
+    if (renewed.error || renewed.data !== true) continue;
 
     let outcome: { status: "sent" | "failed" | "blocked"; code: string | null; receipt?: string };
     try {
@@ -95,7 +106,7 @@ export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> 
       _error: outcome.code,
       _receipt: outcome.receipt ?? null,
     });
-    // Lease expirada ou reivindicada por outro trabalhador: a linha volta pela fila.
+    // Lease vencida ou reivindicada por outro trabalhador: a linha volta pela fila.
     if (completed.error) console.error("[jornada-outbox] conclusão recusada");
   }
   return summary;

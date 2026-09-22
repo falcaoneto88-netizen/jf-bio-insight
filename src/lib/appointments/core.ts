@@ -248,6 +248,10 @@ export function buildRows(input: {
   contactNames: Map<string, string>;
   locationId: string;
   syncRows?: OutboxStatusRow[];
+  /** A leitura da situação do aviso falhou: não confundir com "sem aviso a enviar". */
+  syncUnavailable?: boolean;
+  /** Marca d'água da primeira ativação: só depois dela uma confirmação é elegível. */
+  syncFirstActivatedAt?: string | null;
   progressUnavailable?: boolean;
   now?: number;
 }): AppointmentRow[] {
@@ -364,6 +368,14 @@ export function buildRows(input: {
           (input.syncRows ?? []).find(
             (r) => r.record_id === current.id && r.consultation_id === current.consultation_id,
           ),
+          {
+            unavailable: input.syncUnavailable === true,
+            eligible:
+              typeof input.syncFirstActivatedAt === "string" &&
+              Number.isFinite(Date.parse(input.syncFirstActivatedAt)) &&
+              Number.isFinite(Date.parse(current.confirmed_at)) &&
+              Date.parse(current.confirmed_at) >= Date.parse(input.syncFirstActivatedAt),
+          },
         ),
         note:
           versions.length > 1

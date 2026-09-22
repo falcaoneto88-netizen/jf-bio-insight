@@ -33,16 +33,26 @@ export const Route = createFileRoute("/api/public/hooks/jornada-outbox")({
         }
 
         const locationId = process.env["GHL_LOCATION_ID"] ?? "";
-        if (!locationId) return deny("not_configured", 503);
+        const organizationId = process.env["JORNADA_AI_ORGANIZATION_ID"] ?? "";
+        if (!locationId || !organizationId) return deny("not_configured", 503);
 
         try {
           const { createOutboxClient } = await import("@/lib/jornada-events/outbox.server");
           const { runOutboxWorker } = await import("@/lib/jornada-events/outbox.server");
           const { sendJornadaEvent } = await import("@/lib/jornada-events/client.server");
+          // Só a impressão digital do destino sai do servidor; o valor nunca é exposto.
+          const digest = await crypto.subtle.digest(
+            "SHA-256",
+            new TextEncoder().encode(organizationId),
+          );
+          const orgFingerprint = [...new Uint8Array(digest)]
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
           const summary = await runOutboxWorker({
             db: createOutboxClient(),
             send: sendJornadaEvent,
             locationId,
+            orgFingerprint,
             wakeup,
           });
           return Response.json(summary, { headers: { "Cache-Control": "no-store, private" } });
