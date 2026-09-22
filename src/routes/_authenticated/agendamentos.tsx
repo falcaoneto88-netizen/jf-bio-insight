@@ -238,7 +238,7 @@ function EnviosPanel() {
             : "Este aviso já não está em falha."
           : r.message,
       );
-      await query.refetch();
+      await refresh();
     } catch {
       setMessage("Não foi possível recolocar o aviso na fila.");
     } finally {
@@ -253,7 +253,7 @@ function EnviosPanel() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => void query.refetch()}
+          onClick={() => void refresh()}
           disabled={query.isFetching}
         >
           {query.isFetching ? "Atualizando…" : "Atualizar"}
