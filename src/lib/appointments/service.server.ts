@@ -238,6 +238,7 @@ export async function listConfirmedAppointments(
   let submissions: SubmissionRow[] = [];
   let drafts: DraftRow[] = [];
   const consultationNames = new Map<string, string>();
+  let syncRows: OutboxStatusRow[] = [];
   let progressUnavailable = false;
 
   if (appointmentIds.length > 0) {
@@ -288,6 +289,15 @@ export async function listConfirmedAppointments(
           submissions = (submissionQuery.data ?? []) as SubmissionRow[];
           drafts = (draftQuery.data ?? []) as DraftRow[];
         }
+        // Situação do aviso administrativo: leitura à parte, restrita a administradores.
+        const syncQuery = await db.rpc("jornada_outbox_status", {
+          _consultation_ids: consultationIds,
+        });
+        if (syncQuery.error)
+          warnings.push(
+            "Não foi possível ler a situação da sincronização com o Jornada AI nesta atualização.",
+          );
+        else syncRows = (syncQuery.data ?? []) as OutboxStatusRow[];
       }
     }
   }
