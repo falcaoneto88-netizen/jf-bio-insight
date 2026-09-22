@@ -89,6 +89,22 @@ export function journeyNaturalStep(journey: Journey): JourneyStep {
   return 1;
 }
 
+/**
+ * Etapa de abertura quando o link pede uma etapa específica. Rascunho com
+ * protocolo persistido pode abrir direto na etapa 6 (documento sai marcado
+ * como RASCUNHO), sem marcar a aprovação como concluída. Sem protocolo, o
+ * destino nunca passa do ponto natural da jornada.
+ */
+export function journeyInitialStep(
+  journey: Journey,
+  etapaInicial: JourneyStep | null | undefined,
+): JourneyStep {
+  const natural = journeyNaturalStep(journey);
+  if (!etapaInicial) return natural;
+  if (etapaInicial === 6 && journey.protocolo && journey.protocolo.sections.length > 0) return 6;
+  return Math.min(etapaInicial, natural) as JourneyStep;
+}
+
 export function journeyCompletedSteps(journey: Journey): ReadonlySet<JourneyStep> {
   const completed = new Set<JourneyStep>();
   if (journey.confirmations.anamnese) completed.add(1);

@@ -31,7 +31,11 @@ import {
   type JourneyStep,
   type Protocolo,
 } from "@/lib/journey/types";
-import { journeyCompletedSteps, journeyNaturalStep } from "@/lib/clinical-navigation";
+import {
+  journeyCompletedSteps,
+  journeyInitialStep,
+  journeyNaturalStep,
+} from "@/lib/clinical-navigation";
 
 const searchSchema = z.object({
   /** Etapa inicial pedida por quem abriu o link (1 a 6). */
@@ -130,9 +134,9 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
     setAnamnese(journey.anamnese);
     setBio(journey.bio);
     setProtocolo(journey.protocolo ?? emptyProtocolo);
-    // Etapa pedida no link (aprovação/impressão), sem passar do ponto já atingido.
-    const natural = journeyNaturalStep(journey);
-    setStep(etapaInicial ? (Math.min(etapaInicial, natural) as JourneyStep) : natural);
+    // Etapa pedida no link (aprovação/impressão), sem passar do ponto já
+    // atingido — rascunho com protocolo persistido pode abrir na etapa 6.
+    setStep(journeyInitialStep(journey, etapaInicial));
     setInitialised(true);
   }, [journey, initialised, etapaInicial]);
 
@@ -255,11 +259,8 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
                   setBio(journey.bio);
                   setProtocolo(journey.protocolo ?? emptyProtocolo);
                   setDraftVersion(journey.version);
-                  // Etapa pedida no link (aprovação/impressão), sem passar do ponto já atingido.
-                  const natural = journeyNaturalStep(journey);
-                  setStep(
-                    etapaInicial ? (Math.min(etapaInicial, natural) as JourneyStep) : natural,
-                  );
+                  // Etapa pedida no link, respeitando o mesmo limite da abertura.
+                  setStep(journeyInitialStep(journey, etapaInicial));
                 }
               }}
             >
@@ -386,6 +387,7 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
             htmlVersion={htmlVersion}
             htmlError={htmlError}
             onBack={() => setStep(4)}
+            onPreviewDraft={() => setStep(6)}
             onApproved={async () => {
               await refetch();
               setStep(6);
