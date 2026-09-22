@@ -4,12 +4,16 @@ import { z } from "zod";
 /**
  * Trabalhador periódico da fila de avisos administrativos ao Jornada AI.
  *
- * O despertador interno do banco (pg_net) segue redirects, por isso ele não
- * envia credencial fixa: o corpo carrega apenas uma assinatura de finalidade
- * exclusiva ("jornada-outbox-wakeup"), uso único e validade de 2 minutos, sem
- * nenhum identificador de paciente. A assinatura é verificada pelo próprio
- * banco na reserva. Este trabalhador não usa acesso privilegiado (service
- * role), não guarda segredos e nunca registra cabeçalhos, corpo ou credenciais.
+ * Autoridades separadas:
+ * - O despertador interno do banco (pg_net segue redirects) carrega apenas uma
+ *   assinatura de finalidade exclusiva ("jornada-outbox-wakeup"), uso único e
+ *   validade de 2 minutos, sem nenhum identificador de paciente. Ela SÓ acorda
+ *   este endpoint: não lê, não reserva e não conclui nada.
+ * - Reservar, renovar e concluir exigem outra prova, gerada aqui no servidor a
+ *   partir de uma subchave derivada do segredo de assinatura já configurado.
+ *
+ * Sem acesso privilegiado (service role), sem guardar segredos e sem registrar
+ * cabeçalhos, corpo ou credenciais.
  */
 
 const wakeupSchema = z.object({
@@ -32,14 +36,27 @@ export const Route = createFileRoute("/api/public/hooks/jornada-outbox")({
           return deny("unauthorized", 401);
         }
 
+        // Configuração conferida ANTES de consumir o despertador.
         const locationId = process.env["GHL_LOCATION_ID"] ?? "";
         const organizationId = process.env["JORNADA_AI_ORGANIZATION_ID"] ?? "";
-        if (!locationId || !organizationId) return deny("not_configured", 503);
+        const signingSecret = process.env["BIOREPORT_JORNADA_SIGNING_SECRET"] ?? "";
+        if (!locationId || !organizationId || !signingSecret) return deny("not_configured", 503);
 
         try {
-          const { createOutboxClient } = await import("@/lib/jornada-events/outbox.server");
-          const { runOutboxWorker } = await import("@/lib/jornada-events/outbox.server");
+          const { createOutboxClient, runOutboxWorker, deriveClaimKey } = await import(
+            "@/lib/jornada-events/outbox.server"
+          );
           const { sendJornadaEvent } = await import("@/lib/jornada-events/client.server");
+          const db = createOutboxClient();
+
+          // Despertador: apenas acorda. Não devolve identificadores nem reserva.
+          const woke = await db.rpc("jornada_outbox_wake_signed", {
+            _epoch: wakeup.ts,
+            _nonce: wakeup.nonce,
+            _sig: wakeup.sig,
+          });
+          if (woke.error || woke.data !== true) return deny("unauthorized", 401);
+
           // Só a impressão digital do destino sai do servidor; o valor nunca é exposto.
           const digest = await crypto.subtle.digest(
             "SHA-256",
@@ -49,16 +66,16 @@ export const Route = createFileRoute("/api/public/hooks/jornada-outbox")({
             .map((b) => b.toString(16).padStart(2, "0"))
             .join("");
           const summary = await runOutboxWorker({
-            db: createOutboxClient(),
+            db,
             send: sendJornadaEvent,
             locationId,
             orgFingerprint,
-            wakeup,
+            claimKey: await deriveClaimKey(signingSecret),
           });
           return Response.json(summary, { headers: { "Cache-Control": "no-store, private" } });
         } catch (error) {
-          // Assinatura recusada pelo banco não é diferenciada de indisponibilidade no corpo.
-          const invalid = error instanceof Error && error.message === "wakeup";
+          // Prova recusada pelo banco não é diferenciada de indisponibilidade no corpo.
+          const invalid = error instanceof Error && error.message === "claim";
           return deny(invalid ? "unauthorized" : "unavailable", invalid ? 401 : 503);
         }
       },
