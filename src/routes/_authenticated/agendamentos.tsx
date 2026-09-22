@@ -133,6 +133,12 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
         Envia somente o estado administrativo (identificadores) de anamneses definitivamente
         confirmadas. Não envia respostas, medidas, exames nem mensagens ao paciente.
       </p>
+      {settings.isError && (
+        <p className="text-sm text-destructive">
+          Não foi possível ler a situação do aviso automático. Os contadores abaixo não estão
+          disponíveis; nada foi alterado.
+        </p>
+      )}
       {settings.data && !settings.data.ok && (
         <p className="text-sm text-destructive">{settings.data.message}</p>
       )}
