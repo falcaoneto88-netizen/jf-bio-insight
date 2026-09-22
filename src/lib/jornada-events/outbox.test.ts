@@ -159,6 +159,7 @@ describe("cadeia de vínculo da fila", () => {
 type Rpc = { name: string; args: Record<string, unknown> };
 const ORG_FP = "c".repeat(64);
 const WAKEUP = { ts: 1_790_000_000, nonce: "a".repeat(32), sig: "b".repeat(64) };
+const CLAIM_KEY = "d".repeat(64);
 const batchItem = (over: Partial<Chain> = {}) => ({ ...claim, ...chain(over) });
 
 function fakeDb(options: { batches: unknown[]; claimError?: boolean }) {
