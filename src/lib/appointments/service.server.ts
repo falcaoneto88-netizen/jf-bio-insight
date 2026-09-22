@@ -334,6 +334,7 @@ export async function listConfirmedAppointments(
     consultationNames,
     contactNames: lookup.names,
     locationId,
+    syncRows,
     progressUnavailable,
     ...(options.now === undefined ? {} : { now: options.now }),
   });
