@@ -314,7 +314,24 @@ describe("trabalhador da fila", () => {
       limit: 500,
     });
     expect(summary.claimed).toBe(0);
-    expect(db.calls[0].args["_limit"]).toBe(25);
+    expect(db.calls[0].args["_limit"]).toBe(2);
+  });
+
+  it("não declara confirmação quando a gravação do recibo foi recusada", async () => {
+    const db = fakeDb({ batches: [[batchItem()]], completeRefused: true });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const summary = await runOutboxWorker({
+        db,
+        send: vi.fn().mockResolvedValue({ status: "received" }),
+        locationId: LOCATION,
+        orgFingerprint: ORG_FP,
+        claimKey: CLAIM_KEY,
+      });
+      expect(summary).toEqual({ claimed: 1, sent: 0, duplicate: 0, blocked: 0, failed: 1 });
+    } finally {
+      log.mockRestore();
+    }
   });
 });
 
