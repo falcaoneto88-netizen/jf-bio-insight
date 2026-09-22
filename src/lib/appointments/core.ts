@@ -247,6 +247,7 @@ export function buildRows(input: {
   consultationNames: Map<string, string>;
   contactNames: Map<string, string>;
   locationId: string;
+  syncRows?: OutboxStatusRow[];
   progressUnavailable?: boolean;
   now?: number;
 }): AppointmentRow[] {
@@ -264,6 +265,7 @@ export function buildRows(input: {
       appliedSubmissionId: null as string | null,
       expiresAt: null as string | null,
       note: null as string | null,
+      sync: NOT_APPLICABLE as SyncInfo,
     };
     const contactName = input.contactNames.get(event.contactId) ?? null;
     if (contactName) {
