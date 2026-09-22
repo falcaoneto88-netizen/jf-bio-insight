@@ -43,9 +43,8 @@ export const Route = createFileRoute("/api/public/hooks/jornada-outbox")({
         if (!locationId || !organizationId || !signingSecret) return deny("not_configured", 503);
 
         try {
-          const { createOutboxClient, runOutboxWorker, deriveClaimKey } = await import(
-            "@/lib/jornada-events/outbox.server"
-          );
+          const { createOutboxClient, runOutboxWorker, deriveClaimKey } =
+            await import("@/lib/jornada-events/outbox.server");
           const { sendJornadaEvent } = await import("@/lib/jornada-events/client.server");
           const db = createOutboxClient();
 
