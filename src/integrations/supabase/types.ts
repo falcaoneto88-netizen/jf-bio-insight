@@ -624,6 +624,8 @@ export type Database = {
           status: string
         }[]
       }
+      jornada_outbox_tick: { Args: never; Returns: number }
+      jornada_worker_auth: { Args: { _token: string }; Returns: boolean }
       open_consultation_journey: {
         Args: {
           _anamnese: Json
