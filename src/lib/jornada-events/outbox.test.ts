@@ -171,7 +171,7 @@ const WAKEUP = { ts: 1_790_000_000, nonce: "a".repeat(32), sig: "b".repeat(64) }
 const CLAIM_KEY = "d".repeat(64);
 const batchItem = (over: Partial<Chain> = {}) => ({ ...claim, ...chain(over) });
 
-function fakeDb(options: { batches: unknown[]; claimError?: boolean }) {
+function fakeDb(options: { batches: unknown[]; claimError?: boolean; completeRefused?: boolean }) {
   const calls: Rpc[] = [];
   let batch = 0;
   const db = {
@@ -184,7 +184,10 @@ function fakeDb(options: { batches: unknown[]; claimError?: boolean }) {
             ? { data: null, error: { message: "DESPERTADOR_INVALIDO" } }
             : { data: options.batches[batch++] ?? [], error: null },
         );
-      return Promise.resolve({ data: true, error: null });
+      return Promise.resolve({
+        data: !(options.completeRefused && name === "jornada_outbox_complete_signed"),
+        error: null,
+      });
     },
     from() {
       throw new Error("o trabalhador não deve ler tabelas diretamente");
