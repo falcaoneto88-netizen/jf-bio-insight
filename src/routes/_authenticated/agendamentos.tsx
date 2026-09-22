@@ -508,6 +508,14 @@ function AppointmentsPage() {
 
         <SyncPanel onChanged={() => void query.refetch()} />
 
+        <EnviosPanel />
+
+        <p className="text-xs text-muted-foreground">
+          Os controles do aviso gerenciam apenas a fila de envios administrativos ao Jornada AI:
+          não criam agendamentos, convites nem mensagens ao paciente. A agenda acima permanece
+          somente leitura.
+        </p>
+
         <div role="status" aria-live="polite" className="space-y-4">
           {query.isPending && (
             <p className="rounded-md border bg-card p-4 text-sm text-muted-foreground">
