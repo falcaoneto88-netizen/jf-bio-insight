@@ -126,6 +126,7 @@ export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> 
     const renewed = await deps.db.rpc("jornada_outbox_renew_signed", {
       _id: claim.id,
       _lease: claim.lease_token,
+      ...(await buildProof(deps.claimKey, "renew", `${claim.id}:${claim.lease_token}`)),
     });
     if (renewed.error || renewed.data !== true) continue;
 
