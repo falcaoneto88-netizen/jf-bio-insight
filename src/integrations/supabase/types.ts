@@ -585,6 +585,45 @@ export type Database = {
         }
         Returns: Json
       }
+      jornada_outbox_claim: {
+        Args: { _lease_seconds?: number; _limit?: number }
+        Returns: {
+          attempts: number
+          consultation_id: string
+          event_type: string
+          id: string
+          lease_token: string
+          record_id: string
+          scope_location_id: string
+        }[]
+      }
+      jornada_outbox_complete: {
+        Args: {
+          _error?: string
+          _id: string
+          _lease: string
+          _receipt?: string
+          _status: string
+        }
+        Returns: boolean
+      }
+      jornada_outbox_configure: { Args: { _enabled: boolean }; Returns: Json }
+      jornada_outbox_retry: { Args: { _id: string }; Returns: boolean }
+      jornada_outbox_settings: { Args: never; Returns: Json }
+      jornada_outbox_status: {
+        Args: { _consultation_ids: string[] }
+        Returns: {
+          attempts: number
+          consultation_id: string
+          last_attempt_at: string
+          last_error_code: string
+          next_attempt_at: string
+          outbox_id: string
+          record_id: string
+          sent_at: string
+          status: string
+        }[]
+      }
       open_consultation_journey: {
         Args: {
           _anamnese: Json

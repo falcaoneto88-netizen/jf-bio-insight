@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+import {
+  NOT_APPLICABLE,
+  syncInfo,
+  type OutboxStatusRow,
+  type SyncInfo,
+} from "@/lib/jornada-events/outbox";
+
 /**
  * Núcleo puro do acompanhamento de agendamentos confirmados.
  * Sem acesso a rede, banco ou segredos: só validação, fuso e derivação de estado.
@@ -218,6 +225,8 @@ export type AppointmentRow = {
   appliedSubmissionId: string | null;
   expiresAt: string | null;
   note: string | null;
+  /** Situação do aviso administrativo ao Jornada AI, separada da etapa da anamnese. */
+  sync: SyncInfo;
 };
 
 export const sameInstant = (a: string, b: string) => {

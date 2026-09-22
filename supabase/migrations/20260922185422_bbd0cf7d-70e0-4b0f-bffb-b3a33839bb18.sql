@@ -1,0 +1,1 @@
+revoke all on function public.jornada_enqueue_anamnese() from public, anon, authenticated;
