@@ -12,6 +12,7 @@ import { listarAgendamentosConfirmados } from "@/lib/appointments/functions";
 import { SYNC_LABEL, type SyncState } from "@/lib/jornada-events/outbox";
 import {
   configurarAvisoJornada,
+  listarEnviosJornada,
   obterAvisoJornada,
   reenviarAvisoJornada,
 } from "@/lib/jornada-events/functions";
