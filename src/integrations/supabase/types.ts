@@ -632,6 +632,10 @@ export type Database = {
         Returns: boolean
       }
       jornada_outbox_configure: { Args: { _enabled: boolean }; Returns: Json }
+      jornada_outbox_list: {
+        Args: { _limit?: number; _offset?: number }
+        Returns: Json
+      }
       jornada_outbox_provision_claim_key: {
         Args: { _key: string }
         Returns: Json
