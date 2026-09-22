@@ -198,11 +198,11 @@ describe("trabalhador da fila", () => {
     expect(summary).toEqual({ claimed: 1, sent: 1, duplicate: 0, blocked: 0, failed: 0 });
     const reserva = db.calls[0] as Rpc;
     expect(reserva.name).toBe("jornada_outbox_claim_signed");
-    expect(reserva.args).toMatchObject({
-      _epoch: WAKEUP.ts,
-      _nonce: WAKEUP.nonce,
-      _sig: WAKEUP.sig,
-    });
+    // A reserva leva prova própria do servidor, nunca a assinatura do despertador.
+    expect(reserva.args["_location_id"]).toBe(LOCATION);
+    expect(reserva.args["_sig"]).not.toBe(WAKEUP.sig);
+    expect(reserva.args["_nonce"]).not.toBe(WAKEUP.nonce);
+    expect(String(reserva.args["_sig"])).toMatch(/^[a-f0-9]{64}$/);
     const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete_signed");
     expect(complete.args["_lease"]).toBe(claim.lease_token);
     expect(complete.args["_status"]).toBe("sent");
