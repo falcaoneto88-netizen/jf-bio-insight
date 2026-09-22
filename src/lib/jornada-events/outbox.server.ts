@@ -98,17 +98,22 @@ export type WorkerSummary = {
 
 export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> {
   const summary: WorkerSummary = { claimed: 0, sent: 0, duplicate: 0, blocked: 0, failed: 0 };
-  // Reserva assinada: o banco verifica a assinatura de uso único, confere o
-  // escopo fixado (clínica + organização) e devolve a reserva com bilhete
-  // (lease) e a cadeia administrativa. Sem config ativa, nada é reservado.
+  const limit = Math.max(1, Math.min(deps.limit ?? 10, 25));
+  // Reserva: prova do servidor com finalidade "claim", escopo fixado
+  // (clínica + organização), carimbo de tempo e nonce de uso único. A
+  // assinatura do despertador não é aceita aqui. Sem config ativa e escopo
+  // correspondente, nada é reservado.
   const claimed = await deps.db.rpc("jornada_outbox_claim_signed", {
-    _epoch: deps.wakeup.ts,
-    _nonce: deps.wakeup.nonce,
-    _sig: deps.wakeup.sig,
+    ...(await buildProof(
+      deps.claimKey,
+      "claim",
+      `${deps.orgFingerprint}:${deps.locationId}:${limit}`,
+    )),
     _org_fp: deps.orgFingerprint,
-    _limit: Math.max(1, Math.min(deps.limit ?? 10, 25)),
+    _location_id: deps.locationId,
+    _limit: limit,
   });
-  if (claimed.error) throw new Error("wakeup");
+  if (claimed.error) throw new Error("claim");
 
   const batch = Array.isArray(claimed.data) ? (claimed.data as unknown[]) : [];
   for (const raw of batch) {
