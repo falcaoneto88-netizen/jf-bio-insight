@@ -237,6 +237,7 @@ describe("estado da anamnese", () => {
         "receivedAt",
         "stage",
         "startIso",
+        "sync",
       ].sort(),
     );
     expect(JSON.stringify(row)).not.toMatch(/token|email|phone/i);

@@ -29,6 +29,7 @@ import { Route as ApiPublicGhlAnamneseRouteImport } from './routes/api/public/gh
 import { Route as ApiPublicAnamneseConviteRouteImport } from './routes/api/public/anamnese-convite'
 import { Route as AuthenticatedJornadaIdRouteImport } from './routes/_authenticated/jornada/$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as ApiPublicHooksJornadaOutboxRouteImport } from './routes/api/public/hooks/jornada-outbox'
 
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
@@ -133,6 +134,12 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksJornadaOutboxRoute =
+  ApiPublicHooksJornadaOutboxRouteImport.update({
+    id: '/api/public/hooks/jornada-outbox',
+    path: '/api/public/hooks/jornada-outbox',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
   '/api/public/ghl-anamnese': typeof ApiPublicGhlAnamneseRoute
   '/jornada/': typeof AuthenticatedJornadaIndexRoute
+  '/api/public/hooks/jornada-outbox': typeof ApiPublicHooksJornadaOutboxRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -175,6 +183,7 @@ export interface FileRoutesByTo {
   '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
   '/api/public/ghl-anamnese': typeof ApiPublicGhlAnamneseRoute
   '/jornada': typeof AuthenticatedJornadaIndexRoute
+  '/api/public/hooks/jornada-outbox': typeof ApiPublicHooksJornadaOutboxRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,6 +207,7 @@ export interface FileRoutesById {
   '/api/public/anamnese-convite': typeof ApiPublicAnamneseConviteRoute
   '/api/public/ghl-anamnese': typeof ApiPublicGhlAnamneseRoute
   '/_authenticated/jornada/': typeof AuthenticatedJornadaIndexRoute
+  '/api/public/hooks/jornada-outbox': typeof ApiPublicHooksJornadaOutboxRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/api/public/anamnese-convite'
     | '/api/public/ghl-anamnese'
     | '/jornada/'
+    | '/api/public/hooks/jornada-outbox'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '/api/public/anamnese-convite'
     | '/api/public/ghl-anamnese'
     | '/jornada'
+    | '/api/public/hooks/jornada-outbox'
   id:
     | '__root__'
     | '/'
@@ -264,6 +276,7 @@ export interface FileRouteTypes {
     | '/api/public/anamnese-convite'
     | '/api/public/ghl-anamnese'
     | '/_authenticated/jornada/'
+    | '/api/public/hooks/jornada-outbox'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -284,6 +297,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicAnamneseConviteRoute: typeof ApiPublicAnamneseConviteRoute
   ApiPublicGhlAnamneseRoute: typeof ApiPublicGhlAnamneseRoute
+  ApiPublicHooksJornadaOutboxRoute: typeof ApiPublicHooksJornadaOutboxRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -428,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/jornada-outbox': {
+      id: '/api/public/hooks/jornada-outbox'
+      path: '/api/public/hooks/jornada-outbox'
+      fullPath: '/api/public/hooks/jornada-outbox'
+      preLoaderRoute: typeof ApiPublicHooksJornadaOutboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -465,6 +486,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicAnamneseConviteRoute: ApiPublicAnamneseConviteRoute,
   ApiPublicGhlAnamneseRoute: ApiPublicGhlAnamneseRoute,
+  ApiPublicHooksJornadaOutboxRoute: ApiPublicHooksJornadaOutboxRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

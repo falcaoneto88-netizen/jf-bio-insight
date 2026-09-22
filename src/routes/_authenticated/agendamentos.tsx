@@ -9,6 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { STAGE_LABEL, type AppointmentRow, type Stage } from "@/lib/appointments/core";
 import { listarAgendamentosConfirmados } from "@/lib/appointments/functions";
+import { SYNC_LABEL, type SyncState } from "@/lib/jornada-events/outbox";
+import {
+  configurarAvisoJornada,
+  obterAvisoJornada,
+  reenviarAvisoJornada,
+} from "@/lib/jornada-events/functions";
 
 export const Route = createFileRoute("/_authenticated/agendamentos")({
   head: () => ({
@@ -70,6 +76,143 @@ function formatStamp(iso: string, timezone: string) {
   } catch {
     return iso;
   }
+}
+
+const SYNC_TONE: Record<SyncState, string> = {
+  nao_aplicavel: "text-muted-foreground",
+  pendente: "text-foreground",
+  confirmada: "text-foreground",
+  falha: "text-destructive",
+  pendencia_vinculo: "text-destructive",
+};
+
+/** Ativação e pausa do aviso administrativo automático. Nunca envia mensagens ao paciente. */
+function SyncPanel({ onChanged }: { onChanged: () => void }) {
+  const carregar = useServerFn(obterAvisoJornada);
+  const configurar = useServerFn(configurarAvisoJornada);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const settings = useQuery({
+    queryKey: ["aviso-jornada"],
+    queryFn: () => carregar({ data: {} }),
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const data = settings.data?.ok ? settings.data.data : null;
+
+  async function change(enabled: boolean) {
+    setBusy(true);
+    try {
+      const r = await configurar({ data: { enabled, confirm: true } });
+      setMessage(
+        r.ok
+          ? enabled
+            ? "Aviso automático ativado. Vale apenas para anamneses confirmadas a partir de agora."
+            : "Aviso automático pausado. A fila é preservada; nada é apagado."
+          : r.message,
+      );
+      await settings.refetch();
+      onChanged();
+    } catch {
+      setMessage("Não foi possível alterar o aviso automático.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="space-y-3 rounded-md border bg-card p-4">
+      <h2 className="font-serif text-lg">Aviso automático ao Jornada AI</h2>
+      <p className="text-sm text-muted-foreground">
+        Envia somente o estado administrativo (identificadores) de anamneses definitivamente
+        confirmadas. Não envia respostas, medidas, exames nem mensagens ao paciente.
+      </p>
+      {settings.data && !settings.data.ok && (
+        <p className="text-sm text-destructive">{settings.data.message}</p>
+      )}
+      {data && (
+        <>
+          <p className="text-sm">
+            Situação: <strong>{data.enabled ? "ativo" : "pausado"}</strong>
+            {data.activatedAt && data.enabled
+              ? ` · ativado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(data.activatedAt))}`
+              : ""}
+            {` · na fila: ${data.pending} · pendências de vínculo: ${data.blocked} · confirmados: ${data.sent}`}
+          </p>
+          <Button
+            disabled={busy}
+            variant={data.enabled ? "outline" : "default"}
+            onClick={() => void change(!data.enabled)}
+          >
+            {data.enabled ? "Pausar aviso automático" : "Ativar aviso automático"}
+          </Button>
+        </>
+      )}
+      {message && <p className="text-sm">{message}</p>}
+    </section>
+  );
+}
+
+function SyncLine({
+  row,
+  timezone,
+  onRequeued,
+}: {
+  row: AppointmentRow;
+  timezone: string;
+  onRequeued: () => void;
+}) {
+  const reenviar = useServerFn(reenviarAvisoJornada);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const sync = row.sync;
+  return (
+    <div className="mt-3 border-t border-border pt-3 text-sm">
+      <p className={SYNC_TONE[sync.state]}>Sincronização: {SYNC_LABEL[sync.state]}</p>
+      {sync.note && <p className="text-muted-foreground">{sync.note}</p>}
+      {sync.lastAttemptAt && (
+        <p className="text-muted-foreground">
+          Última tentativa: {formatStamp(sync.lastAttemptAt, timezone)}
+        </p>
+      )}
+      {sync.nextAttemptAt && (
+        <p className="text-muted-foreground">
+          Próxima tentativa: {formatStamp(sync.nextAttemptAt, timezone)}
+        </p>
+      )}
+      {sync.outboxId && (sync.state === "falha" || sync.state === "pendencia_vinculo") && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const r = await reenviar({
+                data: { outboxId: sync.outboxId as string, confirm: true },
+              });
+              setMessage(
+                r.ok
+                  ? r.data.requeued
+                    ? "Aviso recolocado na fila."
+                    : "Este aviso já não está em falha."
+                  : r.message,
+              );
+              onRequeued();
+            } catch {
+              setMessage("Não foi possível recolocar o aviso na fila.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Recolocar na fila
+        </Button>
+      )}
+      {message && <p className="mt-2 text-muted-foreground">{message}</p>}
+    </div>
+  );
 }
 
 function AppointmentsPage() {
@@ -188,6 +331,8 @@ function AppointmentsPage() {
           </div>
         </form>
 
+        <SyncPanel onChanged={() => void query.refetch()} />
+
         <div role="status" aria-live="polite" className="space-y-4">
           {query.isPending && (
             <p className="rounded-md border bg-card p-4 text-sm text-muted-foreground">
@@ -301,6 +446,11 @@ function AppointmentsPage() {
                         )}
                         {row.note && <p>{row.note}</p>}
                       </div>
+                      <SyncLine
+                        row={row}
+                        timezone={payload.timezone}
+                        onRequeued={() => void query.refetch()}
+                      />
                       {row.consultationId && (
                         <Button asChild variant="outline" size="sm" className="mt-3">
                           <Link to="/consulta" search={{ id: row.consultationId }}>

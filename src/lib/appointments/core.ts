@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+import {
+  NOT_APPLICABLE,
+  syncInfo,
+  type OutboxStatusRow,
+  type SyncInfo,
+} from "@/lib/jornada-events/outbox";
+
 /**
  * Núcleo puro do acompanhamento de agendamentos confirmados.
  * Sem acesso a rede, banco ou segredos: só validação, fuso e derivação de estado.
@@ -218,6 +225,8 @@ export type AppointmentRow = {
   appliedSubmissionId: string | null;
   expiresAt: string | null;
   note: string | null;
+  /** Situação do aviso administrativo ao Jornada AI, separada da etapa da anamnese. */
+  sync: SyncInfo;
 };
 
 export const sameInstant = (a: string, b: string) => {
@@ -238,6 +247,7 @@ export function buildRows(input: {
   consultationNames: Map<string, string>;
   contactNames: Map<string, string>;
   locationId: string;
+  syncRows?: OutboxStatusRow[];
   progressUnavailable?: boolean;
   now?: number;
 }): AppointmentRow[] {
@@ -255,6 +265,7 @@ export function buildRows(input: {
       appliedSubmissionId: null as string | null,
       expiresAt: null as string | null,
       note: null as string | null,
+      sync: NOT_APPLICABLE as SyncInfo,
     };
     const contactName = input.contactNames.get(event.contactId) ?? null;
     if (contactName) {
@@ -348,6 +359,12 @@ export function buildRows(input: {
         stage,
         receivedAt: current.confirmed_at,
         appliedSubmissionId: applied,
+        // A sincronização segue a versão recebida atual; nunca é inferida por nome.
+        sync: syncInfo(
+          (input.syncRows ?? []).find(
+            (r) => r.record_id === current.id && r.consultation_id === current.consultation_id,
+          ),
+        ),
         note:
           versions.length > 1
             ? `${versions.length} versões recebidas nesta consulta.`
