@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import type { Source, SyncInput } from "./core";
-import { batchSchema, resolveDispatch } from "./outbox";
+import { batchItemSchema, resolveDispatch, splitBatchItem } from "./outbox";
 
 /**
  * Trabalhador da fila: roda apenas no servidor, sem depender de aba aberta.
