@@ -129,7 +129,7 @@ describe("cadeia de vínculo da fila", () => {
       send: vi.fn().mockResolvedValue({ status: "received" }),
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     const names = db.calls.map((r: Rpc) => r.name);
     expect(names).toEqual([
@@ -159,6 +159,7 @@ describe("cadeia de vínculo da fila", () => {
 type Rpc = { name: string; args: Record<string, unknown> };
 const ORG_FP = "c".repeat(64);
 const WAKEUP = { ts: 1_790_000_000, nonce: "a".repeat(32), sig: "b".repeat(64) };
+const CLAIM_KEY = "d".repeat(64);
 const batchItem = (over: Partial<Chain> = {}) => ({ ...claim, ...chain(over) });
 
 function fakeDb(options: { batches: unknown[]; claimError?: boolean }) {
@@ -193,16 +194,16 @@ describe("trabalhador da fila", () => {
       send,
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(summary).toEqual({ claimed: 1, sent: 1, duplicate: 0, blocked: 0, failed: 0 });
     const reserva = db.calls[0] as Rpc;
     expect(reserva.name).toBe("jornada_outbox_claim_signed");
-    expect(reserva.args).toMatchObject({
-      _epoch: WAKEUP.ts,
-      _nonce: WAKEUP.nonce,
-      _sig: WAKEUP.sig,
-    });
+    // A reserva leva prova própria do servidor, nunca a assinatura do despertador.
+    expect(reserva.args["_location_id"]).toBe(LOCATION);
+    expect(reserva.args["_sig"]).not.toBe(WAKEUP.sig);
+    expect(reserva.args["_nonce"]).not.toBe(WAKEUP.nonce);
+    expect(String(reserva.args["_sig"])).toMatch(/^[a-f0-9]{64}$/);
     const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete_signed");
     expect(complete.args["_lease"]).toBe(claim.lease_token);
     expect(complete.args["_status"]).toBe("sent");
@@ -211,12 +212,18 @@ describe("trabalhador da fila", () => {
     expect(db.calls.some((r: Rpc) => r.name === "jornada_outbox_complete")).toBe(false);
   });
 
-  it("assinatura recusada pelo banco interrompe o ciclo sem enviar nada", async () => {
+  it("prova recusada pelo banco interrompe o ciclo sem enviar nada", async () => {
     const db = fakeDb({ batches: [], claimError: true });
     const send = vi.fn();
     await expect(
-      runOutboxWorker({ db, send, locationId: LOCATION, orgFingerprint: ORG_FP, wakeup: WAKEUP }),
-    ).rejects.toThrow("wakeup");
+      runOutboxWorker({
+        db,
+        send,
+        locationId: LOCATION,
+        orgFingerprint: ORG_FP,
+        claimKey: CLAIM_KEY,
+      }),
+    ).rejects.toThrow("claim");
     expect(send).not.toHaveBeenCalled();
     expect(db.calls).toHaveLength(1);
   });
@@ -228,7 +235,7 @@ describe("trabalhador da fila", () => {
       send: vi.fn().mockResolvedValue({ status: "duplicate" }),
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(summary.duplicate).toBe(1);
     expect(
@@ -243,7 +250,7 @@ describe("trabalhador da fila", () => {
       send: vi.fn().mockRejectedValue(new Error("Recibo inválido com segredo-abc")),
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(summary.failed).toBe(1);
     const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete_signed");
@@ -259,7 +266,7 @@ describe("trabalhador da fila", () => {
       send,
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(send).not.toHaveBeenCalled();
     expect(summary.blocked).toBe(1);
@@ -276,7 +283,7 @@ describe("trabalhador da fila", () => {
       send,
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(send).not.toHaveBeenCalled();
     expect(summary.claimed).toBe(0);
@@ -291,7 +298,7 @@ describe("trabalhador da fila", () => {
       send: vi.fn(),
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
       limit: 500,
     });
     expect(summary.claimed).toBe(0);
@@ -346,5 +353,83 @@ describe("situação exibida ao administrador", () => {
     expect(syncInfo(undefined, { unavailable: true, eligible: true }).state).toBe("indisponivel");
     // Sem elegibilidade (antes da primeira ativação) continua sendo "sem aviso a enviar".
     expect(syncInfo(undefined, {})).toEqual(NOT_APPLICABLE);
+  });
+});
+
+/**
+ * Separação de autoridades: o despertador só acorda; reservar/renovar/concluir
+ * exigem prova própria do servidor. O verificador abaixo replica exatamente a
+ * regra do banco (finalidade + escopo + carimbo + nonce de uso único).
+ */
+describe("autoridades separadas da fila", () => {
+  const WAKEUP_KEY = "e".repeat(64);
+  const usados = new Set<string>();
+
+  async function hmacHex(key: string, message: string) {
+    const k = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(key),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const sig = await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(message));
+    return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  /** Réplica de jornada_events.proof_valid (chave da prova, nunca a do despertador). */
+  async function proofValid(purpose: string, payload: string, args: Record<string, unknown>) {
+    const epoch = Number(args["_epoch"]);
+    const nonce = String(args["_nonce"]);
+    const sig = String(args["_sig"]);
+    if (!/^[a-f0-9]{32}$/.test(nonce) || !/^[a-f0-9]{64}$/.test(sig)) return false;
+    if (Math.abs(Math.floor(Date.now() / 1000) - epoch) > 120) return false;
+    const expected = await hmacHex(
+      CLAIM_KEY,
+      `jornada-outbox-${purpose}|${payload}|${epoch}|${nonce}`,
+    );
+    if (expected !== sig) return false;
+    if (usados.has(nonce)) return false;
+    usados.add(nonce);
+    return true;
+  }
+
+  it("assinatura do despertador desviada NÃO reserva nem devolve identificadores", async () => {
+    const epoch = Math.floor(Date.now() / 1000);
+    const nonce = "f".repeat(32);
+    // Quem recebesse um redirect do despertador teria exatamente estes valores.
+    const wakeSig = await hmacHex(WAKEUP_KEY, `jornada-outbox-wakeup|${epoch}|${nonce}`);
+    const aceita = await proofValid("claim", `${ORG_FP}:${LOCATION}:10`, {
+      _epoch: epoch,
+      _nonce: nonce,
+      _sig: wakeSig,
+    });
+    expect(aceita).toBe(false);
+  });
+
+  it("prova assinada pelo servidor é aceita e o replay é recusado", async () => {
+    const { buildProof } = await import("./outbox.server");
+    const payload = `${ORG_FP}:${LOCATION}:10`;
+    const proof = await buildProof(CLAIM_KEY, "claim", payload);
+    expect(await proofValid("claim", payload, proof)).toBe(true);
+    // Mesmo nonce/assinatura repetidos: recusado.
+    expect(await proofValid("claim", payload, proof)).toBe(false);
+  });
+
+  it("prova de uma finalidade não vale para outra nem para outro escopo", async () => {
+    const { buildProof } = await import("./outbox.server");
+    const proof = await buildProof(CLAIM_KEY, "renew", `${claim.id}:${claim.lease_token}`);
+    expect(await proofValid("claim", `${ORG_FP}:${LOCATION}:10`, proof)).toBe(false);
+    const outra = await buildProof(CLAIM_KEY, "claim", `${ORG_FP}:outra_clinica:10`);
+    expect(await proofValid("claim", `${ORG_FP}:${LOCATION}:10`, outra)).toBe(false);
+  });
+
+  it("subchave da prova é derivada do segredo já configurado e não o revela", async () => {
+    const { deriveClaimKey } = await import("./outbox.server");
+    const derivada = await deriveClaimKey("segredo-sintetico-de-teste");
+    expect(derivada).toMatch(/^[a-f0-9]{64}$/);
+    expect(derivada).not.toContain("segredo-sintetico-de-teste");
+    expect(await deriveClaimKey("segredo-sintetico-de-teste")).toBe(derivada);
+    expect(await deriveClaimKey("outro-segredo")).not.toBe(derivada);
   });
 });

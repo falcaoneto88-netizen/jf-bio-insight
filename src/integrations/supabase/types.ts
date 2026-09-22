@@ -601,6 +601,7 @@ export type Database = {
         Args: {
           _epoch: number
           _limit?: number
+          _location_id: string
           _nonce: string
           _org_fp: string
           _sig: string
@@ -619,17 +620,30 @@ export type Database = {
       }
       jornada_outbox_complete_signed: {
         Args: {
+          _epoch: number
           _error?: string
           _id: string
           _lease: string
+          _nonce: string
           _receipt?: string
+          _sig: string
           _status: string
         }
         Returns: boolean
       }
       jornada_outbox_configure: { Args: { _enabled: boolean }; Returns: Json }
+      jornada_outbox_provision_claim_key: {
+        Args: { _key: string }
+        Returns: Json
+      }
       jornada_outbox_renew_signed: {
-        Args: { _id: string; _lease: string }
+        Args: {
+          _epoch: number
+          _id: string
+          _lease: string
+          _nonce: string
+          _sig: string
+        }
         Returns: boolean
       }
       jornada_outbox_retry: { Args: { _id: string }; Returns: boolean }
@@ -649,6 +663,10 @@ export type Database = {
         }[]
       }
       jornada_outbox_tick: { Args: never; Returns: number }
+      jornada_outbox_wake_signed: {
+        Args: { _epoch: number; _nonce: string; _sig: string }
+        Returns: boolean
+      }
       open_consultation_journey: {
         Args: {
           _anamnese: Json
