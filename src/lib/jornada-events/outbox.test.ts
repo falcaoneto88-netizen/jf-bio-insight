@@ -246,7 +246,7 @@ describe("trabalhador da fila", () => {
   });
 
   it("marca pendência de vínculo sem chamar o destino", async () => {
-    const db = fakeDb({ batches: [[batchItem({ links: [] })]] });
+    const db = fakeDb({ batches: [[batchItem({ links: [], link_contacts: 0 })]] });
     const send = vi.fn();
     const summary = await runOutboxWorker({ db, send, locationId: LOCATION, orgFingerprint: ORG_FP, wakeup: WAKEUP });
     expect(send).not.toHaveBeenCalled();
