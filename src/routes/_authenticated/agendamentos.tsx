@@ -139,7 +139,11 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
               : ""}
             {` · na fila: ${data.pending} · pendências de vínculo: ${data.blocked} · confirmados: ${data.sent}`}
           </p>
-          <Button disabled={busy} variant={data.enabled ? "outline" : "default"} onClick={() => void change(!data.enabled)}>
+          <Button
+            disabled={busy}
+            variant={data.enabled ? "outline" : "default"}
+            onClick={() => void change(!data.enabled)}
+          >
             {data.enabled ? "Pausar aviso automático" : "Ativar aviso automático"}
           </Button>
         </>
@@ -185,7 +189,9 @@ function SyncLine({
           onClick={async () => {
             setBusy(true);
             try {
-              const r = await reenviar({ data: { outboxId: sync.outboxId as string, confirm: true } });
+              const r = await reenviar({
+                data: { outboxId: sync.outboxId as string, confirm: true },
+              });
               setMessage(
                 r.ok
                   ? r.data.requeued

@@ -81,8 +81,14 @@ describe("cadeia de vínculo da fila", () => {
       "contato divergente do convite",
       { invitation: { ...chain().invitation!, contact_id: "outro_contato" } },
     ],
-    ["convite revogado", { invitation: { ...chain().invitation!, revoked_at: "2026-09-20T11:00:00Z" } }],
-    ["convite de outra consulta", { invitation: { ...chain().invitation!, consultation_id: uuid(9) } }],
+    [
+      "convite revogado",
+      { invitation: { ...chain().invitation!, revoked_at: "2026-09-20T11:00:00Z" } },
+    ],
+    [
+      "convite de outra consulta",
+      { invitation: { ...chain().invitation!, consultation_id: uuid(9) } },
+    ],
     ["convite ausente", { invitation: null }],
   ])("bloqueia %s sem enviar", (_label, over) => {
     const r = resolveDispatch(claim, chain(over as Partial<Chain>), LOCATION);
@@ -165,7 +171,8 @@ describe("trabalhador da fila", () => {
     const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete");
     expect(complete.args["_lease"]).toBe(claim.lease_token);
     expect(complete.args["_status"]).toBe("sent");
-    for (const columns of db.selects) expect(columns).not.toMatch(/answers|clinical_data|token_hash/);
+    for (const columns of db.selects)
+      expect(columns).not.toMatch(/answers|clinical_data|token_hash/);
   });
 
   it("trata recibo duplicado como confirmado (resposta perdida após processar)", async () => {
@@ -176,9 +183,9 @@ describe("trabalhador da fila", () => {
       locationId: LOCATION,
     });
     expect(summary.duplicate).toBe(1);
-    expect(
-      db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete").args["_status"],
-    ).toBe("sent");
+    expect(db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete").args["_status"]).toBe(
+      "sent",
+    );
   });
 
   it("marca falha sanitizada quando o destino está indisponível ou o recibo é inválido", async () => {
@@ -200,9 +207,9 @@ describe("trabalhador da fila", () => {
     const summary = await runOutboxWorker({ db, send, locationId: LOCATION });
     expect(send).not.toHaveBeenCalled();
     expect(summary.blocked).toBe(1);
-    expect(
-      db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete").args["_error"],
-    ).toBe("vinculo_ausente");
+    expect(db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete").args["_error"]).toBe(
+      "vinculo_ausente",
+    );
   });
 
   it("falha de leitura do banco vira retentativa, não pendência definitiva", async () => {

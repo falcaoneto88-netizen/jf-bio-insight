@@ -278,7 +278,11 @@ export async function listConfirmedAppointments(
             .in("consultation_id", consultationIds)
             .limit(1000),
         ]);
-        if (incomplete(consultationQuery) || incomplete(submissionQuery) || incomplete(draftQuery)) {
+        if (
+          incomplete(consultationQuery) ||
+          incomplete(submissionQuery) ||
+          incomplete(draftQuery)
+        ) {
           progressUnavailable = true;
           warnings.push(
             "O histórico da anamnese está incompleto ou indisponível. Reduza o período ou tente atualizar.",

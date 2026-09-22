@@ -15,7 +15,9 @@ export type EventSettings = {
   blocked: number;
   sent: number;
 };
-export type EventsResponse<T> = { ok: true; data: T } | { ok: false; code: string; message: string };
+export type EventsResponse<T> =
+  | { ok: true; data: T }
+  | { ok: false; code: string; message: string };
 
 const settingsSchema = z.object({
   enabled: z.boolean(),
@@ -28,9 +30,8 @@ const settingsSchema = z.object({
 
 async function adminDb() {
   const { getRequest } = await import("@tanstack/react-start/server");
-  const { publicIntakeDb, assertIntakeAdmin } = await import(
-    "@/lib/intake-invitations/service.server"
-  );
+  const { publicIntakeDb, assertIntakeAdmin } =
+    await import("@/lib/intake-invitations/service.server");
   const authorization = getRequest().headers.get("authorization");
   if (!authorization || !/^Bearer \S+$/.test(authorization))
     throw new IntakeError("unauthorized", "Sua sessão expirou. Entre novamente.", 401);
