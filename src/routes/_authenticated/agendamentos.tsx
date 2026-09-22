@@ -209,6 +209,11 @@ function EnviosPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const limit = 10;
+  const queryClient = useQueryClient();
+  const refresh = async () => {
+    await query.refetch();
+    await queryClient.invalidateQueries({ queryKey: ["aviso-jornada"] });
+  };
   const query = useQuery({
     queryKey: ["envios-jornada", offset],
     queryFn: () => listar({ data: { limit, offset } }),
