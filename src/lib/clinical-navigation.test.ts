@@ -150,7 +150,11 @@ describe("abertura direta na etapa do documento", () => {
 
   it("pedido de etapa intermediária continua limitado ao ponto natural", () => {
     expect(journeyInitialStep(draft, 3)).toBe(3);
-    const inicio = { ...draft, confirmations: { anamnese: false, bio: false, revisao: false } };
+    const inicio = {
+      ...draft,
+      protocolo: null,
+      confirmations: { anamnese: false, bio: false, revisao: false },
+    };
     expect(journeyInitialStep(inicio, 5)).toBe(1);
   });
 });
