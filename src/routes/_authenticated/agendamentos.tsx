@@ -325,6 +325,8 @@ function AppointmentsPage() {
           </div>
         </form>
 
+        <SyncPanel onChanged={() => void query.refetch()} />
+
         <div role="status" aria-live="polite" className="space-y-4">
           {query.isPending && (
             <p className="rounded-md border bg-card p-4 text-sm text-muted-foreground">
