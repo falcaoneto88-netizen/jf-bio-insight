@@ -440,6 +440,11 @@ function AppointmentsPage() {
                         )}
                         {row.note && <p>{row.note}</p>}
                       </div>
+                      <SyncLine
+                        row={row}
+                        timezone={payload.timezone}
+                        onRequeued={() => void query.refetch()}
+                      />
                       {row.consultationId && (
                         <Button asChild variant="outline" size="sm" className="mt-3">
                           <Link to="/consulta" search={{ id: row.consultationId }}>
