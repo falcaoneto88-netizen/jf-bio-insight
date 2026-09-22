@@ -129,7 +129,7 @@ describe("cadeia de vínculo da fila", () => {
       send: vi.fn().mockResolvedValue({ status: "received" }),
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     const names = db.calls.map((r: Rpc) => r.name);
     expect(names).toEqual([
@@ -193,7 +193,7 @@ describe("trabalhador da fila", () => {
       send,
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(summary).toEqual({ claimed: 1, sent: 1, duplicate: 0, blocked: 0, failed: 0 });
     const reserva = db.calls[0] as Rpc;
@@ -215,7 +215,7 @@ describe("trabalhador da fila", () => {
     const db = fakeDb({ batches: [], claimError: true });
     const send = vi.fn();
     await expect(
-      runOutboxWorker({ db, send, locationId: LOCATION, orgFingerprint: ORG_FP, wakeup: WAKEUP }),
+      runOutboxWorker({ db, send, locationId: LOCATION, orgFingerprint: ORG_FP, claimKey: CLAIM_KEY }),
     ).rejects.toThrow("wakeup");
     expect(send).not.toHaveBeenCalled();
     expect(db.calls).toHaveLength(1);
@@ -228,7 +228,7 @@ describe("trabalhador da fila", () => {
       send: vi.fn().mockResolvedValue({ status: "duplicate" }),
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(summary.duplicate).toBe(1);
     expect(
@@ -243,7 +243,7 @@ describe("trabalhador da fila", () => {
       send: vi.fn().mockRejectedValue(new Error("Recibo inválido com segredo-abc")),
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(summary.failed).toBe(1);
     const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete_signed");
@@ -259,7 +259,7 @@ describe("trabalhador da fila", () => {
       send,
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(send).not.toHaveBeenCalled();
     expect(summary.blocked).toBe(1);
@@ -276,7 +276,7 @@ describe("trabalhador da fila", () => {
       send,
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
     });
     expect(send).not.toHaveBeenCalled();
     expect(summary.claimed).toBe(0);
@@ -291,7 +291,7 @@ describe("trabalhador da fila", () => {
       send: vi.fn(),
       locationId: LOCATION,
       orgFingerprint: ORG_FP,
-      wakeup: WAKEUP,
+      claimKey: CLAIM_KEY,
       limit: 500,
     });
     expect(summary.claimed).toBe(0);
