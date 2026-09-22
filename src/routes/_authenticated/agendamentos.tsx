@@ -511,9 +511,9 @@ function AppointmentsPage() {
         <EnviosPanel />
 
         <p className="text-xs text-muted-foreground">
-          Os controles do aviso gerenciam apenas a fila de envios administrativos ao Jornada AI:
-          não criam agendamentos, convites nem mensagens ao paciente. A agenda acima permanece
-          somente leitura.
+          Os controles do aviso gerenciam apenas a fila de envios administrativos ao Jornada AI: não
+          criam agendamentos, convites nem mensagens ao paciente. A agenda acima permanece somente
+          leitura.
         </p>
 
         <div role="status" aria-live="polite" className="space-y-4">

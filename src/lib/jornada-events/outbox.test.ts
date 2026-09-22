@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { buildEvent } from "./core";
-import { NOT_APPLICABLE, resolveDispatch, syncInfo, type Chain, type OutboxClaim } from "./outbox";
+import {
+  BLOCK_REASON,
+  NOT_APPLICABLE,
+  recoverExpired,
+  resolveDispatch,
+  syncInfo,
+  toAdminQueue,
+  type Chain,
+  type OutboxClaim,
+} from "./outbox";
 import { runOutboxWorker } from "./outbox.server";
 
 /** Todos os dados são sintéticos: nenhum paciente, contato ou clínica reais. */
