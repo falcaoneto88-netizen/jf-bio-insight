@@ -212,7 +212,7 @@ describe("trabalhador da fila", () => {
     expect(db.calls.some((r: Rpc) => r.name === "jornada_outbox_complete")).toBe(false);
   });
 
-  it("assinatura recusada pelo banco interrompe o ciclo sem enviar nada", async () => {
+  it("prova recusada pelo banco interrompe o ciclo sem enviar nada", async () => {
     const db = fakeDb({ batches: [], claimError: true });
     const send = vi.fn();
     await expect(
@@ -223,7 +223,7 @@ describe("trabalhador da fila", () => {
         orgFingerprint: ORG_FP,
         claimKey: CLAIM_KEY,
       }),
-    ).rejects.toThrow("wakeup");
+    ).rejects.toThrow("claim");
     expect(send).not.toHaveBeenCalled();
     expect(db.calls).toHaveLength(1);
   });
