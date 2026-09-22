@@ -44,6 +44,41 @@ export type Chain = {
   invitation: InvitationRow | null;
 };
 
+/**
+ * Lote devolvido pela reserva assinada: a reserva com bilhete (lease) e apenas
+ * a cadeia administrativa. Nenhum campo clínico é aceito aqui.
+ */
+export const batchItemSchema = claimSchema.extend({
+  submission: z
+    .object({
+      id: z.uuid(),
+      consultation_id: z.uuid(),
+      accepted: z.boolean(),
+      confirmed_at: z.string().min(1),
+      invitation_id: z.uuid().nullable(),
+    })
+    .nullable(),
+  consultation: z.object({ id: z.uuid(), patient_id: z.string() }).nullable(),
+  links: z.array(z.object({ location_id: z.string(), contact_id: z.string(), patient_id: z.string() })),
+  invitation: z
+    .object({
+      id: z.uuid(),
+      location_id: z.string(),
+      contact_id: z.string(),
+      consultation_id: z.uuid(),
+      revoked_at: z.string().nullable(),
+      submission_id: z.uuid().nullable(),
+    })
+    .nullable(),
+});
+export type BatchItem = z.infer<typeof batchItemSchema>;
+
+/** Separa a reserva da cadeia administrativa validada. */
+export function splitBatchItem(item: BatchItem): { claim: OutboxClaim; chain: Chain } {
+  const { submission, consultation, links, invitation, ...claim } = item;
+  return { claim, chain: { submission, consultation, links, invitation } };
+}
+
 export type Resolution =
   | { ok: true; input: SyncInput; source: Source }
   | { ok: false; code: string; blocked: boolean };

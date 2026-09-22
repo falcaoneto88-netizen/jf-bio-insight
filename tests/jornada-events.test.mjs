@@ -166,6 +166,21 @@ test("erros HTTP não expõem corpo do provedor", async () => {
     );
   }
 });
+test("recusa redirecionamento: nenhum 3xx é seguido e nada é reenviado", async () => {
+  for (const status of [301, 302, 303, 307, 308]) {
+    let chamadas = 0;
+    globalThis.fetch = async (_url, init) => {
+      chamadas += 1;
+      assert.equal(init.redirect, "manual");
+      return new Response(null, { status, headers: { location: "https://destino-nao-confiavel" } });
+    };
+    await assert.rejects(api.sendJornadaEvent(input, source), (e) => {
+      assert.doesNotMatch(e.message, /destino-nao-confiavel/);
+      return true;
+    });
+    assert.equal(chamadas, 1);
+  }
+});
 test("recusa resposta para outro evento e configuração ausente", async () => {
   globalThis.fetch = async () =>
     Response.json({ status: "received", event_id: "other", contact_id: uuid(5), messages_sent: 0 });

@@ -113,49 +113,26 @@ describe("cadeia de vínculo da fila", () => {
 });
 
 type Rpc = { name: string; args: Record<string, unknown> };
-function fakeDb(options: { claims: unknown[][]; chain?: Chain; dbError?: boolean }) {
+const WAKEUP = { ts: 1_790_000_000, nonce: "a".repeat(32), sig: "b".repeat(64) };
+const batchItem = (over: Partial<Chain> = {}) => ({ ...claim, ...chain(over) });
+
+function fakeDb(options: { batches: unknown[]; claimError?: boolean }) {
   const calls: Rpc[] = [];
-  const selects: string[] = [];
-  const c = options.chain ?? chain();
   let batch = 0;
   const db = {
     calls,
-    selects,
     rpc(name: string, args: Record<string, unknown>) {
       calls.push({ name, args });
-      if (name === "jornada_outbox_claim")
-        return Promise.resolve({ data: options.claims[batch++] ?? [], error: null });
+      if (name === "jornada_outbox_claim_signed")
+        return Promise.resolve(
+          options.claimError
+            ? { data: null, error: { message: "DESPERTADOR_INVALIDO" } }
+            : { data: options.batches[batch++] ?? [], error: null },
+        );
       return Promise.resolve({ data: true, error: null });
     },
-    from(table: string) {
-      const chainable = {
-        select(columns: string) {
-          selects.push(columns);
-          return chainable;
-        },
-        eq: () => chainable,
-        limit: () =>
-          Promise.resolve(
-            options.dbError
-              ? { data: null, error: { message: "x" } }
-              : { data: c.links, error: null },
-          ),
-        maybeSingle: () =>
-          Promise.resolve(
-            options.dbError
-              ? { data: null, error: { message: "x" } }
-              : {
-                  data:
-                    table === "anamnesis_submissions"
-                      ? c.submission
-                      : table === "consultations"
-                        ? c.consultation
-                        : c.invitation,
-                  error: null,
-                },
-          ),
-      };
-      return chainable;
+    from() {
+      throw new Error("o trabalhador não deve ler tabelas diretamente");
     },
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,72 +140,94 @@ function fakeDb(options: { claims: unknown[][]; chain?: Chain; dbError?: boolean
 }
 
 describe("trabalhador da fila", () => {
-  it("envia, confirma com fencing pela lease e não lê conteúdo clínico", async () => {
-    const db = fakeDb({ claims: [[claim]] });
+  it("reserva com assinatura de uso único, sem service role e sem ler tabelas", async () => {
+    const db = fakeDb({ batches: [[batchItem()]] });
     const send = vi.fn().mockResolvedValue({ status: "received" });
-    const summary = await runOutboxWorker({ db, send, locationId: LOCATION });
+    const summary = await runOutboxWorker({ db, send, locationId: LOCATION, wakeup: WAKEUP });
     expect(summary).toEqual({ claimed: 1, sent: 1, duplicate: 0, blocked: 0, failed: 0 });
-    const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete");
+    const reserva = db.calls[0] as Rpc;
+    expect(reserva.name).toBe("jornada_outbox_claim_signed");
+    expect(reserva.args).toMatchObject({
+      _epoch: WAKEUP.ts,
+      _nonce: WAKEUP.nonce,
+      _sig: WAKEUP.sig,
+    });
+    const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete_signed");
     expect(complete.args["_lease"]).toBe(claim.lease_token);
     expect(complete.args["_status"]).toBe("sent");
-    for (const columns of db.selects)
-      expect(columns).not.toMatch(/answers|clinical_data|token_hash/);
+    // Nenhuma rotina privilegiada é usada.
+    expect(db.calls.some((r: Rpc) => r.name === "jornada_outbox_claim")).toBe(false);
+    expect(db.calls.some((r: Rpc) => r.name === "jornada_outbox_complete")).toBe(false);
+  });
+
+  it("assinatura recusada pelo banco interrompe o ciclo sem enviar nada", async () => {
+    const db = fakeDb({ batches: [], claimError: true });
+    const send = vi.fn();
+    await expect(
+      runOutboxWorker({ db, send, locationId: LOCATION, wakeup: WAKEUP }),
+    ).rejects.toThrow("wakeup");
+    expect(send).not.toHaveBeenCalled();
+    expect(db.calls).toHaveLength(1);
   });
 
   it("trata recibo duplicado como confirmado (resposta perdida após processar)", async () => {
-    const db = fakeDb({ claims: [[claim]] });
+    const db = fakeDb({ batches: [[batchItem()]] });
     const summary = await runOutboxWorker({
       db,
       send: vi.fn().mockResolvedValue({ status: "duplicate" }),
       locationId: LOCATION,
+      wakeup: WAKEUP,
     });
     expect(summary.duplicate).toBe(1);
-    expect(db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete").args["_status"]).toBe(
-      "sent",
-    );
+    expect(
+      db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete_signed").args["_status"],
+    ).toBe("sent");
   });
 
   it("marca falha sanitizada quando o destino está indisponível ou o recibo é inválido", async () => {
-    const db = fakeDb({ claims: [[claim]] });
+    const db = fakeDb({ batches: [[batchItem()]] });
     const summary = await runOutboxWorker({
       db,
       send: vi.fn().mockRejectedValue(new Error("Recibo inválido com segredo-abc")),
       locationId: LOCATION,
+      wakeup: WAKEUP,
     });
     expect(summary.failed).toBe(1);
-    const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete");
+    const complete = db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete_signed");
     expect(complete.args["_status"]).toBe("failed");
     expect(String(complete.args["_error"])).toBe("envio_indisponivel");
   });
 
   it("marca pendência de vínculo sem chamar o destino", async () => {
-    const db = fakeDb({ claims: [[claim]], chain: chain({ links: [] }) });
+    const db = fakeDb({ batches: [[batchItem({ links: [] })]] });
     const send = vi.fn();
-    const summary = await runOutboxWorker({ db, send, locationId: LOCATION });
+    const summary = await runOutboxWorker({ db, send, locationId: LOCATION, wakeup: WAKEUP });
     expect(send).not.toHaveBeenCalled();
     expect(summary.blocked).toBe(1);
-    expect(db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete").args["_error"]).toBe(
-      "vinculo_ausente",
-    );
-  });
-
-  it("falha de leitura do banco vira retentativa, não pendência definitiva", async () => {
-    const db = fakeDb({ claims: [[claim]], dbError: true });
-    const summary = await runOutboxWorker({ db, send: vi.fn(), locationId: LOCATION });
-    expect(summary.failed).toBe(1);
+    expect(
+      db.calls.find((r: Rpc) => r.name === "jornada_outbox_complete_signed").args["_error"],
+    ).toBe("vinculo_ausente");
   });
 
   it("não reprocessa quando a reserva não devolve linhas (concorrência e clique duplo)", async () => {
-    const db = fakeDb({ claims: [[]] });
+    const db = fakeDb({ batches: [[]] });
     const send = vi.fn();
-    const summary = await runOutboxWorker({ db, send, locationId: LOCATION });
+    const summary = await runOutboxWorker({ db, send, locationId: LOCATION, wakeup: WAKEUP });
     expect(send).not.toHaveBeenCalled();
     expect(summary.claimed).toBe(0);
   });
 
-  it("ignora reserva malformada e limita o lote pedido", async () => {
-    const db = fakeDb({ claims: [[{ id: "x" }]] });
-    const summary = await runOutboxWorker({ db, send: vi.fn(), locationId: LOCATION, limit: 500 });
+  it("ignora lote malformado ou com campo inesperado e limita o tamanho pedido", async () => {
+    const db = fakeDb({
+      batches: [[{ id: "x" }, { ...batchItem(), submission: { id: "não-uuid" } }]],
+    });
+    const summary = await runOutboxWorker({
+      db,
+      send: vi.fn(),
+      locationId: LOCATION,
+      wakeup: WAKEUP,
+      limit: 500,
+    });
     expect(summary.claimed).toBe(0);
     expect(db.calls[0].args["_limit"]).toBe(25);
   });
