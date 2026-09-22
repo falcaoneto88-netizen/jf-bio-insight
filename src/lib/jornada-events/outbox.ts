@@ -173,6 +173,29 @@ export const BLOCK_REASON: Record<string, string> = {
   convite_revogado: "O convite desta resposta foi revogado.",
 };
 
+/** Códigos técnicos de falha (não são pendências de vínculo). */
+export const TECHNICAL_REASON: Record<string, string> = {
+  reserva_expirada_esgotada:
+    "O envio foi interrompido durante a última tentativa e não será repetido automaticamente.",
+  reserva_expirada: "Uma tentativa anterior foi interrompida e a fila a recuperou.",
+  envio_indisponivel: "O destino não confirmou o recebimento nesta tentativa.",
+};
+
+/**
+ * Regra de recuperação de reservas vencidas, espelhada do banco: uma queda na
+ * última tentativa não pode voltar para a fila como pendente, porque a reserva
+ * exige tentativas restantes — a linha ficaria presa para sempre.
+ */
+export function recoverExpired(row: {
+  attempts: number;
+  maxAttempts: number;
+  lastErrorCode: string | null;
+}): { status: "pending" | "exhausted"; lastErrorCode: string } {
+  return row.attempts >= row.maxAttempts
+    ? { status: "exhausted", lastErrorCode: "reserva_expirada_esgotada" }
+    : { status: "pending", lastErrorCode: row.lastErrorCode ?? "reserva_expirada" };
+}
+
 /** Situação da sincronização mostrada ao administrador, separada da etapa da anamnese. */
 export type SyncState =
   | "nao_aplicavel"
