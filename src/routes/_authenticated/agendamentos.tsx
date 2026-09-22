@@ -210,16 +210,16 @@ function EnviosPanel() {
   const [message, setMessage] = useState("");
   const limit = 10;
   const queryClient = useQueryClient();
-  const refresh = async () => {
-    await query.refetch();
-    await queryClient.invalidateQueries({ queryKey: ["aviso-jornada"] });
-  };
   const query = useQuery({
     queryKey: ["envios-jornada", offset],
     queryFn: () => listar({ data: { limit, offset } }),
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const refresh = async () => {
+    await query.refetch();
+    await queryClient.invalidateQueries({ queryKey: ["aviso-jornada"] });
+  };
   const data = query.data?.ok ? query.data.data : null;
   const readFailure = query.isError
     ? "Não foi possível ler a fila de envios. A lista abaixo não está completa."
