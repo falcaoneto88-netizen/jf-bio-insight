@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { IntakeError } from "@/lib/intake-invitations/schema";
+import { toAdminQueue, type AdminQueue } from "./outbox";
 
 /**
  * Controles administrativos do aviso automático ao Jornada AI.
@@ -166,6 +167,37 @@ export const reenviarAvisoJornada = createServerFn({ method: "POST" })
       const r = await db.rpc("jornada_outbox_retry", { _id: data.outboxId });
       if (r.error) throw new IntakeError("db", "Não foi possível recolocar o aviso na fila.", 503);
       return { ok: true, data: { requeued: r.data === true } };
+    } catch (error) {
+      return failure(error);
+    }
+  });
+
+/**
+ * Listagem administrativa dos envios ao Jornada AI, independente da agenda GHL.
+ * Restrita a administrador; devolve apenas identificadores e estado do envio.
+ */
+export const listarEnviosJornada = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .strictObject({
+        limit: z.number().int().min(1).max(50).optional(),
+        offset: z.number().int().min(0).max(10_000).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data }): Promise<EventsResponse<AdminQueue>> => {
+    try {
+      const db = await adminDb();
+      const r = await db.rpc("jornada_outbox_list", {
+        _limit: data.limit ?? 20,
+        _offset: data.offset ?? 0,
+      });
+      if (r.error) throw new IntakeError("db", "Não foi possível ler a fila de envios.", 503);
+      try {
+        return { ok: true, data: toAdminQueue(r.data) };
+      } catch {
+        throw new IntakeError("invalid_response", "Não foi possível ler a fila de envios.", 503);
+      }
     } catch (error) {
       return failure(error);
     }

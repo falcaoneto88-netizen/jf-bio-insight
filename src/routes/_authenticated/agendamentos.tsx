@@ -12,6 +12,7 @@ import { listarAgendamentosConfirmados } from "@/lib/appointments/functions";
 import { SYNC_LABEL, type SyncState } from "@/lib/jornada-events/outbox";
 import {
   configurarAvisoJornada,
+  listarEnviosJornada,
   obterAvisoJornada,
   reenviarAvisoJornada,
 } from "@/lib/jornada-events/functions";
@@ -174,6 +175,149 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
           >
             {data.enabled ? "Pausar aviso automático" : "Ativar aviso automático"}
           </Button>
+        </>
+      )}
+      {message && <p className="text-sm">{message}</p>}
+    </section>
+  );
+}
+
+function stamp(iso: string | null) {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  return Number.isFinite(date.getTime())
+    ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date)
+    : iso;
+}
+
+/**
+ * Envios administrativos da fila, independentes da leitura e dos filtros da
+ * agenda GHL: mostra também anamneses sem convite ou sem agendamento.
+ */
+function EnviosPanel() {
+  const listar = useServerFn(listarEnviosJornada);
+  const reenviar = useServerFn(reenviarAvisoJornada);
+  const [offset, setOffset] = useState(0);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const limit = 10;
+  const query = useQuery({
+    queryKey: ["envios-jornada", offset],
+    queryFn: () => listar({ data: { limit, offset } }),
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const data = query.data?.ok ? query.data.data : null;
+  const readFailure = query.isError
+    ? "Não foi possível ler a fila de envios. A lista abaixo não está completa."
+    : query.data && !query.data.ok
+      ? query.data.message
+      : null;
+
+  async function requeue(outboxId: string) {
+    setBusy(outboxId);
+    try {
+      const r = await reenviar({ data: { outboxId, confirm: true } });
+      setMessage(
+        r.ok
+          ? r.data.requeued
+            ? "Aviso recolocado na fila."
+            : "Este aviso já não está em falha."
+          : r.message,
+      );
+      await query.refetch();
+    } catch {
+      setMessage("Não foi possível recolocar o aviso na fila.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section className="space-y-3 rounded-md border bg-card p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-serif text-lg">Envios administrativos</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void query.refetch()}
+          disabled={query.isFetching}
+        >
+          {query.isFetching ? "Atualizando…" : "Atualizar"}
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Fila completa da clínica configurada, independente do período e dos filtros da agenda.
+        Inclui anamneses preenchidas sem convite ou sem agendamento. Pendências aparecem primeiro.
+      </p>
+      {readFailure && <p className="text-sm text-destructive">{readFailure}</p>}
+      {query.isPending && <p className="text-sm text-muted-foreground">Lendo a fila…</p>}
+      {data && (
+        <>
+          <p className="text-sm">
+            {data.total} envio(s) registrados · mostrando {data.rows.length} a partir de{" "}
+            {data.offset + 1}
+          </p>
+          {data.rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum envio registrado nesta página.</p>
+          ) : (
+            <ul className="space-y-3">
+              {data.rows.map((row) => (
+                <li key={row.outboxId} className="rounded-md border p-3 text-sm">
+                  <p className={SYNC_TONE[row.sync.state]}>{SYNC_LABEL[row.sync.state]}</p>
+                  {row.sync.note && <p className="text-muted-foreground">{row.sync.note}</p>}
+                  <p className="text-muted-foreground">
+                    Tentativas: {row.attempts} de {row.maxAttempts} · na fila desde{" "}
+                    {stamp(row.enqueuedAt)}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Última tentativa: {stamp(row.sync.lastAttemptAt)} · próxima:{" "}
+                    {stamp(row.sync.nextAttemptAt)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/consulta" search={{ id: row.consultationId }}>
+                        Abrir consulta
+                      </Link>
+                    </Button>
+                    {(row.sync.state === "falha" ||
+                      row.sync.state === "falha_intervencao" ||
+                      row.sync.state === "pendencia_vinculo") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy === row.outboxId}
+                        onClick={() => void requeue(row.outboxId)}
+                      >
+                        Recolocar na fila
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={data.offset === 0 || query.isFetching}
+              onClick={() => setOffset(Math.max(0, offset - limit))}
+            >
+              Página anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={data.offset + data.rows.length >= data.total || query.isFetching}
+              onClick={() => setOffset(offset + limit)}
+            >
+              Próxima página
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Até {limit} envios por página, ordenados por pendência.
+            </span>
+          </div>
         </>
       )}
       {message && <p className="text-sm">{message}</p>}
@@ -363,6 +507,14 @@ function AppointmentsPage() {
         </form>
 
         <SyncPanel onChanged={() => void query.refetch()} />
+
+        <EnviosPanel />
+
+        <p className="text-xs text-muted-foreground">
+          Os controles do aviso gerenciam apenas a fila de envios administrativos ao Jornada AI: não
+          criam agendamentos, convites nem mensagens ao paciente. A agenda acima permanece somente
+          leitura.
+        </p>
 
         <div role="status" aria-live="polite" className="space-y-4">
           {query.isPending && (

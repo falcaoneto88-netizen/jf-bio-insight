@@ -132,3 +132,27 @@ não está exposto na API (PGRST106) e não foi relaxado.
 Testes: 4 novos casos de separação de autoridades (assinatura de despertador desviada não reserva;
 prova do servidor aceita; replay recusado; finalidade/escopo trocados recusados; derivação estável
 sem revelar o segredo), 34 no arquivo da fila e 312 na suíte.
+
+## Revisão de 22/09/2026 — queda na última tentativa e quadro de envios administrativos
+
+1. **Recuperação de reservas vencidas** (`jornada_events.recover_expired`, usada por
+   `jornada_outbox_claim` e `jornada_outbox_tick`): antes a linha voltava sempre para `pending`.
+   Com `attempts >= max_attempts` ela ficava presa, porque reserva e verificação exigem tentativas
+   restantes. Agora vira `exhausted` com código técnico `reserva_expirada_esgotada` (e
+   `reserva_expirada` quando ainda há tentativas), aparece como "Falha no envio — precisa de
+   intervenção" e mantém o botão administrativo de recolocar na fila.
+2. **Quadro "Envios administrativos"** em /agendamentos, servido por `jornada_outbox_list`
+   (admin autenticado, escopo da clínica configurada, no máximo 50 por página, pendências
+   primeiro). Independe da leitura e dos filtros da agenda GHL, então mostra também anamneses
+   preenchidas na clínica sem convite ou sem agendamento. Devolve apenas identificadores, estado,
+   tentativas e datas — nenhuma resposta clínica. Falha de leitura é explícita e nunca vira
+   lista vazia (`toAdminQueue` lança em resposta ilegível). A agenda GHL continua somente leitura.
+
+Testes: `recoverExpired` na última tentativa e com tentativas restantes, mapeamento para
+"precisa de intervenção" sem próxima tentativa prometida, listagem de pendência de vínculo sem
+convite com os identificadores para reenfileirar e recusa de resposta ilegível — 38 no arquivo da
+fila, 316 na suíte e 78 na suíte Node. Conferido no banco que `recover_expired` contém o ramo
+`reserva_expirada_esgotada` e que reserva e verificação a chamam.
+
+Limite honesto: essas provas são unitárias e por catálogo SQL; o comportamento ponta a ponta com
+queda real de processo não foi executado, e a integração continua pausada e não publicada.

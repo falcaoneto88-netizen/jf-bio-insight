@@ -173,6 +173,29 @@ export const BLOCK_REASON: Record<string, string> = {
   convite_revogado: "O convite desta resposta foi revogado.",
 };
 
+/** Códigos técnicos de falha (não são pendências de vínculo). */
+export const TECHNICAL_REASON: Record<string, string> = {
+  reserva_expirada_esgotada:
+    "O envio foi interrompido durante a última tentativa e não será repetido automaticamente.",
+  reserva_expirada: "Uma tentativa anterior foi interrompida e a fila a recuperou.",
+  envio_indisponivel: "O destino não confirmou o recebimento nesta tentativa.",
+};
+
+/**
+ * Regra de recuperação de reservas vencidas, espelhada do banco: uma queda na
+ * última tentativa não pode voltar para a fila como pendente, porque a reserva
+ * exige tentativas restantes — a linha ficaria presa para sempre.
+ */
+export function recoverExpired(row: {
+  attempts: number;
+  maxAttempts: number;
+  lastErrorCode: string | null;
+}): { status: "pending" | "exhausted"; lastErrorCode: string } {
+  return row.attempts >= row.maxAttempts
+    ? { status: "exhausted", lastErrorCode: "reserva_expirada_esgotada" }
+    : { status: "pending", lastErrorCode: row.lastErrorCode ?? "reserva_expirada" };
+}
+
 /** Situação da sincronização mostrada ao administrador, separada da etapa da anamnese. */
 export type SyncState =
   | "nao_aplicavel"
@@ -269,8 +292,77 @@ export function syncInfo(row: OutboxStatusRow | undefined, context: SyncContext 
         ? (BLOCK_REASON[row.last_error_code ?? ""] ??
           "Pendência de vínculo. Confira o cadastro do paciente.")
         : state === "falha_intervencao"
-          ? "As tentativas automáticas terminaram. Recoloque na fila depois de conferir."
+          ? `${TECHNICAL_REASON[row.last_error_code ?? ""] ?? "As tentativas automáticas terminaram."} Recoloque na fila depois de conferir.`
           : null,
     outboxId: row.outbox_id,
+  };
+}
+
+/**
+ * Listagem administrativa da fila, independente da leitura da agenda GHL:
+ * apenas identificadores e estado do envio, nunca respostas clínicas.
+ */
+export const adminQueueRowSchema = z.object({
+  outbox_id: z.uuid(),
+  consultation_id: z.uuid(),
+  record_id: z.uuid(),
+  status: z.string().min(1),
+  attempts: z.number().int().nonnegative(),
+  max_attempts: z.number().int().positive(),
+  enqueued_at: z.string().min(1),
+  last_attempt_at: z.string().nullable(),
+  next_attempt_at: z.string().nullable(),
+  last_error_code: z.string().nullable(),
+  sent_at: z.string().nullable(),
+});
+export const adminQueueSchema = z.object({
+  total: z.number().int().nonnegative(),
+  limit: z.number().int().nonnegative(),
+  offset: z.number().int().nonnegative(),
+  rows: z.array(adminQueueRowSchema),
+});
+
+export type AdminQueueRow = {
+  outboxId: string;
+  consultationId: string;
+  recordId: string;
+  attempts: number;
+  maxAttempts: number;
+  enqueuedAt: string;
+  sync: SyncInfo;
+};
+export type AdminQueue = {
+  total: number;
+  limit: number;
+  offset: number;
+  rows: AdminQueueRow[];
+};
+
+/** Converte a resposta do banco; uma resposta ilegível nunca vira lista vazia. */
+export function toAdminQueue(raw: unknown): AdminQueue {
+  const parsed = adminQueueSchema.parse(raw);
+  return {
+    total: parsed.total,
+    limit: parsed.limit,
+    offset: parsed.offset,
+    rows: parsed.rows.map((r) => ({
+      outboxId: r.outbox_id,
+      consultationId: r.consultation_id,
+      recordId: r.record_id,
+      attempts: r.attempts,
+      maxAttempts: r.max_attempts,
+      enqueuedAt: r.enqueued_at,
+      sync: syncInfo({
+        consultation_id: r.consultation_id,
+        record_id: r.record_id,
+        status: r.status,
+        attempts: r.attempts,
+        last_attempt_at: r.last_attempt_at,
+        next_attempt_at: r.next_attempt_at,
+        last_error_code: r.last_error_code,
+        sent_at: r.sent_at,
+        outbox_id: r.outbox_id,
+      }),
+    })),
   };
 }
