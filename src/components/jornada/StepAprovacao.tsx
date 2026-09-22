@@ -148,6 +148,11 @@ export function StepAprovacao({
             <Button variant="ghost" onClick={onBack}>
               Voltar para editar
             </Button>
+            {!aprovado && (
+              <Button variant="outline" onClick={onPreviewDraft}>
+                Visualizar / imprimir rascunho
+              </Button>
+            )}
             <Button
               size="lg"
               onClick={aprovar}
