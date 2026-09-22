@@ -171,7 +171,7 @@ const WAKEUP = { ts: 1_790_000_000, nonce: "a".repeat(32), sig: "b".repeat(64) }
 const CLAIM_KEY = "d".repeat(64);
 const batchItem = (over: Partial<Chain> = {}) => ({ ...claim, ...chain(over) });
 
-function fakeDb(options: { batches: unknown[]; claimError?: boolean }) {
+function fakeDb(options: { batches: unknown[]; claimError?: boolean; completeRefused?: boolean }) {
   const calls: Rpc[] = [];
   let batch = 0;
   const db = {
@@ -184,7 +184,10 @@ function fakeDb(options: { batches: unknown[]; claimError?: boolean }) {
             ? { data: null, error: { message: "DESPERTADOR_INVALIDO" } }
             : { data: options.batches[batch++] ?? [], error: null },
         );
-      return Promise.resolve({ data: true, error: null });
+      return Promise.resolve({
+        data: !(options.completeRefused && name === "jornada_outbox_complete_signed"),
+        error: null,
+      });
     },
     from() {
       throw new Error("o trabalhador não deve ler tabelas diretamente");
@@ -311,7 +314,24 @@ describe("trabalhador da fila", () => {
       limit: 500,
     });
     expect(summary.claimed).toBe(0);
-    expect(db.calls[0].args["_limit"]).toBe(25);
+    expect(db.calls[0].args["_limit"]).toBe(2);
+  });
+
+  it("não declara confirmação quando a gravação do recibo foi recusada", async () => {
+    const db = fakeDb({ batches: [[batchItem()]], completeRefused: true });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const summary = await runOutboxWorker({
+        db,
+        send: vi.fn().mockResolvedValue({ status: "received" }),
+        locationId: LOCATION,
+        orgFingerprint: ORG_FP,
+        claimKey: CLAIM_KEY,
+      });
+      expect(summary).toEqual({ claimed: 1, sent: 0, duplicate: 0, blocked: 0, failed: 1 });
+    } finally {
+      log.mockRestore();
+    }
   });
 });
 
