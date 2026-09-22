@@ -111,7 +111,8 @@ function ClinicalFormPage() {
     } finally {
       setSaving(false);
     }
-    navigate({ to: "/review" });
+    if (consultation) navigate({ to: "/consulta", search: { id: consultation.id } });
+    else navigate({ to: "/review" });
   };
 
   const showTrainingDetails = data.currentlyTraining === "sim";
@@ -435,7 +436,7 @@ function ClinicalFormPage() {
               className="bg-gold text-gold-foreground hover:bg-gold/90"
             >
               <Sparkles />
-              Continuar para revisão
+              {consultation ? "Salvar e voltar à consulta" : "Continuar para revisão"}
               <ArrowRight />
             </Button>
           </div>
