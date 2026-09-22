@@ -18,6 +18,8 @@ export type EventSettings = {
   jobActive: boolean;
   /** A configuração do servidor (recebimento e clínica) corresponde. */
   configOk: boolean;
+  /** A chave de prova da reserva já foi preparada no servidor. */
+  keyReady: boolean;
   pending: number;
   blocked: number;
   exhausted: number;
@@ -36,6 +38,7 @@ const settingsSchema = z.object({
   reconciled_at: z.string().nullable(),
   location_id: z.string(),
   job_active: z.boolean(),
+  key_ready: z.boolean(),
   config_ok: z.boolean(),
   pending: z.number(),
   blocked: z.number(),
@@ -75,6 +78,7 @@ function toSettings(raw: unknown): EventSettings {
     firstActivatedAt: parsed.data.first_activated_at,
     reconciledAt: parsed.data.reconciled_at,
     jobActive: parsed.data.job_active,
+    keyReady: parsed.data.key_ready,
     configOk: parsed.data.config_ok,
     pending: parsed.data.pending,
     blocked: parsed.data.blocked,
@@ -99,6 +103,19 @@ export const obterAvisoJornada = createServerFn({ method: "POST" })
     }
   });
 
+/**
+ * Prepara no banco a chave de prova da reserva, derivada do segredo de
+ * assinatura já configurado. O segredo e a chave derivada nunca são devolvidos.
+ */
+async function prepararChaveProva(db: Awaited<ReturnType<typeof adminDb>>) {
+  const secret = process.env["BIOREPORT_JORNADA_SIGNING_SECRET"] ?? "";
+  if (!secret)
+    throw new IntakeError("not_configured", "O envio ao Jornada AI ainda não está configurado.", 503);
+  const { deriveClaimKey } = await import("./outbox.server");
+  const r = await db.rpc("jornada_outbox_provision_claim_key", { _key: await deriveClaimKey(secret) });
+  if (r.error) throw new IntakeError("db", "Não foi possível preparar o aviso automático.", 503);
+}
+
 /** Ativa ou pausa o aviso automático. A ativação vale só para novas confirmações. */
 export const configurarAvisoJornada = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
@@ -107,6 +124,7 @@ export const configurarAvisoJornada = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<EventsResponse<EventSettings>> => {
     try {
       const db = await adminDb();
+      if (data.enabled) await prepararChaveProva(db);
       const r = await db.rpc("jornada_outbox_configure", { _enabled: data.enabled });
       if (r.error)
         throw new IntakeError(
@@ -116,7 +134,16 @@ export const configurarAvisoJornada = createServerFn({ method: "POST" })
             : "Não foi possível alterar o aviso automático.",
           409,
         );
-      return { ok: true, data: toSettings(r.data) };
+      const settings = toSettings(r.data);
+      // Não declarar sucesso quando a verificação periódica está parada.
+      if (data.enabled && (!settings.jobActive || !settings.keyReady || !settings.configOk))
+        return {
+          ok: false,
+          code: "verificacao_parada",
+          message:
+            "Aviso marcado como ativo, mas a verificação periódica no servidor está parada. Nada será enviado até que ela seja ligada.",
+        };
+      return { ok: true, data: settings };
     } catch (error) {
       return failure(error);
     }
