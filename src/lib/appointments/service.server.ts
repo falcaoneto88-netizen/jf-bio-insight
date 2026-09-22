@@ -239,6 +239,8 @@ export async function listConfirmedAppointments(
   let drafts: DraftRow[] = [];
   const consultationNames = new Map<string, string>();
   let syncRows: OutboxStatusRow[] = [];
+  let syncUnavailable = false;
+  let syncFirstActivatedAt: string | null = null;
   let progressUnavailable = false;
 
   if (appointmentIds.length > 0) {
@@ -294,14 +296,21 @@ export async function listConfirmedAppointments(
           drafts = (draftQuery.data ?? []) as DraftRow[];
         }
         // Situação do aviso administrativo: leitura à parte, restrita a administradores.
-        const syncQuery = await db.rpc("jornada_outbox_status", {
-          _consultation_ids: consultationIds,
-        });
-        if (syncQuery.error)
+        const [syncQuery, settingsQuery] = await Promise.all([
+          db.rpc("jornada_outbox_status", { _consultation_ids: consultationIds }),
+          db.rpc("jornada_outbox_settings"),
+        ]);
+        if (syncQuery.error || settingsQuery.error) {
+          // Falha de leitura nunca vira "Sem aviso a enviar".
+          syncUnavailable = true;
           warnings.push(
             "Não foi possível ler a situação da sincronização com o Jornada AI nesta atualização.",
           );
-        else syncRows = (syncQuery.data ?? []) as OutboxStatusRow[];
+        } else {
+          syncRows = (syncQuery.data ?? []) as OutboxStatusRow[];
+          const raw = (settingsQuery.data ?? {}) as { first_activated_at?: string | null };
+          syncFirstActivatedAt = raw.first_activated_at ?? null;
+        }
       }
     }
   }
@@ -339,6 +348,8 @@ export async function listConfirmedAppointments(
     contactNames: lookup.names,
     locationId,
     syncRows,
+    syncUnavailable,
+    syncFirstActivatedAt,
     progressUnavailable,
     ...(options.now === undefined ? {} : { now: options.now }),
   });

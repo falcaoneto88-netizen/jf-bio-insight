@@ -11,9 +11,19 @@ import { IntakeError } from "@/lib/intake-invitations/schema";
 export type EventSettings = {
   enabled: boolean;
   activatedAt: string | null;
+  /** Marca d'água: preservada ao pausar e reativar. */
+  firstActivatedAt: string | null;
+  reconciledAt: string | null;
+  /** A verificação periódica está efetivamente ligada no servidor. */
+  jobActive: boolean;
+  /** A configuração do servidor (recebimento e clínica) corresponde. */
+  configOk: boolean;
   pending: number;
   blocked: number;
+  exhausted: number;
   sent: number;
+  /** Confirmações elegíveis que ainda não entraram na fila. */
+  missing: number;
 };
 export type EventsResponse<T> =
   | { ok: true; data: T }
@@ -22,10 +32,16 @@ export type EventsResponse<T> =
 const settingsSchema = z.object({
   enabled: z.boolean(),
   activated_at: z.string().nullable(),
+  first_activated_at: z.string().nullable(),
+  reconciled_at: z.string().nullable(),
   location_id: z.string(),
+  job_active: z.boolean(),
+  config_ok: z.boolean(),
   pending: z.number(),
   blocked: z.number(),
+  exhausted: z.number(),
   sent: z.number(),
+  missing: z.number(),
 });
 
 async function adminDb() {
@@ -56,9 +72,15 @@ function toSettings(raw: unknown): EventSettings {
   return {
     enabled: parsed.data.enabled,
     activatedAt: parsed.data.activated_at,
+    firstActivatedAt: parsed.data.first_activated_at,
+    reconciledAt: parsed.data.reconciled_at,
+    jobActive: parsed.data.job_active,
+    configOk: parsed.data.config_ok,
     pending: parsed.data.pending,
     blocked: parsed.data.blocked,
+    exhausted: parsed.data.exhausted,
     sent: parsed.data.sent,
+    missing: parsed.data.missing,
   };
 }
 

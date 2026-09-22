@@ -83,7 +83,10 @@ const SYNC_TONE: Record<SyncState, string> = {
   pendente: "text-foreground",
   confirmada: "text-foreground",
   falha: "text-destructive",
+  falha_intervencao: "text-destructive",
   pendencia_vinculo: "text-destructive",
+  ausente_na_fila: "text-destructive",
+  indisponivel: "text-muted-foreground",
 };
 
 /** Ativação e pausa do aviso administrativo automático. Nunca envia mensagens ao paciente. */
@@ -133,12 +136,36 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
       {data && (
         <>
           <p className="text-sm">
-            Situação: <strong>{data.enabled ? "ativo" : "pausado"}</strong>
+            Situação:{" "}
+            <strong>
+              {!data.configOk
+                ? "configuração indisponível"
+                : data.enabled
+                  ? data.jobActive
+                    ? "ativo"
+                    : "ativo, verificação periódica desligada"
+                  : "pausado"}
+            </strong>
             {data.activatedAt && data.enabled
               ? ` · ativado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(data.activatedAt))}`
               : ""}
-            {` · na fila: ${data.pending} · pendências de vínculo: ${data.blocked} · confirmados: ${data.sent}`}
+            {data.firstActivatedAt
+              ? ` · primeira ativação em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(data.firstActivatedAt))}`
+              : ""}
+            {` · na fila: ${data.pending} · pendências de vínculo: ${data.blocked} · precisam de intervenção: ${data.exhausted} · fora da fila: ${data.missing} · confirmados: ${data.sent}`}
           </p>
+          {!data.configOk && (
+            <p className="text-sm text-destructive">
+              O recebimento de anamneses do GHL não está configurado para esta clínica. Confira a
+              integração antes de ativar.
+            </p>
+          )}
+          {data.enabled && !data.jobActive && (
+            <p className="text-sm text-destructive">
+              A verificação periódica no servidor está desligada: os avisos ficam na fila sem
+              entrega automática.
+            </p>
+          )}
           <Button
             disabled={busy}
             variant={data.enabled ? "outline" : "default"}
@@ -180,7 +207,10 @@ function SyncLine({
           Próxima tentativa: {formatStamp(sync.nextAttemptAt, timezone)}
         </p>
       )}
-      {sync.outboxId && (sync.state === "falha" || sync.state === "pendencia_vinculo") && (
+      {sync.outboxId &&
+        (sync.state === "falha" ||
+          sync.state === "falha_intervencao" ||
+          sync.state === "pendencia_vinculo") && (
         <Button
           variant="outline"
           size="sm"
