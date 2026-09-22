@@ -9,6 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { STAGE_LABEL, type AppointmentRow, type Stage } from "@/lib/appointments/core";
 import { listarAgendamentosConfirmados } from "@/lib/appointments/functions";
+import { SYNC_LABEL, type SyncState } from "@/lib/jornada-events/outbox";
+import {
+  configurarAvisoJornada,
+  obterAvisoJornada,
+  reenviarAvisoJornada,
+} from "@/lib/jornada-events/functions";
 
 export const Route = createFileRoute("/_authenticated/agendamentos")({
   head: () => ({
