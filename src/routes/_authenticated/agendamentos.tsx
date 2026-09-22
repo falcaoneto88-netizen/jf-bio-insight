@@ -156,8 +156,9 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
           </p>
           {!data.configOk && (
             <p className="text-sm text-destructive">
-              O recebimento de anamneses do GHL não está configurado para esta clínica. Confira a
-              integração antes de ativar.
+              {data.keyReady
+                ? "O recebimento de anamneses do GHL não está configurado para esta clínica. Confira a integração antes de ativar."
+                : "O preparo do aviso ainda não foi concluído no servidor. Ative para concluir o preparo."}
             </p>
           )}
           {data.enabled && !data.jobActive && (
