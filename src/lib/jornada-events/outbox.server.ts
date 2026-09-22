@@ -1,23 +1,44 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import type { Source, SyncInput } from "./core";
-import { claimSchema, resolveDispatch, type Chain, type OutboxClaim } from "./outbox";
+import { batchSchema, resolveDispatch } from "./outbox";
 
 /**
  * Trabalhador da fila: roda apenas no servidor, sem depender de aba aberta.
+ * Não usa acesso privilegiado (service role): reserva e conclui pela assinatura
+ * de uso único do despertador e pelo bilhete de reserva (lease/fencing).
  * Não toca em conteúdo clínico e nunca registra segredos, cabeçalhos ou corpo.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = SupabaseClient<any, any, any>;
 
+export type Wakeup = { ts: number; nonce: string; sig: string };
+
 export type WorkerDeps = {
   db: Db;
   send: (input: SyncInput, source: Source) => Promise<{ status: "received" | "duplicate" }>;
   locationId: string;
+  wakeup: Wakeup;
   limit?: number;
-  leaseSeconds?: number;
 };
+
+/** Cliente público do servidor: apenas as duas rotinas assinadas da fila. */
+export function createOutboxClient(): Db {
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"] ?? "";
+  return createClient(process.env["SUPABASE_URL"] ?? "", key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init) => {
+        const headers = new Headers(init?.headers);
+        if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`)
+          headers.delete("Authorization");
+        headers.set("apikey", key);
+        return fetch(input, { ...init, headers });
+      },
+    },
+  });
+}
 
 export type WorkerSummary = {
   claimed: number;
