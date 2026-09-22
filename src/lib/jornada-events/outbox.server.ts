@@ -73,8 +73,13 @@ export async function buildProof(
 
 /** Cliente público do servidor: apenas as duas rotinas assinadas da fila. */
 export function createOutboxClient(): Db {
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"] ?? "";
-  return createClient(process.env["SUPABASE_URL"] ?? "", key, {
+  const key =
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+    process.env["SUPABASE_ANON_KEY"] ||
+    import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    "";
+  const url = process.env["SUPABASE_URL"] || import.meta.env?.VITE_SUPABASE_URL || "";
+  return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
       fetch: (input, init) => {
@@ -98,7 +103,9 @@ export type WorkerSummary = {
 
 export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> {
   const summary: WorkerSummary = { claimed: 0, sent: 0, duplicate: 0, blocked: 0, failed: 0 };
-  const limit = Math.max(1, Math.min(deps.limit ?? 10, 25));
+  // Duas chamadas de até 15s deixam margem para os RPCs dentro do despertar de 55s.
+  // O restante permanece persistido para a próxima batida, sem reservar um lote que expirará.
+  const limit = Math.max(1, Math.min(deps.limit ?? 2, 2));
   // Reserva: prova do servidor com finalidade "claim", escopo fixado
   // (clínica + organização), carimbo de tempo e nonce de uso único. A
   // assinatura do despertador não é aceita aqui. Sem config ativa e escopo
@@ -145,12 +152,6 @@ export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> 
       outcome = { status: "failed", code: "envio_indisponivel" };
     }
 
-    if (outcome.status === "sent") {
-      if (outcome.receipt === "duplicate") summary.duplicate += 1;
-      else summary.sent += 1;
-    } else if (outcome.status === "blocked") summary.blocked += 1;
-    else summary.failed += 1;
-
     const completed = await deps.db.rpc("jornada_outbox_complete_signed", {
       _id: claim.id,
       _lease: claim.lease_token,
@@ -164,7 +165,16 @@ export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> 
       _receipt: outcome.receipt ?? null,
     });
     // Lease vencida ou reivindicada por outro trabalhador: a linha volta pela fila.
-    if (completed.error) console.error("[jornada-outbox] conclusão recusada");
+    if (completed.error || completed.data !== true) {
+      summary.failed += 1;
+      console.error("[jornada-outbox] conclusão recusada");
+      continue;
+    }
+    if (outcome.status === "sent") {
+      if (outcome.receipt === "duplicate") summary.duplicate += 1;
+      else summary.sent += 1;
+    } else if (outcome.status === "blocked") summary.blocked += 1;
+    else summary.failed += 1;
   }
   return summary;
 }
