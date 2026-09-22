@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
@@ -96,6 +96,7 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
   const configurar = useServerFn(configurarAvisoJornada);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const queryClient = useQueryClient();
   const settings = useQuery({
     queryKey: ["aviso-jornada"],
     queryFn: () => carregar({ data: {} }),
@@ -111,11 +112,12 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
       setMessage(
         r.ok
           ? enabled
-            ? "Aviso automático ativado. Vale apenas para anamneses confirmadas a partir de agora."
+            ? "Aviso automático ativado. Nenhuma anamnese anterior à primeira ativação é reprocessada; as pendências registradas desde a primeira ativação voltam a ser entregues."
             : "Aviso automático pausado. A fila é preservada; nada é apagado."
           : r.message,
       );
       await settings.refetch();
+      await queryClient.invalidateQueries({ queryKey: ["envios-jornada"] });
       onChanged();
     } catch {
       setMessage("Não foi possível alterar o aviso automático.");
