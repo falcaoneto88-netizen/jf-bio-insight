@@ -18,6 +18,7 @@ export function StepAprovacao({
   htmlError,
   onApproved,
   onBack,
+  onPreviewDraft,
 }: {
   journey: Journey;
   issues: { blocking: string[]; warnings: string[] };
@@ -27,6 +28,8 @@ export function StepAprovacao({
   htmlError: string | null;
   onApproved: () => void;
   onBack: () => void;
+  /** Abre a etapa do documento em modo rascunho (marca RASCUNHO), sem aprovar. */
+  onPreviewDraft: () => void;
 }) {
   const [confirmacao, setConfirmacao] = useState("");
   const [busy, setBusy] = useState(false);
