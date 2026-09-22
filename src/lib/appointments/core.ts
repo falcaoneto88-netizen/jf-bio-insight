@@ -359,6 +359,12 @@ export function buildRows(input: {
         stage,
         receivedAt: current.confirmed_at,
         appliedSubmissionId: applied,
+        // A sincronização segue a versão recebida atual; nunca é inferida por nome.
+        sync: syncInfo(
+          (input.syncRows ?? []).find(
+            (r) => r.record_id === current.id && r.consultation_id === current.consultation_id,
+          ),
+        ),
         note:
           versions.length > 1
             ? `${versions.length} versões recebidas nesta consulta.`
