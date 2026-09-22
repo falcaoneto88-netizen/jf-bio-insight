@@ -155,6 +155,11 @@ export async function runOutboxWorker(deps: WorkerDeps): Promise<WorkerSummary> 
       _id: claim.id,
       _lease: claim.lease_token,
       _status: outcome.status,
+      ...(await buildProof(
+        deps.claimKey,
+        "complete",
+        `${claim.id}:${claim.lease_token}:${outcome.status}`,
+      )),
       _error: outcome.code,
       _receipt: outcome.receipt ?? null,
     });
