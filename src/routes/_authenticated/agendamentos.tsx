@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
@@ -96,6 +96,7 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
   const configurar = useServerFn(configurarAvisoJornada);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const queryClient = useQueryClient();
   const settings = useQuery({
     queryKey: ["aviso-jornada"],
     queryFn: () => carregar({ data: {} }),
@@ -111,11 +112,12 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
       setMessage(
         r.ok
           ? enabled
-            ? "Aviso automático ativado. Vale apenas para anamneses confirmadas a partir de agora."
+            ? "Aviso automático ativado. Nenhuma anamnese anterior à primeira ativação é reprocessada; as pendências registradas desde a primeira ativação voltam a ser entregues."
             : "Aviso automático pausado. A fila é preservada; nada é apagado."
           : r.message,
       );
       await settings.refetch();
+      await queryClient.invalidateQueries({ queryKey: ["envios-jornada"] });
       onChanged();
     } catch {
       setMessage("Não foi possível alterar o aviso automático.");
@@ -131,6 +133,12 @@ function SyncPanel({ onChanged }: { onChanged: () => void }) {
         Envia somente o estado administrativo (identificadores) de anamneses definitivamente
         confirmadas. Não envia respostas, medidas, exames nem mensagens ao paciente.
       </p>
+      {settings.isError && (
+        <p className="text-sm text-destructive">
+          Não foi possível ler a situação do aviso automático. Os contadores abaixo não estão
+          disponíveis; nada foi alterado.
+        </p>
+      )}
       {settings.data && !settings.data.ok && (
         <p className="text-sm text-destructive">{settings.data.message}</p>
       )}
@@ -201,12 +209,17 @@ function EnviosPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const limit = 10;
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["envios-jornada", offset],
     queryFn: () => listar({ data: { limit, offset } }),
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const refresh = async () => {
+    await query.refetch();
+    await queryClient.invalidateQueries({ queryKey: ["aviso-jornada"] });
+  };
   const data = query.data?.ok ? query.data.data : null;
   const readFailure = query.isError
     ? "Não foi possível ler a fila de envios. A lista abaixo não está completa."
@@ -225,7 +238,7 @@ function EnviosPanel() {
             : "Este aviso já não está em falha."
           : r.message,
       );
-      await query.refetch();
+      await refresh();
     } catch {
       setMessage("Não foi possível recolocar o aviso na fila.");
     } finally {
@@ -240,7 +253,7 @@ function EnviosPanel() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => void query.refetch()}
+          onClick={() => void refresh()}
           disabled={query.isFetching}
         >
           {query.isFetching ? "Atualizando…" : "Atualizar"}
