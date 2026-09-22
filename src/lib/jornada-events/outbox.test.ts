@@ -188,7 +188,13 @@ describe("trabalhador da fila", () => {
   it("reserva com assinatura de uso único, sem service role e sem ler tabelas", async () => {
     const db = fakeDb({ batches: [[batchItem()]] });
     const send = vi.fn().mockResolvedValue({ status: "received" });
-    const summary = await runOutboxWorker({ db, send, locationId: LOCATION, orgFingerprint: ORG_FP, wakeup: WAKEUP });
+    const summary = await runOutboxWorker({
+      db,
+      send,
+      locationId: LOCATION,
+      orgFingerprint: ORG_FP,
+      wakeup: WAKEUP,
+    });
     expect(summary).toEqual({ claimed: 1, sent: 1, duplicate: 0, blocked: 0, failed: 0 });
     const reserva = db.calls[0] as Rpc;
     expect(reserva.name).toBe("jornada_outbox_claim_signed");
@@ -248,7 +254,13 @@ describe("trabalhador da fila", () => {
   it("marca pendência de vínculo sem chamar o destino", async () => {
     const db = fakeDb({ batches: [[batchItem({ links: [], link_contacts: 0 })]] });
     const send = vi.fn();
-    const summary = await runOutboxWorker({ db, send, locationId: LOCATION, orgFingerprint: ORG_FP, wakeup: WAKEUP });
+    const summary = await runOutboxWorker({
+      db,
+      send,
+      locationId: LOCATION,
+      orgFingerprint: ORG_FP,
+      wakeup: WAKEUP,
+    });
     expect(send).not.toHaveBeenCalled();
     expect(summary.blocked).toBe(1);
     expect(
@@ -259,7 +271,13 @@ describe("trabalhador da fila", () => {
   it("não reprocessa quando a reserva não devolve linhas (concorrência e clique duplo)", async () => {
     const db = fakeDb({ batches: [[]] });
     const send = vi.fn();
-    const summary = await runOutboxWorker({ db, send, locationId: LOCATION, orgFingerprint: ORG_FP, wakeup: WAKEUP });
+    const summary = await runOutboxWorker({
+      db,
+      send,
+      locationId: LOCATION,
+      orgFingerprint: ORG_FP,
+      wakeup: WAKEUP,
+    });
     expect(send).not.toHaveBeenCalled();
     expect(summary.claimed).toBe(0);
   });

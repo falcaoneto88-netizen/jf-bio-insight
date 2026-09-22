@@ -211,35 +211,35 @@ function SyncLine({
         (sync.state === "falha" ||
           sync.state === "falha_intervencao" ||
           sync.state === "pendencia_vinculo") && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              const r = await reenviar({
-                data: { outboxId: sync.outboxId as string, confirm: true },
-              });
-              setMessage(
-                r.ok
-                  ? r.data.requeued
-                    ? "Aviso recolocado na fila."
-                    : "Este aviso já não está em falha."
-                  : r.message,
-              );
-              onRequeued();
-            } catch {
-              setMessage("Não foi possível recolocar o aviso na fila.");
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Recolocar na fila
-        </Button>
-      )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await reenviar({
+                  data: { outboxId: sync.outboxId as string, confirm: true },
+                });
+                setMessage(
+                  r.ok
+                    ? r.data.requeued
+                      ? "Aviso recolocado na fila."
+                      : "Este aviso já não está em falha."
+                    : r.message,
+                );
+                onRequeued();
+              } catch {
+                setMessage("Não foi possível recolocar o aviso na fila.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Recolocar na fila
+          </Button>
+        )}
       {message && <p className="mt-2 text-muted-foreground">{message}</p>}
     </div>
   );
