@@ -4,6 +4,7 @@ import {
   consultationPrimaryAction,
   consultationReportState,
   journeyCompletedSteps,
+  journeyInitialStep,
   journeyNaturalStep,
 } from "./clinical-navigation";
 import { fixtureJourney } from "./journey/__fixtures__/jornada-sintetica";
@@ -114,6 +115,43 @@ describe("progresso persistido da jornada", () => {
     expect(completed.has(5)).toBe(true);
     expect(completed.has(6)).toBe(false);
     expect(journeyNaturalStep(approved)).toBe(6);
+  });
+});
+
+describe("abertura direta na etapa do documento", () => {
+  const draft = {
+    ...fixtureJourney,
+    version: 7,
+    approvedVersion: null,
+    sourceCurrent: true,
+    confirmations: { anamnese: true, bio: true, revisao: true },
+  };
+
+  it("rascunho com protocolo persistido abre na etapa 6 sem concluir a aprovação", () => {
+    expect(journeyInitialStep(draft, 6)).toBe(6);
+    const completed = journeyCompletedSteps(draft);
+    expect(completed.has(5)).toBe(false);
+    expect(completed.has(6)).toBe(false);
+    // Natural continua na aprovação: sem link, a jornada abre na etapa 5.
+    expect(journeyInitialStep(draft, null)).toBe(5);
+  });
+
+  it("sem protocolo persistido, o pedido da etapa 6 não passa do ponto natural", () => {
+    const semProtocolo = { ...draft, protocolo: null };
+    expect(journeyInitialStep(semProtocolo, 6)).toBe(4);
+  });
+
+  it("versão obsoleta (aprovação antiga) abre como rascunho, nunca como final", () => {
+    const obsoleta = { ...draft, version: 8, approvedVersion: 7 };
+    expect(journeyInitialStep(obsoleta, 6)).toBe(6);
+    expect(obsoleta.approvedVersion === obsoleta.version).toBe(false);
+    expect(journeyCompletedSteps(obsoleta).has(5)).toBe(false);
+  });
+
+  it("pedido de etapa intermediária continua limitado ao ponto natural", () => {
+    expect(journeyInitialStep(draft, 3)).toBe(3);
+    const inicio = { ...draft, confirmations: { anamnese: false, bio: false, revisao: false } };
+    expect(journeyInitialStep(inicio, 5)).toBe(1);
   });
 });
 
