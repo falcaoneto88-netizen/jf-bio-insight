@@ -292,7 +292,7 @@ export function syncInfo(row: OutboxStatusRow | undefined, context: SyncContext 
         ? (BLOCK_REASON[row.last_error_code ?? ""] ??
           "Pendência de vínculo. Confira o cadastro do paciente.")
         : state === "falha_intervencao"
-          ? "As tentativas automáticas terminaram. Recoloque na fila depois de conferir."
+          ? `${TECHNICAL_REASON[row.last_error_code ?? ""] ?? "As tentativas automáticas terminaram."} Recoloque na fila depois de conferir.`
           : null,
     outboxId: row.outbox_id,
   };
