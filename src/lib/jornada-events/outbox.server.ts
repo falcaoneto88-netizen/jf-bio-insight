@@ -5,8 +5,11 @@ import { batchItemSchema, resolveDispatch, splitBatchItem } from "./outbox";
 
 /**
  * Trabalhador da fila: roda apenas no servidor, sem depender de aba aberta.
- * Não usa acesso privilegiado (service role): reserva e conclui pela assinatura
- * de uso único do despertador e pelo bilhete de reserva (lease/fencing).
+ * Não usa acesso privilegiado (service role). Autoridades separadas: o
+ * despertador apenas acorda este endpoint e NÃO autoriza leitura, reserva ou
+ * conclusão; reservar, renovar e concluir exigem uma prova própria do servidor
+ * (finalidade distinta + escopo clínica/organização + carimbo de tempo + nonce
+ * de uso único), assinada com a subchave derivada do segredo já configurado.
  * Não toca em conteúdo clínico e nunca registra segredos, cabeçalhos ou corpo.
  */
 
@@ -21,9 +24,52 @@ export type WorkerDeps = {
   locationId: string;
   /** Impressão digital (SHA-256) da organização de destino: escopo fixado no banco. */
   orgFingerprint: string;
-  wakeup: Wakeup;
+  /** Subchave derivada (hex) da prova de reserva; nunca é registrada nem devolvida. */
+  claimKey: string;
   limit?: number;
 };
+
+const PROOF_PURPOSES = ["claim", "renew", "complete"] as const;
+type ProofPurpose = (typeof PROOF_PURPOSES)[number];
+export type Proof = { _epoch: number; _nonce: string; _sig: string };
+
+function hex(bytes: ArrayBuffer | Uint8Array): string {
+  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Subchave de finalidade exclusiva: derivada do segredo de assinatura já configurado. */
+export async function deriveClaimKey(signingSecret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(signingSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return hex(
+    await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("jornada-outbox-claim-v1")),
+  );
+}
+
+/** Prova do servidor para uma operação específica da fila. */
+export async function buildProof(
+  claimKey: string,
+  purpose: ProofPurpose,
+  payload: string,
+): Promise<Proof> {
+  const epoch = Math.floor(Date.now() / 1000);
+  const nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(claimKey),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const message = `jornada-outbox-${purpose}|${payload}|${epoch}|${nonce}`;
+  const sig = hex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message)));
+  return { _epoch: epoch, _nonce: nonce, _sig: sig };
+}
 
 /** Cliente público do servidor: apenas as duas rotinas assinadas da fila. */
 export function createOutboxClient(): Db {
