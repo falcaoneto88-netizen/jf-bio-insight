@@ -49,3 +49,34 @@ Nada é apagado em nenhum desses passos.
 - Não houve execução end-to-end: o aviso está desativado, a batida está inativa e nenhum evento foi enviado nesta implementação.
 - Os testes usam dados sintéticos e substitutos do banco; não comprovam os privilégios reais nem o comportamento do gatilho em produção.
 - Verificação de gatilho, reserva concorrente e recuo no banco real fica para o teste autorizado após a publicação.
+
+---
+
+# Revisão independente — 22/09/2026 (correção do risco de redirect)
+
+## Achado aceito
+
+`pg_net` 0.20.3 define `CURLOPT_FOLLOWLOCATION = true` (`src/core.c`, linha 97): o despertador do banco **segue redirects**. Verificar o status 3xx da resposta depois do `net.http_post` não impede o reenvio do corpo e dos cabeçalhos ao destino do redirect. Por isso a credencial fixa no cabeçalho `Authorization` foi eliminada.
+
+## O que mudou
+
+1. **Despertador sem credencial e sem IDs de pacientes.** `public.jornada_outbox_tick()` não envia mais cabeçalho de autorização. O corpo passa a ser `{ts, nonce, sig}`, onde `sig = HMAC-SHA256("jornada-outbox-wakeup|<epoch>|<nonce>")` com a chave interna já existente no cofre do banco (`jornada_outbox_worker`) — **nenhuma chave nova é exigida** e o destinatário do evento permanece o mesmo.
+2. **Assinatura de finalidade exclusiva, curta e de uso único.** `jornada_events.wakeup_valid()` exige formato, janela de ±120 s, prefixo de finalidade fixo e grava o nonce em `jornada_events.wakeup_nonce` (chave primária) — repetição é recusada. Pior caso de um redirect hostil: o terceiro recebe uma assinatura que só serve para uma reserva, por até 2 minutos, sem nenhuma resposta clínica.
+3. **Trabalhador sem service role.** `POST /api/public/hooks/jornada-outbox` usa apenas a chave pública do servidor e duas rotinas estreitas: `jornada_outbox_claim_signed` (verifica a assinatura, reserva com lease/fencing e devolve só a cadeia administrativa) e `jornada_outbox_complete_signed` (autenticada pelo bilhete de reserva, com validação de estado/código/recibo). O trabalhador não lê tabelas diretamente, não guarda segredos e não registra cabeçalhos, corpo ou requisições.
+4. **Credencial fixa removida do banco.** `public.jornada_worker_auth(text)` foi apagada.
+5. **ACL dos recursos novos.** `jornada_events` continua sem `USAGE` para visitantes/autenticados; `wakeup_nonce` e `wakeup_valid` sem qualquer permissão pública. As duas rotinas assinadas foram revogadas de `public`/`authenticated` e concedidas somente a `anon`, porque a autenticação delas é a assinatura/bilhete, não o perfil.
+6. **Envio real inalterado.** O worker continua usando `sendJornadaEvent` (`fetch` com `redirect: "manual"`), que recusa qualquer 3xx.
+
+## Provas executadas (22/09/2026)
+
+- Banco, dados sintéticos: assinatura válida = aceita; **reuso do mesmo nonce = recusado**; assinatura adulterada = recusada; carimbo de 10 min atrás = recusado; mesma chave com outra finalidade = recusada.
+- Permissões reais consultadas no catálogo: `anon` **não** pode executar a reserva privilegiada `jornada_outbox_claim`; `authenticated` **não** pode executar as rotinas assinadas; `anon` não tem acesso a `jornada_events.wakeup_nonce`.
+- Chamada externa real com a chave pública e assinatura inválida → `42501 DESPERTADOR_INVALIDO` (nenhuma linha reservada).
+- Redirects: 5 testes (301/302/303/307/308) confirmam `redirect: "manual"`, uma única requisição por tentativa, recusa do 3xx e nenhuma mensagem com o destino do redirect.
+- Fila: 22 testes sintéticos atualizados, incluindo "reserva assinada sem service role e sem leitura direta de tabelas" e "assinatura recusada interrompe o ciclo sem enviar nada". Suíte: 300 Vitest + 78 Node, tipos e compilação sem erros.
+
+## Limite real que permanece
+
+As tabelas técnicas do `net` (`http_request_queue`, `_http_response`) mantêm os `GRANT` a `PUBLIC` criados pela própria extensão. O perfil `postgres` do projeto **não** é membro do dono (`supabase_admin`), então o `REVOKE` não tem efeito — verificado. Mitigação comprovada: o esquema `net` não está exposto na API (`PGRST106 — Only the following schemas are exposed: public, graphql_public`), portanto não é alcançável com a chave pública. O item fica registrado como pendência de plataforma.
+
+Continua valendo: nada publicado, aviso desativado, batida periódica inativa, nenhum evento enviado, nenhum paciente histórico reprocessado, nenhum contato/CRM/mensagem alterado. Pin `@lovable.dev/vite-tanstack-config` restaurado em 2.13.1 (package.json e lockfile).
