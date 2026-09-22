@@ -110,9 +110,15 @@ export const obterAvisoJornada = createServerFn({ method: "POST" })
 async function prepararChaveProva(db: Awaited<ReturnType<typeof adminDb>>) {
   const secret = process.env["BIOREPORT_JORNADA_SIGNING_SECRET"] ?? "";
   if (!secret)
-    throw new IntakeError("not_configured", "O envio ao Jornada AI ainda não está configurado.", 503);
+    throw new IntakeError(
+      "not_configured",
+      "O envio ao Jornada AI ainda não está configurado.",
+      503,
+    );
   const { deriveClaimKey } = await import("./outbox.server");
-  const r = await db.rpc("jornada_outbox_provision_claim_key", { _key: await deriveClaimKey(secret) });
+  const r = await db.rpc("jornada_outbox_provision_claim_key", {
+    _key: await deriveClaimKey(secret),
+  });
   if (r.error) throw new IntakeError("db", "Não foi possível preparar o aviso automático.", 503);
 }
 

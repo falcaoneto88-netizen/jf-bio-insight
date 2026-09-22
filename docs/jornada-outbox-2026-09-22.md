@@ -95,3 +95,40 @@ Continua valendo: nada publicado, aviso desativado, batida periódica inativa, n
 - Tentativas esgotadas aparecem como falha que exige intervenção, sem prometer nova tentativa programada.
 
 Limites reais: as tabelas técnicas da extensão de rede mantêm o `GRANT PUBLIC` criado pela própria extensão e não podem ser revogadas com o perfil do projeto; o esquema não está exposto na API. Nada foi publicado, ativado ou enviado.
+
+## Revisão de 22/09/2026 — separação de autoridades (despertador × reserva)
+
+Motivo: a assinatura curta do despertador era aceita por `jornada_outbox_claim_signed`,
+que devolvia identificadores e reserva. Como o pg_net 0.20.3 segue redirects
+(CURLOPT_FOLLOWLOCATION=true), quem recebesse o desvio poderia usá-la na RPC pública.
+
+Correções aplicadas (prévia, integração desativada, nada publicado nem enviado):
+
+- `jornada_outbox_wake_signed(epoch,nonce,sig)`: única rotina que aceita a assinatura do
+  despertador. Retorna apenas verdadeiro/falso — nunca identificadores, reserva ou lease.
+- `jornada_events.proof_valid(purpose,payload,epoch,nonce,sig)`: prova do servidor com chave
+  distinta (vault `jornada_outbox_claim`), finalidade obrigatória (`claim`/`renew`/`complete`),
+  escopo organização+clínica ou id+lease no payload, janela de 120 s e nonce de uso único
+  (`jornada_events.proof_nonce`). Execução revogada de public/anon/authenticated.
+- `jornada_outbox_claim_signed(epoch,nonce,sig,org_fp,location_id,limit)`: exige prova `claim`;
+  não aceita assinatura de despertador; confere config, clínica e impressão digital imutável.
+- `jornada_outbox_renew_signed` e `jornada_outbox_complete_signed`: exigem prova `renew`/`complete`
+  ligada ao id, ao bilhete de reserva e ao estado final.
+- `jornada_outbox_claim` e `jornada_outbox_complete` (internas): EXECUTE revogado de
+  public/anon/authenticated.
+- `jornada_outbox_provision_claim_key(key)`: admin autenticado; grava a subchave derivada no cofre.
+  A derivação é feita no servidor a partir de `BIOREPORT_JORNADA_SIGNING_SECRET`
+  (`HMAC-SHA256(segredo, "jornada-outbox-claim-v1")`). Nenhum segredo é devolvido, impresso ou
+  copiado pelo usuário. Nenhum segredo de longo prazo ou identificador viaja no despertador.
+- Ativação: prepara a chave, confere `key_ready`, `config_ok` e `job_active`; com o job parado a
+  resposta NÃO declara sucesso.
+- `worker_url` corrigido para o domínio publicado real
+  `https://jf-bio-insight.lovable.app/api/public/hooks/jornada-outbox` (antes `project--…`).
+
+Pendência mantida: as tabelas técnicas do esquema `net` conservam GRANT PUBLIC criado pela
+extensão; o perfil do projeto não é membro do dono, logo o revoke é impossível. O esquema `net`
+não está exposto na API (PGRST106) e não foi relaxado.
+
+Testes: 4 novos casos de separação de autoridades (assinatura de despertador desviada não reserva;
+prova do servidor aceita; replay recusado; finalidade/escopo trocados recusados; derivação estável
+sem revelar o segredo), 34 no arquivo da fila e 312 na suíte.
