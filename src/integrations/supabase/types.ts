@@ -597,7 +597,21 @@ export type Database = {
           scope_location_id: string
         }[]
       }
+      jornada_outbox_claim_signed: {
+        Args: { _epoch: number; _limit?: number; _nonce: string; _sig: string }
+        Returns: Json
+      }
       jornada_outbox_complete: {
+        Args: {
+          _error?: string
+          _id: string
+          _lease: string
+          _receipt?: string
+          _status: string
+        }
+        Returns: boolean
+      }
+      jornada_outbox_complete_signed: {
         Args: {
           _error?: string
           _id: string
@@ -625,7 +639,6 @@ export type Database = {
         }[]
       }
       jornada_outbox_tick: { Args: never; Returns: number }
-      jornada_worker_auth: { Args: { _token: string }; Returns: boolean }
       open_consultation_journey: {
         Args: {
           _anamnese: Json
