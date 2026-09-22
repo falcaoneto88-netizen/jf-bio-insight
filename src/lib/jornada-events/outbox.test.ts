@@ -433,3 +433,89 @@ describe("autoridades separadas da fila", () => {
     expect(await deriveClaimKey("outro-segredo")).not.toBe(derivada);
   });
 });
+
+describe("queda na última tentativa", () => {
+  it("reserva vencida na última tentativa vira falha que exige intervenção", () => {
+    const recovered = recoverExpired({ attempts: 5, maxAttempts: 5, lastErrorCode: null });
+    expect(recovered).toEqual({
+      status: "exhausted",
+      lastErrorCode: "reserva_expirada_esgotada",
+    });
+    const info = syncInfo({
+      consultation_id: "11111111-1111-4111-8111-111111111111",
+      record_id: "22222222-2222-4222-8222-222222222222",
+      status: recovered.status,
+      attempts: 5,
+      last_attempt_at: "2026-09-22T10:00:00.000Z",
+      next_attempt_at: null,
+      last_error_code: recovered.lastErrorCode,
+      sent_at: null,
+      outbox_id: "33333333-3333-4333-8333-333333333333",
+    });
+    // Não fica presa como "na fila" nem promete nova tentativa automática.
+    expect(info.state).toBe("falha_intervencao");
+    expect(info.nextAttemptAt).toBeNull();
+    expect(info.note).toContain("interrompido durante a última tentativa");
+    expect(info.outboxId).toBe("33333333-3333-4333-8333-333333333333");
+  });
+
+  it("reserva vencida com tentativas restantes volta para a fila", () => {
+    expect(recoverExpired({ attempts: 2, maxAttempts: 5, lastErrorCode: null })).toEqual({
+      status: "pending",
+      lastErrorCode: "reserva_expirada",
+    });
+    expect(
+      recoverExpired({ attempts: 2, maxAttempts: 5, lastErrorCode: "envio_indisponivel" })
+        .lastErrorCode,
+    ).toBe("envio_indisponivel");
+  });
+});
+
+describe("listagem administrativa de envios", () => {
+  const raw = {
+    total: 3,
+    limit: 10,
+    offset: 0,
+    rows: [
+      {
+        outbox_id: "44444444-4444-4444-8444-444444444444",
+        consultation_id: "55555555-5555-4555-8555-555555555555",
+        record_id: "66666666-6666-4666-8666-666666666666",
+        status: "blocked",
+        attempts: 1,
+        max_attempts: 5,
+        enqueued_at: "2026-09-22T09:00:00.000Z",
+        last_attempt_at: "2026-09-22T09:01:00.000Z",
+        next_attempt_at: null,
+        last_error_code: "vinculo_ausente",
+        sent_at: null,
+      },
+    ],
+  };
+
+  it("mostra pendência de vínculo de consulta sem convite, com identificadores para reenfileirar", () => {
+    const queue = toAdminQueue(raw);
+    expect(queue.total).toBe(3);
+    const row = queue.rows[0]!;
+    expect(row.sync.state).toBe("pendencia_vinculo");
+    expect(row.sync.note).toBe(BLOCK_REASON["vinculo_ausente"]);
+    expect(row.consultationId).toBe("55555555-5555-4555-8555-555555555555");
+    expect(row.attempts).toBe(1);
+    expect(row.maxAttempts).toBe(5);
+    // Somente dados administrativos: nenhum campo clínico atravessa a listagem.
+    expect(Object.keys(row).sort()).toEqual([
+      "attempts",
+      "consultationId",
+      "enqueuedAt",
+      "maxAttempts",
+      "outboxId",
+      "recordId",
+      "sync",
+    ]);
+  });
+
+  it("resposta ilegível falha em vez de virar lista vazia", () => {
+    expect(() => toAdminQueue({ total: 1, limit: 10, offset: 0 })).toThrow();
+    expect(() => toAdminQueue({ ...raw, rows: [{ outbox_id: "x" }] })).toThrow();
+  });
+});
