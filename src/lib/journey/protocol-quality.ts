@@ -248,41 +248,18 @@ export function protocolOpenWarnings(protocolo: Protocolo): string[] {
 /* --------------------- integridade dos protocolos --------------------- */
 
 /**
- * Secção de prescrições recriada deterministicamente a partir das entradas
- * confirmadas e completas. Apagar ou editar uma entrada apaga o texto antigo,
- * porque a secção é sempre reconstruída — nunca editada à parte.
+ * Secções de prescrição (oral e injetável) recriadas deterministicamente a
+ * partir das entradas confirmadas e completas, pela montagem central. Apagar
+ * ou editar uma entrada apaga o texto antigo, porque as secções são sempre
+ * reconstruídas — nunca editadas à parte, e sem deixar a tabela única antiga.
  * Documentos legados (sem "generator") não são tocados.
  */
 export function rebuildPrescriptionSection(protocolo: Protocolo): Protocolo {
   if (!isGeneratedProtocol(protocolo)) return protocolo;
-  const t = documentLabels(protocolo.locale ?? "pt-BR");
-  const sections = protocolo.sections.filter(
-    (s) => s.kind !== "prescription" && s.id !== "prescricoes",
+  const sections = withoutPrescriptionSections(protocolo.sections);
+  sections.push(
+    ...buildPrescriptionSections(protocolo.prescriptions, protocolo.locale ?? "pt-BR"),
   );
-  const emitidas = (protocolo.prescriptions ?? []).filter(
-    (p) => p.substancia.trim() && p.confirmada && prescriptionIsComplete(p),
-  );
-  if (emitidas.length) {
-    const section: ProtocolSection = {
-      id: "prescricoes",
-      title: t.prescription,
-      kind: "prescription",
-      blocks: [
-        {
-          type: "table",
-          columns: [t.name, t.dose, t.unit, t.frequency, t.reason],
-          rows: emitidas.map((p) => [
-            p.substancia.trim(),
-            p.dose.trim(),
-            p.via.trim(),
-            p.frequencia.trim(),
-            p.observacoes.trim(),
-          ]),
-        },
-      ],
-    };
-    sections.push(section);
-  }
   return { ...protocolo, sections };
 }
 
