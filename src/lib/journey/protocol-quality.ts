@@ -8,8 +8,15 @@
  * - avisos (protocolOpenWarnings): podem ser marcados como revistos.
  */
 import { hideMealTimes } from "./meal-presentation";
-import type { PrescriptionEntry, ProtocolBlock, ProtocolSection, Protocolo } from "./types";
-import { documentLabels } from "./document-locale";
+import type { PrescriptionEntry, ProtocolBlock, Protocolo } from "./types";
+import {
+  buildPrescriptionSections,
+  prescriptionFields,
+  prescriptionIsComplete as entryIsComplete,
+  prescriptionIssues,
+  withoutPrescriptionSections,
+} from "./prescription-sections";
+import { missingSubstitutionCategories } from "./substitution-categories";
 import { emptyProtocolo } from "./types";
 
 const UNITS =
