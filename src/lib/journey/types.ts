@@ -273,10 +273,19 @@ export const protocolSectionSchema = z.object({
 export type ProtocolSection = z.infer<typeof protocolSectionSchema>;
 
 export const prescriptionEntrySchema = z.object({
+  /**
+   * Grupo escolhido pelo profissional. Opcional e SEM default: entradas
+   * legadas continuam a serializar igual e mantêm os hashes dos documentos
+   * antigos. Sem grupo a entrada fica "classificação pendente" — a via nunca
+   * é deduzida pelo nome da substância.
+   */
+  grupo: z.enum(["oral", "injetavel"]).optional(),
   substancia: z.string().trim().max(200).default(""),
   dose: z.string().trim().max(200).default(""),
   via: z.string().trim().max(120).default(""),
   frequencia: z.string().trim().max(200).default(""),
+  /** Horário do próprio fármaco/suplemento. Opcional e sem default. */
+  horario: z.string().trim().max(200).optional(),
   observacoes: z.string().trim().max(600).default(""),
   /** Confirmação individual do profissional; sem ela a entrada não é emitida. */
   confirmada: z.boolean().default(false),
