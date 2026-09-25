@@ -39,7 +39,7 @@ export const protocolGenerationRequestSchema = z.object({
   mealCount: z.number().int().min(1).max(12).optional(),
   energyInput: energyInputSchema.optional(),
   liquidMealNumbers: z.array(z.number().int().min(1).max(12)).max(12).optional(),
-  prescriptions: z.array(prescriptionEntrySchema).max(20).optional(),
+  prescriptions: z.array(prescriptionEntrySchema).max(60).optional(),
 });
 export type ProtocolGenerationRequest = z.infer<typeof protocolGenerationRequestSchema>;
 

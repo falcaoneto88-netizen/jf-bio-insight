@@ -8,8 +8,15 @@
  * - avisos (protocolOpenWarnings): podem ser marcados como revistos.
  */
 import { hideMealTimes } from "./meal-presentation";
-import type { PrescriptionEntry, ProtocolBlock, ProtocolSection, Protocolo } from "./types";
-import { documentLabels } from "./document-locale";
+import type { PrescriptionEntry, ProtocolBlock, Protocolo } from "./types";
+import {
+  buildPrescriptionSections,
+  prescriptionFields,
+  prescriptionIsComplete as entryIsComplete,
+  prescriptionIssues,
+  withoutPrescriptionSections,
+} from "./prescription-sections";
+import { missingSubstitutionCategories } from "./substitution-categories";
 import { emptyProtocolo } from "./types";
 
 const UNITS =
@@ -74,21 +81,22 @@ export function preserveGeneratorMarker(
 export const REGENERATION_REQUIRED_ISSUE =
   "Os dados de entrada mudaram depois da geração (objetivo, meta, refeições, energia ou instruções). Gere o protocolo novamente antes de aprovar: o plano alimentar atual foi calculado com outros dados.";
 
-/** Uma prescrição só entra no documento com substância, dose, via e frequência. */
-export function prescriptionIsComplete(p: PrescriptionEntry): boolean {
-  return Boolean(p.substancia.trim() && p.dose.trim() && p.via.trim() && p.frequencia.trim());
-}
+/** Uma prescrição só entra no documento com grupo, substância, dose, via e frequência. */
+export const prescriptionIsComplete = entryIsComplete;
 
-/** Identidade clínica da entrada: mudar qualquer destes campos anula a confirmação. */
+/**
+ * Identidade clínica da entrada: grupo, substância, dose, via, frequência,
+ * horário e observações. Mudar qualquer um anula a confirmação.
+ */
 export function prescriptionSignature(p: PrescriptionEntry): string {
-  return [p.substancia, p.dose, p.via, p.frequencia]
+  return prescriptionFields(p)
     .map((v) => v.trim().toLowerCase().replace(/\s+/g, " "))
     .join("|");
 }
 
 /**
- * Regras do servidor, aplicadas mesmo a patches diretos: editar substância,
- * dose, via ou frequência retira a confirmação individual.
+ * Regras do servidor, aplicadas mesmo a patches diretos: editar qualquer campo
+ * clínico da entrada retira a confirmação individual.
  */
 export function applyPrescriptionRules(
   current: PrescriptionEntry[] | undefined,
@@ -104,6 +112,46 @@ export function applyPrescriptionRules(
   });
 }
 
+/** Geradores que exigem as 4 categorias na tabela geral de substituições. */
+export function requiresGeneralSubstitutionCategories(protocolo: Protocolo): boolean {
+  const generator = protocolo.generator ?? "";
+  return /-v[2-9]$/.test(generator) || /-v\d\d+$/.test(generator);
+}
+
+/** Linhas da tabela geral de substituições (categoria + opções). */
+function generalSubstitutionRows(protocolo: Protocolo): { label: string; options: string[] }[] {
+  const section = protocolo.sections.find(
+    (s) => s.kind === "substitutions" || s.id === "substituicoes",
+  );
+  if (!section) return [];
+  const rows: { label: string; options: string[] }[] = [];
+  for (const block of section.blocks) {
+    if (block.type === "table") {
+      for (const row of block.rows)
+        rows.push({
+          label: String(row[0] ?? ""),
+          options: String(row[1] ?? "")
+            .split(/[;\n]/)
+            .map((o) => o.trim())
+            .filter(Boolean),
+        });
+    }
+    if (block.type === "list") {
+      for (const item of block.items) {
+        const [label, rest] = item.split(":");
+        rows.push({
+          label: String(label ?? ""),
+          options: String(rest ?? "")
+            .split(/[;,]/)
+            .map((o) => o.trim())
+            .filter(Boolean),
+        });
+      }
+    }
+  }
+  return rows;
+}
+
 export function protocolEssentialIssues(protocolo: Protocolo): string[] {
   const issues: string[] = [];
 
@@ -115,15 +163,21 @@ export function protocolEssentialIssues(protocolo: Protocolo): string[] {
       "Sem meta calórica válida: defina a meta profissional ou complete o cálculo interno antes de aprovar.",
     );
 
-  const entradas = (protocolo.prescriptions ?? []).filter((p) => p.substancia.trim());
-  for (const p of entradas.filter((p) => !p.confirmada))
-    issues.push(
-      `Prescrição por confirmar individualmente: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
-    );
-  for (const p of entradas.filter((p) => p.confirmada && !prescriptionIsComplete(p)))
-    issues.push(
-      `Prescrição incompleta: ${p.substancia.trim()} precisa de dose, via e frequência antes de ser confirmada.`,
-    );
+  issues.push(...prescriptionIssues(protocolo.prescriptions));
+
+  if (requiresGeneralSubstitutionCategories(protocolo)) {
+    const rows = generalSubstitutionRows(protocolo);
+    if (!rows.length)
+      issues.push(
+        "Tabela geral de substituições vazia: liste Proteínas, Carboidratos, Gorduras boas e Frutas liberadas para este paciente.",
+      );
+    else
+      for (const missing of missingSubstitutionCategories(rows))
+        issues.push(
+          `Tabela geral de substituições: falta a categoria ${missing.label}. Preencha com as opções liberadas, respeitando as restrições alimentares.`,
+        );
+  }
+
 
   const meals = protocolo.sections
     .flatMap((s) => s.blocks)
@@ -194,41 +248,18 @@ export function protocolOpenWarnings(protocolo: Protocolo): string[] {
 /* --------------------- integridade dos protocolos --------------------- */
 
 /**
- * Secção de prescrições recriada deterministicamente a partir das entradas
- * confirmadas e completas. Apagar ou editar uma entrada apaga o texto antigo,
- * porque a secção é sempre reconstruída — nunca editada à parte.
+ * Secções de prescrição (oral e injetável) recriadas deterministicamente a
+ * partir das entradas confirmadas e completas, pela montagem central. Apagar
+ * ou editar uma entrada apaga o texto antigo, porque as secções são sempre
+ * reconstruídas — nunca editadas à parte, e sem deixar a tabela única antiga.
  * Documentos legados (sem "generator") não são tocados.
  */
 export function rebuildPrescriptionSection(protocolo: Protocolo): Protocolo {
   if (!isGeneratedProtocol(protocolo)) return protocolo;
-  const t = documentLabels(protocolo.locale ?? "pt-BR");
-  const sections = protocolo.sections.filter(
-    (s) => s.kind !== "prescription" && s.id !== "prescricoes",
+  const sections = withoutPrescriptionSections(protocolo.sections);
+  sections.push(
+    ...buildPrescriptionSections(protocolo.prescriptions, protocolo.locale ?? "pt-BR"),
   );
-  const emitidas = (protocolo.prescriptions ?? []).filter(
-    (p) => p.substancia.trim() && p.confirmada && prescriptionIsComplete(p),
-  );
-  if (emitidas.length) {
-    const section: ProtocolSection = {
-      id: "prescricoes",
-      title: t.prescription,
-      kind: "prescription",
-      blocks: [
-        {
-          type: "table",
-          columns: [t.name, t.dose, t.unit, t.frequency, t.reason],
-          rows: emitidas.map((p) => [
-            p.substancia.trim(),
-            p.dose.trim(),
-            p.via.trim(),
-            p.frequencia.trim(),
-            p.observacoes.trim(),
-          ]),
-        },
-      ],
-    };
-    sections.push(section);
-  }
   return { ...protocolo, sections };
 }
 

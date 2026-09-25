@@ -273,10 +273,19 @@ export const protocolSectionSchema = z.object({
 export type ProtocolSection = z.infer<typeof protocolSectionSchema>;
 
 export const prescriptionEntrySchema = z.object({
+  /**
+   * Grupo escolhido pelo profissional. Opcional e SEM default: entradas
+   * legadas continuam a serializar igual e mantêm os hashes dos documentos
+   * antigos. Sem grupo a entrada fica "classificação pendente" — a via nunca
+   * é deduzida pelo nome da substância.
+   */
+  grupo: z.enum(["oral", "injetavel"]).optional(),
   substancia: z.string().trim().max(200).default(""),
   dose: z.string().trim().max(200).default(""),
   via: z.string().trim().max(120).default(""),
   frequencia: z.string().trim().max(200).default(""),
+  /** Horário do próprio fármaco/suplemento. Opcional e sem default. */
+  horario: z.string().trim().max(200).optional(),
   observacoes: z.string().trim().max(600).default(""),
   /** Confirmação individual do profissional; sem ela a entrada não é emitida. */
   confirmada: z.boolean().default(false),
@@ -305,7 +314,7 @@ export const protocolSchema = z.object({
    * Prescrições escritas pelo profissional. A IA nunca cria, completa nem
    * remonta medicação: só entradas confirmadas aqui entram no documento.
    */
-  prescriptions: z.array(prescriptionEntrySchema).max(20).optional(),
+  prescriptions: z.array(prescriptionEntrySchema).max(60).optional(),
   /**
    * Marcado pelo servidor quando os dados de entrada mudam depois da geração.
    * Só uma nova geração pelo caminho do servidor o limpa: um patch do cliente
