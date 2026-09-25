@@ -314,7 +314,7 @@ export const protocolSchema = z.object({
    * Prescrições escritas pelo profissional. A IA nunca cria, completa nem
    * remonta medicação: só entradas confirmadas aqui entram no documento.
    */
-  prescriptions: z.array(prescriptionEntrySchema).max(20).optional(),
+  prescriptions: z.array(prescriptionEntrySchema).max(60).optional(),
   /**
    * Marcado pelo servidor quando os dados de entrada mudam depois da geração.
    * Só uma nova geração pelo caminho do servidor o limpa: um patch do cliente
