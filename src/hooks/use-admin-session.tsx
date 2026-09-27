@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { clearReportStoreOnLogout } from "@/store/report-store";
 
 export type AdminSessionState = {
   /** true enquanto a sessão ainda está a ser verificada */
@@ -46,6 +47,7 @@ export function useAdminSession(): AdminSessionState {
 
     void check();
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") clearReportStoreOnLogout();
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         void check();
       }

@@ -397,7 +397,7 @@ export const useReportStore = create<ReportState>()(
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
-      version: 7,
+      version: 8,
       migrate: (_persistedState, version) => {
         if (version < 1) {
           return {
@@ -423,22 +423,18 @@ export const useReportStore = create<ReportState>()(
             s.clinicalData = { ...s.clinicalData, mainGoal: "recomposicao" };
           }
         }
+        // v8: dados clínicos (consulta, arquivo, bioimpedância, formulário,
+        // exame anterior, prescrição) deixam de ser guardados no navegador;
+        // o que estava salvo é descartado nesta migração.
         return {
-          ...s,
-          prescription: s.prescription ?? null,
           reportOptions: normalizeReportOptions(s.reportOptions),
           dietCustomization: normalizeDietCustomization(s.dietCustomization),
           mealTimeOverrides: normalizeMealTimeOverrides(s.mealTimeOverrides),
           extraMeals: normalizeExtraMeals(s.extraMeals),
         };
       },
+      // Persiste apenas preferências de layout — nunca dados clínicos.
       partialize: (state) => ({
-        consultation: state.consultation,
-        file: state.file,
-        bodyComposition: normalizeBodyComposition(state.bodyComposition),
-        clinicalData: state.clinicalData,
-        previousExam: state.previousExam,
-        prescription: state.prescription,
         reportOptions: state.reportOptions,
         dietCustomization: state.dietCustomization,
         mealTimeOverrides: state.mealTimeOverrides,
@@ -458,3 +454,9 @@ export const useReportStore = create<ReportState>()(
     },
   ),
 );
+
+/** Limpa o rascunho do fluxo antigo (memória e navegador) ao terminar a sessão. */
+export function clearReportStoreOnLogout() {
+  useReportStore.getState().reset();
+  if (typeof window !== "undefined") window.localStorage.removeItem("jf-bioreport-draft");
+}
