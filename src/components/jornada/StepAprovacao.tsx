@@ -7,7 +7,65 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { aprovarJornada } from "@/lib/journey.functions";
+import {
+  prescriptionIsComplete,
+  prescriptionStarted,
+} from "@/lib/journey/prescription-sections";
+import {
+  generalSubstitutionRows,
+  requiresGeneralSubstitutionCategories,
+} from "@/lib/journey/protocol-quality";
+import { missingSubstitutionCategories } from "@/lib/journey/substitution-categories";
 import type { Journey } from "@/lib/journey/types";
+
+const NADA = "Nenhuma cadastrada — não será incluída no documento.";
+
+/** Resumo dos 3 blocos do protocolo, equivalente ao da etapa Protocolo. */
+function BlocosResumo({ journey }: { journey: Journey }) {
+  const protocolo = journey.protocolo;
+  if (!protocolo) return null;
+  const entradas = protocolo.prescriptions ?? [];
+  const resumo = (grupo: "oral" | "injetavel") => {
+    const doGrupo = entradas.filter((p) => p.grupo === grupo);
+    if (!doGrupo.length) return NADA;
+    const emitidas = doGrupo.filter((p) => p.confirmada && prescriptionIsComplete(p)).length;
+    return `${emitidas} de ${doGrupo.length} entradas confirmadas entram no documento.`;
+  };
+  const semGrupo = entradas.filter((p) => !p.grupo && prescriptionStarted(p)).length;
+  const faltas = requiresGeneralSubstitutionCategories(protocolo)
+    ? missingSubstitutionCategories(generalSubstitutionRows(protocolo))
+    : [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-serif text-lg">Blocos do protocolo</CardTitle>
+        <CardDescription>Este resumo nunca faz parte do documento.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <p>
+          <strong className="text-foreground">Tabela geral de substituições:</strong>{" "}
+          {faltas.length
+            ? `faltam as categorias ${faltas.map((f) => f.label).join(", ")}.`
+            : "categorias completas."}
+        </p>
+        <p>
+          <strong className="text-foreground">Prescrição e suplementação oral:</strong>{" "}
+          {resumo("oral")}
+        </p>
+        <p>
+          <strong className="text-foreground">Prescrições injetáveis:</strong> {resumo("injetavel")}
+        </p>
+        {semGrupo > 0 && (
+          <p>
+            {semGrupo} entrada(s) com classificação pendente: indique oral ou injetável na etapa
+            Protocolo.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export function StepAprovacao({
   journey,
@@ -92,6 +150,8 @@ export function StepAprovacao({
           )}
         </CardContent>
       </Card>
+
+      <BlocosResumo journey={journey} />
 
       {(issues.blocking.length > 0 ||
         issues.warnings.length > 0 ||

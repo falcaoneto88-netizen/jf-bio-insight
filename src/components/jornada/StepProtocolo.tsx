@@ -11,7 +11,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { prepararProtocolo } from "@/lib/journey.functions";
 import { energyInternalSummary, resolveEnergyForBio } from "@/lib/journey/energy";
-import { protocolEssentialIssues, protocolOpenWarnings } from "@/lib/journey/protocol-quality";
+import {
+  generalSubstitutionRows,
+  protocolEssentialIssues,
+  protocolOpenWarnings,
+  requiresGeneralSubstitutionCategories,
+} from "@/lib/journey/protocol-quality";
+import {
+  prescriptionIsComplete,
+  prescriptionIssues,
+  prescriptionStarted,
+  type PrescriptionGroup,
+} from "@/lib/journey/prescription-sections";
+import { missingSubstitutionCategories } from "@/lib/journey/substitution-categories";
 import {
   OBJETIVOS,
   CURRENT_PROTOCOL_TEMPLATE_VERSION,
@@ -41,6 +53,9 @@ function parseMealNumbers(text: string): number[] {
   ].sort((a, b) => a - b);
 }
 
+/** Limite de entradas, igual em UI, schema, servidor e MCP. */
+export const MAX_PRESCRIPTIONS = 60;
+
 const emptyPrescription: PrescriptionEntry = {
   substancia: "",
   dose: "",
@@ -49,6 +64,97 @@ const emptyPrescription: PrescriptionEntry = {
   observacoes: "",
   confirmada: false,
 };
+
+/** Campos de uma prescrição. Nenhum fármaco, dose ou via é sugerido por omissão. */
+function PrescriptionFields({
+  p,
+  onPatch,
+  onRemove,
+}: {
+  p: PrescriptionEntry;
+  onPatch: (patch: Partial<PrescriptionEntry>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1 text-sm">
+          <span>Grupo</span>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={p.grupo ?? ""}
+            onChange={(e) =>
+              onPatch({
+                ...(e.target.value
+                  ? { grupo: e.target.value as PrescriptionGroup }
+                  : { grupo: undefined }),
+              })
+            }
+          >
+            <option value="">Classificação pendente</option>
+            <option value="oral">Oral</option>
+            <option value="injetavel">Injetável</option>
+          </select>
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Substância</span>
+          <Input
+            value={p.substancia}
+            maxLength={200}
+            onChange={(e) => onPatch({ substancia: e.target.value })}
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Dose</span>
+          <Input value={p.dose} maxLength={200} onChange={(e) => onPatch({ dose: e.target.value })} />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Via</span>
+          <Input value={p.via} maxLength={120} onChange={(e) => onPatch({ via: e.target.value })} />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Frequência</span>
+          <Input
+            value={p.frequencia}
+            maxLength={200}
+            onChange={(e) => onPatch({ frequencia: e.target.value })}
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Horário (opcional)</span>
+          <Input
+            value={p.horario ?? ""}
+            maxLength={200}
+            onChange={(e) => onPatch({ horario: e.target.value })}
+          />
+        </label>
+      </div>
+      <label className="space-y-1 text-sm">
+        <span>Observações</span>
+        <Input
+          value={p.observacoes}
+          maxLength={600}
+          onChange={(e) => onPatch({ observacoes: e.target.value })}
+        />
+      </label>
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={p.confirmada}
+            disabled={!prescriptionIsComplete(p)}
+            onChange={(e) => onPatch({ confirmada: e.target.checked })}
+          />
+          <span className="text-muted-foreground">Confirmo esta prescrição individualmente.</span>
+        </label>
+        <Button variant="ghost" size="sm" onClick={onRemove}>
+          Remover
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function StepProtocolo({
   journey,
@@ -102,6 +208,19 @@ export function StepProtocolo({
   const essenciais = draft.generator ? protocolEssentialIssues(draft) : [];
   const avisos = draft.generator ? protocolOpenWarnings(draft) : draft.pendencias;
   const resolvidas = draft.pendenciasResolvidas ?? [];
+
+  const indexadas = prescriptions.map((p, index) => ({ p, index }));
+  const porGrupo = (grupo: PrescriptionGroup) => indexadas.filter((e) => e.p.grupo === grupo);
+  const semClassificacao = indexadas.filter((e) => !e.p.grupo && prescriptionStarted(e.p));
+  const exigeCategorias = requiresGeneralSubstitutionCategories(draft);
+  const tabelaGeralFaltas = exigeCategorias
+    ? missingSubstitutionCategories(generalSubstitutionRows(draft))
+    : [];
+  const resumoGrupo = (grupo: PrescriptionGroup) => {
+    const entradas = indexadas.filter((e) => e.p.grupo === grupo).map((e) => e.p);
+    const emitidas = entradas.filter((p) => p.confirmada && prescriptionIsComplete(p)).length;
+    return { total: entradas.length, emitidas, pendencias: prescriptionIssues(entradas) };
+  };
 
   const setPrescription = (index: number, patch: Partial<PrescriptionEntry>) =>
     onDraftChange({
@@ -328,15 +447,20 @@ export function StepProtocolo({
 
           <div className="space-y-1.5">
             <Label htmlFor="instrucoes" className="text-xs text-muted-foreground">
-              Instruções profissionais (única fonte do que pode ser prescrito)
+              Instruções profissionais (plano alimentar e rotina)
             </Label>
             <Textarea
               id="instrucoes"
               rows={6}
               value={draft.instrucoes}
-              placeholder="Refeições, quantidades, preparo, substituições, suplementos e seus horários, condutas…"
+              placeholder="Refeições, quantidades, preparo, substituições, hidratação, sono e rotina…"
               onChange={(e) => onDraftChange({ ...draft, instrucoes: e.target.value })}
             />
+            <p className="text-xs text-muted-foreground">
+              Este campo orienta apenas o plano alimentar e a rotina. Medicação, suplementos e
+              injetáveis não são lidos daqui: têm de ser inseridos e confirmados nos blocos
+              próprios de prescrição, mais abaixo.
+            </p>
           </div>
           <Button variant="outline" onClick={() => void preparar()} disabled={preparing || saving}>
             <Sparkles className="mr-1 h-4 w-4" />
@@ -353,109 +477,128 @@ export function StepProtocolo({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="bloco-tabela-geral">
         <CardHeader>
-          <CardTitle className="font-serif text-lg">Prescrições (escritas por si)</CardTitle>
+          <CardTitle className="font-serif text-lg">Tabela geral de substituições</CardTitle>
           <CardDescription>
-            Cada entrada precisa de substância, dose, via e frequência, e de confirmação individual.
-            Sem confirmação não entra no documento nem se aprova.
+            Lista geral de alimentos liberados para este paciente, com as categorias Proteínas,
+            Carboidratos, Gorduras boas e Frutas. É diferente das substituições por refeição (que
+            exigem 3 opções distintas com porção) e pode ser corrigida aqui no editor abaixo, sem
+            gerar o protocolo de novo.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {prescriptions.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhuma prescrição registada.</p>
+        <CardContent className="space-y-2 text-sm">
+          {!draft.generator ? (
+            <p className="text-muted-foreground">
+              Ainda sem protocolo gerado: a tabela aparece depois da geração.
+            </p>
+          ) : tabelaGeralFaltas.length ? (
+            tabelaGeralFaltas.map((f) => (
+              <p key={f.key} className="text-muted-foreground">
+                • Falta a categoria <strong className="text-foreground">{f.label}</strong>, com
+                opções que respeitem as restrições alimentares.
+              </p>
+            ))
+          ) : (
+            <p className="text-muted-foreground">
+              {exigeCategorias
+                ? "As quatro categorias estão preenchidas."
+                : "Documento de versão anterior: as categorias não são reinterpretadas."}
+            </p>
           )}
-          {prescriptions.map((p, index) => (
-            <div key={index} className="space-y-3 rounded-md border border-border p-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1 text-sm">
-                  <span>Substância</span>
-                  <Input
-                    value={p.substancia}
-                    maxLength={200}
-                    onChange={(e) => setPrescription(index, { substancia: e.target.value })}
-                  />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span>Dose</span>
-                  <Input
-                    value={p.dose}
-                    maxLength={200}
-                    onChange={(e) => setPrescription(index, { dose: e.target.value })}
-                  />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span>Via</span>
-                  <Input
-                    value={p.via}
-                    maxLength={120}
-                    onChange={(e) => setPrescription(index, { via: e.target.value })}
-                  />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span>Frequência</span>
-                  <Input
-                    value={p.frequencia}
-                    maxLength={200}
-                    onChange={(e) => setPrescription(index, { frequencia: e.target.value })}
-                  />
-                </label>
-              </div>
-              <label className="space-y-1 text-sm">
-                <span>Observações</span>
-                <Input
-                  value={p.observacoes}
-                  maxLength={600}
-                  onChange={(e) => setPrescription(index, { observacoes: e.target.value })}
-                />
-              </label>
-              <div className="flex items-center justify-between gap-3">
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={p.confirmada}
-                    disabled={
-                      !p.substancia.trim() ||
-                      !p.dose.trim() ||
-                      !p.via.trim() ||
-                      !p.frequencia.trim()
-                    }
-                    onChange={(e) => setPrescription(index, { confirmada: e.target.checked })}
-                  />
-                  <span className="text-muted-foreground">
-                    Confirmo esta prescrição individualmente.
-                  </span>
-                </label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    onDraftChange({
-                      ...draft,
-                      prescriptions: prescriptions.filter((_, i) => i !== index),
-                    })
-                  }
-                >
-                  Remover
-                </Button>
-              </div>
-            </div>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              onDraftChange({
-                ...draft,
-                prescriptions: [...prescriptions, { ...emptyPrescription }],
-              })
-            }
-          >
-            Adicionar prescrição
-          </Button>
         </CardContent>
       </Card>
+
+      {(["oral", "injetavel"] as const).map((grupo) => (
+        <Card key={grupo} id={grupo === "oral" ? "bloco-oral" : "bloco-injetavel"}>
+          <CardHeader>
+            <CardTitle className="font-serif text-lg">
+              {grupo === "oral" ? "Prescrição e suplementação oral" : "Prescrições injetáveis"}
+            </CardTitle>
+            <CardDescription>
+              Escritas exclusivamente por si. Cada entrada precisa de grupo, substância, dose, via e
+              frequência, e de confirmação individual. O horário é opcional. Sem confirmação não
+              entra no documento nem se aprova.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {porGrupo(grupo).length > 0 && (
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>
+                  {resumoGrupo(grupo).emitidas} de {resumoGrupo(grupo).total} entradas confirmadas
+                  entram no documento.
+                </p>
+                {resumoGrupo(grupo).pendencias.map((m, i) => (
+                  <p key={i}>• {m}</p>
+                ))}
+              </div>
+            )}
+            {porGrupo(grupo).length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma cadastrada — não será incluída no documento.
+              </p>
+            )}
+            {porGrupo(grupo).map(({ p, index }) => (
+              <PrescriptionFields
+                key={index}
+                p={p}
+                onPatch={(patch) => setPrescription(index, patch)}
+                onRemove={() =>
+                  onDraftChange({
+                    ...draft,
+                    prescriptions: prescriptions.filter((_, i) => i !== index),
+                  })
+                }
+              />
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={prescriptions.length >= MAX_PRESCRIPTIONS}
+              onClick={() =>
+                onDraftChange({
+                  ...draft,
+                  prescriptions: [...prescriptions, { ...emptyPrescription, grupo }],
+                })
+              }
+            >
+              Adicionar prescrição
+            </Button>
+            {prescriptions.length >= MAX_PRESCRIPTIONS && (
+              <p className="text-xs text-muted-foreground">
+                Limite de {MAX_PRESCRIPTIONS} prescrições por protocolo atingido.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+
+      {semClassificacao.length > 0 && (
+        <Card className="border-destructive/60">
+          <CardHeader>
+            <CardTitle className="font-serif text-lg">Classificação pendente</CardTitle>
+            <CardDescription>
+              Entradas anteriores sem grupo. Indique se cada uma é oral ou injetável: a via nunca é
+              deduzida pelo nome da substância.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {semClassificacao.map(({ p, index }) => (
+              <PrescriptionFields
+                key={index}
+                p={p}
+                onPatch={(patch) => setPrescription(index, patch)}
+                onRemove={() =>
+                  onDraftChange({
+                    ...draft,
+                    prescriptions: prescriptions.filter((_, i) => i !== index),
+                  })
+                }
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {essenciais.length > 0 && (
         <Card className="border-destructive/60">

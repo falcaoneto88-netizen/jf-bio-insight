@@ -119,7 +119,7 @@ export function requiresGeneralSubstitutionCategories(protocolo: Protocolo): boo
 }
 
 /** Linhas da tabela geral de substituições (categoria + opções). */
-function generalSubstitutionRows(protocolo: Protocolo): { label: string; options: string[] }[] {
+export function generalSubstitutionRows(protocolo: Protocolo): { label: string; options: string[] }[] {
   const section = protocolo.sections.find(
     (s) => s.kind === "substitutions" || s.id === "substituicoes",
   );
