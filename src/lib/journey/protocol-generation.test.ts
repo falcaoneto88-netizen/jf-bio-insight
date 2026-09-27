@@ -84,7 +84,12 @@ const output = (meals = 4): ProtocolAiOutput => ({
   orientacoesGerais: ["Beber água ao longo do dia."],
   orientacoesAtividade: ["Manter a atividade já relatada."],
   refeicoes: Array.from({ length: meals }, (_, i) => meal(i + 1)),
-  substituicoesGerais: [{ categoria: "Proteínas", opcoes: ["Frango 120 g", "Peixe 130 g"] }],
+  substituicoesGerais: [
+    { categoria: "Proteínas", opcoes: ["Frango 120 g", "Peixe 130 g"] },
+    { categoria: "Carboidratos", opcoes: ["Arroz 100 g", "Batata 150 g"] },
+    { categoria: "Gorduras boas", opcoes: ["Azeite 10 ml", "Castanhas 20 g"] },
+    { categoria: "Frutas", opcoes: ["Banana 1 unidade", "Maçã 1 unidade"] },
+  ],
   pendencias: [],
 });
 
@@ -423,6 +428,7 @@ describe("geração do protocolo", () => {
         ...request,
         prescriptions: [
           {
+            grupo: "oral" as const,
             substancia: "Substância fictícia",
             dose: "10 mg",
             via: "oral",
@@ -444,6 +450,7 @@ describe("geração do protocolo", () => {
         ...request,
         prescriptions: [
           {
+            grupo: "oral" as const,
             substancia: "Substância fictícia",
             dose: "10 mg",
             via: "oral",
