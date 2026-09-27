@@ -182,8 +182,10 @@ export function renderProtocolSections(protocolo: Protocolo): string {
         .filter(Boolean)
         .join("\n");
       if (!body) return "";
-      // Títulos profissionais livres são preservados; categorias explícitas usam o idioma selecionado.
-      const title = section.kind && kind !== "other" ? t[kind] : section.title;
+      // Títulos profissionais livres são preservados; categorias explícitas usam o idioma
+      // selecionado. As prescrições mantêm o título próprio de cada bloco (oral/injetável).
+      const title =
+        section.kind && kind !== "other" && kind !== "prescription" ? t[kind] : section.title;
       return `<section class="protocol-section"><h2>${escapeHtml(title)}</h2><div class="content-card">${body}</div></section>`;
     })
     .filter(Boolean)
