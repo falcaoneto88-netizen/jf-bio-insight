@@ -216,7 +216,11 @@ export function StepProtocolo({
   const tabelaGeralFaltas = exigeCategorias
     ? missingSubstitutionCategories(generalSubstitutionRows(draft))
     : [];
-  const pendenciasPrescricoes = prescriptionIssues(prescriptions);
+  const resumoGrupo = (grupo: PrescriptionGroup) => {
+    const entradas = indexadas.filter((e) => e.p.grupo === grupo).map((e) => e.p);
+    const emitidas = entradas.filter((p) => p.confirmada && prescriptionIsComplete(p)).length;
+    return { total: entradas.length, emitidas, pendencias: prescriptionIssues(entradas) };
+  };
 
   const setPrescription = (index: number, patch: Partial<PrescriptionEntry>) =>
     onDraftChange({
@@ -513,6 +517,17 @@ export function StepProtocolo({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {porGrupo(grupo).length > 0 && (
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>
+                  {resumoGrupo(grupo).emitidas} de {resumoGrupo(grupo).total} entradas confirmadas
+                  entram no documento.
+                </p>
+                {resumoGrupo(grupo).pendencias.map((m, i) => (
+                  <p key={i}>• {m}</p>
+                ))}
+              </div>
+            )}
             {porGrupo(grupo).length === 0 && (
               <p className="text-sm text-muted-foreground">
                 Nenhuma cadastrada — não será incluída no documento.
