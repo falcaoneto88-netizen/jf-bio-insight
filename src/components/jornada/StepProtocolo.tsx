@@ -447,15 +447,20 @@ export function StepProtocolo({
 
           <div className="space-y-1.5">
             <Label htmlFor="instrucoes" className="text-xs text-muted-foreground">
-              Instruções profissionais (única fonte do que pode ser prescrito)
+              Instruções profissionais (plano alimentar e rotina)
             </Label>
             <Textarea
               id="instrucoes"
               rows={6}
               value={draft.instrucoes}
-              placeholder="Refeições, quantidades, preparo, substituições, suplementos e seus horários, condutas…"
+              placeholder="Refeições, quantidades, preparo, substituições, hidratação, sono e rotina…"
               onChange={(e) => onDraftChange({ ...draft, instrucoes: e.target.value })}
             />
+            <p className="text-xs text-muted-foreground">
+              Este campo orienta apenas o plano alimentar e a rotina. Medicação, suplementos e
+              injetáveis não são lidos daqui: têm de ser inseridos e confirmados nos blocos
+              próprios de prescrição, mais abaixo.
+            </p>
           </div>
           <Button variant="outline" onClick={() => void preparar()} disabled={preparing || saving}>
             <Sparkles className="mr-1 h-4 w-4" />
