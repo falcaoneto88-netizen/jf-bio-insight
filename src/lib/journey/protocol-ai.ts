@@ -9,6 +9,11 @@ import { z } from "zod";
 import { computeEvolution } from "./evolution";
 import { energyTargetLine, type EnergyPlan } from "./energy";
 import { documentLabels } from "./document-locale";
+import { buildPrescriptionSections, prescriptionIssues } from "./prescription-sections";
+import {
+  REQUIRED_SUBSTITUTION_CATEGORIES,
+  missingSubstitutionCategories,
+} from "./substitution-categories";
 import {
   ANAMNESE_SECTIONS,
   ANAMNESE_FIELD_LABELS,
@@ -22,7 +27,13 @@ import {
   type Protocolo,
 } from "./types";
 
-export const PROTOCOL_GENERATOR_VERSION = "protocolo-openai-2026-09-16-v1";
+/**
+ * Versão do gerador. A exigência das 4 categorias na tabela geral vale apenas
+ * a partir da v2: documentos anteriores não são reinterpretados.
+ */
+export const PROTOCOL_GENERATOR_VERSION = "protocolo-openai-2026-09-25-v2";
+/** Versão anterior, mantida para leitura de documentos já gerados. */
+export const PROTOCOL_GENERATOR_VERSION_V1 = "protocolo-openai-2026-09-16-v1";
 
 const line = z.string().trim().max(1200);
 
@@ -230,6 +241,14 @@ export function buildProtocolSections(
   const gerais = output.substituicoesGerais.filter(
     (g) => g.categoria.trim() && g.opcoes.some((o) => o.trim()),
   );
+  // Lista geral de alimentos liberados: precisa das 4 categorias base. Não é
+  // conclusão clínica nem substitui as substituições por refeição.
+  for (const missing of missingSubstitutionCategories(
+    gerais.map((g) => ({ label: g.categoria, options: g.opcoes })),
+  ))
+    pendencias.push(
+      `Tabela geral de substituições: falta a categoria ${missing.label}. Preencha com as opções liberadas, respeitando as restrições alimentares.`,
+    );
   if (gerais.length)
     sections.push({
       id: "substituicoes",
@@ -244,36 +263,10 @@ export function buildProtocolSections(
       ],
     });
 
-  // Prescrições: montadas apenas a partir das entradas do profissional já
-  // confirmadas uma a uma. A IA não cria, não completa e não remonta medicação.
-  const entradas = (args.prescriptions ?? []).filter((p) => p.substancia.trim());
-  const confirmadas = entradas.filter((p) => p.confirmada);
-  if (confirmadas.length)
-    sections.push({
-      id: "prescricoes",
-      title: t.prescription,
-      kind: "prescription",
-      blocks: [
-        {
-          type: "table",
-          columns: [t.name, t.dose, t.unit, t.frequency, t.reason],
-          rows: confirmadas.map((p) => [
-            p.substancia.trim(),
-            p.dose.trim(),
-            p.via.trim(),
-            p.frequencia.trim(),
-            p.observacoes.trim(),
-          ]),
-        },
-      ],
-    });
-  pendencias.push(
-    ...entradas
-      .filter((p) => !p.confirmada)
-      .map((p) =>
-        `Prescrição por confirmar individualmente: ${p.substancia.trim()} ${p.dose.trim()}`.trim(),
-      ),
-  );
+  // Prescrições: montagem central partilhada com a integridade das gravações.
+  // A IA não cria, não completa e não remonta medicação.
+  sections.push(...buildPrescriptionSections(args.prescriptions, args.locale));
+  pendencias.push(...prescriptionIssues(args.prescriptions));
 
   return { sections, pendencias };
 }
