@@ -397,7 +397,7 @@ export const useReportStore = create<ReportState>()(
     {
       name: "jf-bioreport-draft",
       storage: createJSONStorage(() => localStorage),
-      version: 7,
+      version: 8,
       migrate: (_persistedState, version) => {
         if (version < 1) {
           return {
@@ -454,3 +454,9 @@ export const useReportStore = create<ReportState>()(
     },
   ),
 );
+
+/** Limpa o rascunho do fluxo antigo (memória e navegador) ao terminar a sessão. */
+export function clearReportStoreOnLogout() {
+  useReportStore.getState().reset();
+  if (typeof window !== "undefined") window.localStorage.removeItem("jf-bioreport-draft");
+}
