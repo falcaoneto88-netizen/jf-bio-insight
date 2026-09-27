@@ -22,7 +22,7 @@ import {
   requiresGeneralSubstitutionCategories,
 } from "./protocol-quality";
 import { protocolSchema, type PrescriptionEntry, type Protocolo } from "./types";
-import { renderJourneyHtml } from "./html";
+import { renderProtocolSections } from "./html";
 
 const oral: PrescriptionEntry = {
   grupo: "oral",
@@ -96,11 +96,8 @@ describe("tabela geral de substituições", () => {
   });
 
   it("uma geração nova só com vegetais aponta as categorias em falta", () => {
-    const { pendencias } = buildProtocolSections({
-      locale: "pt-BR",
-      objetivo: "hipertrofia",
-      prescriptions: [],
-      output: {
+    const { pendencias } = buildProtocolSections(
+      {
         resumoObjetivo: "Resumo fictício.",
         refeicoes: [],
         orientacoesGerais: [],
@@ -108,7 +105,8 @@ describe("tabela geral de substituições", () => {
         substituicoesGerais: [{ categoria: "Vegetais", opcoes: ["Brócolis"] }],
         pendencias: [],
       },
-    });
+      { locale: "pt-BR", energy: null, prescriptions: [] },
+    );
     expect(pendencias.join(" ")).toContain("falta a categoria Proteínas");
     expect(pendencias.join(" ")).toContain("falta a categoria Frutas");
   });
@@ -184,11 +182,8 @@ describe("blocos separados de prescrição", () => {
   });
 
   it("nenhuma prescrição é criada pela IA a partir de doses relatadas", () => {
-    const { sections } = buildProtocolSections({
-      locale: "pt-BR",
-      objetivo: "hipertrofia",
-      prescriptions: [],
-      output: {
+    const { sections } = buildProtocolSections(
+      {
         resumoObjetivo: "Paciente relata uso anterior de 10 mg de substância fictícia.",
         refeicoes: [],
         orientacoesGerais: ["Relato de suplemento fictício 5 g ao dia."],
@@ -199,7 +194,8 @@ describe("blocos separados de prescrição", () => {
         })),
         pendencias: [],
       },
-    });
+      { locale: "pt-BR", energy: null, prescriptions: [] },
+    );
     expect(sections.some((s) => s.kind === "prescription")).toBe(false);
   });
 });
@@ -207,12 +203,7 @@ describe("blocos separados de prescrição", () => {
 describe("documento final", () => {
   it("mantém campos e horários das duas tabelas, com títulos próprios", () => {
     const protocolo = rebuildPrescriptionSection(base({ prescriptions: [oral, injetavel] }));
-    const html = renderJourneyHtml({
-      paciente: "Paciente Fictício",
-      protocolo,
-      version: 2,
-      approved: false,
-    } as Parameters<typeof renderJourneyHtml>[0]);
+    const html = renderProtocolSections(protocolo);
     expect(html).toContain("Prescrição e suplementação oral");
     expect(html).toContain("Prescrições injetáveis");
     expect(html).toContain("Via");
