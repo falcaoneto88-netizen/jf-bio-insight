@@ -423,22 +423,18 @@ export const useReportStore = create<ReportState>()(
             s.clinicalData = { ...s.clinicalData, mainGoal: "recomposicao" };
           }
         }
+        // v8: dados clínicos (consulta, arquivo, bioimpedância, formulário,
+        // exame anterior, prescrição) deixam de ser guardados no navegador;
+        // o que estava salvo é descartado nesta migração.
         return {
-          ...s,
-          prescription: s.prescription ?? null,
           reportOptions: normalizeReportOptions(s.reportOptions),
           dietCustomization: normalizeDietCustomization(s.dietCustomization),
           mealTimeOverrides: normalizeMealTimeOverrides(s.mealTimeOverrides),
           extraMeals: normalizeExtraMeals(s.extraMeals),
         };
       },
+      // Persiste apenas preferências de layout — nunca dados clínicos.
       partialize: (state) => ({
-        consultation: state.consultation,
-        file: state.file,
-        bodyComposition: normalizeBodyComposition(state.bodyComposition),
-        clinicalData: state.clinicalData,
-        previousExam: state.previousExam,
-        prescription: state.prescription,
         reportOptions: state.reportOptions,
         dietCustomization: state.dietCustomization,
         mealTimeOverrides: state.mealTimeOverrides,
