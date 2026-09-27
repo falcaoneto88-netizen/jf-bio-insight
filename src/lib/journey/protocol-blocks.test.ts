@@ -98,7 +98,7 @@ describe("tabela geral de substituições", () => {
   it("uma geração nova só com vegetais aponta as categorias em falta", () => {
     const { pendencias } = buildProtocolSections(
       {
-        resumoObjetivo: "Resumo fictício.",
+        objetivoResumo: "Resumo fictício.",
         refeicoes: [],
         orientacoesGerais: [],
         orientacoesAtividade: [],
@@ -184,7 +184,7 @@ describe("blocos separados de prescrição", () => {
   it("nenhuma prescrição é criada pela IA a partir de doses relatadas", () => {
     const { sections } = buildProtocolSections(
       {
-        resumoObjetivo: "Paciente relata uso anterior de 10 mg de substância fictícia.",
+        objetivoResumo: "Paciente relata uso anterior de 10 mg de substância fictícia.",
         refeicoes: [],
         orientacoesGerais: ["Relato de suplemento fictício 5 g ao dia."],
         orientacoesAtividade: [],
