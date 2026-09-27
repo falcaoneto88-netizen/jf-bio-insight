@@ -173,6 +173,7 @@ describe("marcador do gerador no núcleo", () => {
 
 describe("prescrições como fonte única", () => {
   const completa = {
+    grupo: "oral" as const,
     substancia: "Substância fictícia",
     dose: "10 mg",
     via: "oral",
@@ -245,7 +246,7 @@ describe("prescrições como fonte única", () => {
     });
     expect(updated.protocolo!.sections.some((s) => s.kind === "prescription")).toBe(false);
     expect(protocolEssentialIssues(updated.protocolo!)).toEqual(
-      expect.arrayContaining([expect.stringContaining("Prescrição incompleta")]),
+      expect.arrayContaining([expect.stringContaining("falta via, frequência")]),
     );
   });
 
