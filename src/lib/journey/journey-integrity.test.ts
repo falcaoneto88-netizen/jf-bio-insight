@@ -246,7 +246,7 @@ describe("prescrições como fonte única", () => {
     });
     expect(updated.protocolo!.sections.some((s) => s.kind === "prescription")).toBe(false);
     expect(protocolEssentialIssues(updated.protocolo!)).toEqual(
-      expect.arrayContaining([expect.stringContaining("Prescrição incompleta")]),
+      expect.arrayContaining([expect.stringContaining("falta via, frequência")]),
     );
   });
 
