@@ -65,6 +65,97 @@ const emptyPrescription: PrescriptionEntry = {
   confirmada: false,
 };
 
+/** Campos de uma prescrição. Nenhum fármaco, dose ou via é sugerido por omissão. */
+function PrescriptionFields({
+  p,
+  onPatch,
+  onRemove,
+}: {
+  p: PrescriptionEntry;
+  onPatch: (patch: Partial<PrescriptionEntry>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1 text-sm">
+          <span>Grupo</span>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={p.grupo ?? ""}
+            onChange={(e) =>
+              onPatch({
+                ...(e.target.value
+                  ? { grupo: e.target.value as PrescriptionGroup }
+                  : { grupo: undefined }),
+              })
+            }
+          >
+            <option value="">Classificação pendente</option>
+            <option value="oral">Oral</option>
+            <option value="injetavel">Injetável</option>
+          </select>
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Substância</span>
+          <Input
+            value={p.substancia}
+            maxLength={200}
+            onChange={(e) => onPatch({ substancia: e.target.value })}
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Dose</span>
+          <Input value={p.dose} maxLength={200} onChange={(e) => onPatch({ dose: e.target.value })} />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Via</span>
+          <Input value={p.via} maxLength={120} onChange={(e) => onPatch({ via: e.target.value })} />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Frequência</span>
+          <Input
+            value={p.frequencia}
+            maxLength={200}
+            onChange={(e) => onPatch({ frequencia: e.target.value })}
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Horário (opcional)</span>
+          <Input
+            value={p.horario ?? ""}
+            maxLength={200}
+            onChange={(e) => onPatch({ horario: e.target.value })}
+          />
+        </label>
+      </div>
+      <label className="space-y-1 text-sm">
+        <span>Observações</span>
+        <Input
+          value={p.observacoes}
+          maxLength={600}
+          onChange={(e) => onPatch({ observacoes: e.target.value })}
+        />
+      </label>
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={p.confirmada}
+            disabled={!prescriptionIsComplete(p)}
+            onChange={(e) => onPatch({ confirmada: e.target.checked })}
+          />
+          <span className="text-muted-foreground">Confirmo esta prescrição individualmente.</span>
+        </label>
+        <Button variant="ghost" size="sm" onClick={onRemove}>
+          Remover
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function StepProtocolo({
   journey,
   draft,
@@ -117,6 +208,15 @@ export function StepProtocolo({
   const essenciais = draft.generator ? protocolEssentialIssues(draft) : [];
   const avisos = draft.generator ? protocolOpenWarnings(draft) : draft.pendencias;
   const resolvidas = draft.pendenciasResolvidas ?? [];
+
+  const indexadas = prescriptions.map((p, index) => ({ p, index }));
+  const porGrupo = (grupo: PrescriptionGroup) => indexadas.filter((e) => e.p.grupo === grupo);
+  const semClassificacao = indexadas.filter((e) => !e.p.grupo && prescriptionStarted(e.p));
+  const exigeCategorias = requiresGeneralSubstitutionCategories(draft);
+  const tabelaGeralFaltas = exigeCategorias
+    ? missingSubstitutionCategories(generalSubstitutionRows(draft))
+    : [];
+  const pendenciasPrescricoes = prescriptionIssues(prescriptions);
 
   const setPrescription = (index: number, patch: Partial<PrescriptionEntry>) =>
     onDraftChange({
