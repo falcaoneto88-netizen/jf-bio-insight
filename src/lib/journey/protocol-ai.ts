@@ -41,6 +41,9 @@ const line = z.string().trim().max(1200);
 const SUBSTITUTION_HINT =
   'Quantidade + unidade + alimento, ex.: "120 g de frango grelhado", "2 fatias de pão integral". Nunca apenas o nome do alimento.';
 
+/** A tabela geral é a lista de alimentos liberados, não uma lista de vegetais. */
+const GENERAL_CATEGORY_HINT = `Tabela geral de substituições: obrigatoriamente uma linha para cada categoria ${REQUIRED_SUBSTITUTION_CATEGORIES.map((c) => c.label).join(", ")}, cada uma com opções reais respeitando as restrições alimentares do paciente. Categorias adicionais (ex.: vegetais, temperos) são permitidas, mas nunca substituem as obrigatórias.`;
+
 export const protocolAiOutputSchema = z.strictObject({
   objetivoResumo: z.string().trim().max(3000),
   orientacoesGerais: z.array(line).max(24),
@@ -70,11 +73,12 @@ export const protocolAiOutputSchema = z.strictObject({
   substituicoesGerais: z
     .array(
       z.strictObject({
-        categoria: z.string().trim().max(120),
+        categoria: z.string().trim().max(120).describe(GENERAL_CATEGORY_HINT),
         opcoes: z.array(line).max(14),
       }),
     )
-    .max(10),
+    .max(10)
+    .describe(GENERAL_CATEGORY_HINT),
   pendencias: z.array(z.string().trim().max(600)).max(24),
 });
 export type ProtocolAiOutput = z.infer<typeof protocolAiOutputSchema>;
