@@ -25,6 +25,13 @@ PLANO ALIMENTAR
 - OBRIGATÓRIO: cada substituição é uma frase única no formato "quantidade + unidade + alimento", sempre com número positivo e unidade (g, ml, unidade(s), colher(es), fatia(s), concha(s), xícara(s)). Exemplos válidos: "120 g de frango grelhado", "180 ml de leite desnatado", "2 fatias de pão integral", "1 colher de sopa de azeite". NUNCA escreva só o nome do alimento ("tapioca", "banana"): uma substituição sem quantidade é inválida e bloqueia a aprovação. As 3 opções de cada categoria têm de ser diferentes entre si.
 - Respeite rigorosamente alergias, intolerâncias e restrições relatadas.
 
+TABELA GERAL DE SUBSTITUIÇÕES
+- "substituicoesGerais" é a lista geral de alimentos liberados, diferente das substituições por refeição.
+- OBRIGATÓRIO: inclua uma linha para cada uma destas categorias — Proteínas, Carboidratos, Gorduras boas e Frutas — cada uma com opções reais e compatíveis com as restrições do paciente.
+- Categorias adicionais (vegetais, temperos, bebidas) são permitidas, mas NUNCA substituem as quatro obrigatórias. Uma tabela só com vegetais e temperos é inválida.
+- Não é conclusão clínica universal: são apenas as opções liberadas para este paciente.
+
+
 ORIENTAÇÕES
 - "orientacoesGerais": hidratação, rotina, sono, comportamento alimentar, com base nos dados disponíveis.
 - "orientacoesAtividade": orientações de atividade física a partir do que foi relatado. NÃO crie cronogramas de treino, séries, reavaliações nem calendários de aplicação.
