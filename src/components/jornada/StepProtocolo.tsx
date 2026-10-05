@@ -23,7 +23,12 @@ import {
   prescriptionStarted,
   type PrescriptionGroup,
 } from "@/lib/journey/prescription-sections";
-import { missingSubstitutionCategories } from "@/lib/journey/substitution-categories";
+import {
+  generalCategoryValue,
+  missingSubstitutionCategories,
+  REQUIRED_SUBSTITUTION_CATEGORIES,
+  updateGeneralCategory,
+} from "@/lib/journey/substitution-categories";
 import {
   OBJETIVOS,
   CURRENT_PROTOCOL_TEMPLATE_VERSION,
@@ -106,7 +111,11 @@ function PrescriptionFields({
         </label>
         <label className="space-y-1 text-sm">
           <span>Dose</span>
-          <Input value={p.dose} maxLength={200} onChange={(e) => onPatch({ dose: e.target.value })} />
+          <Input
+            value={p.dose}
+            maxLength={200}
+            onChange={(e) => onPatch({ dose: e.target.value })}
+          />
         </label>
         <label className="space-y-1 text-sm">
           <span>Via</span>
@@ -205,7 +214,9 @@ export function StepProtocolo({
     [journey.bio, objetivo, draft.energyInput, draft.calorieTarget],
   );
 
-  const essenciais = draft.generator ? protocolEssentialIssues(draft) : [];
+  const essenciais = draft.generator
+    ? protocolEssentialIssues(draft)
+    : prescriptionIssues(draft.prescriptions);
   const avisos = draft.generator ? protocolOpenWarnings(draft) : draft.pendencias;
   const resolvidas = draft.pendenciasResolvidas ?? [];
 
@@ -458,8 +469,8 @@ export function StepProtocolo({
             />
             <p className="text-xs text-muted-foreground">
               Este campo orienta apenas o plano alimentar e a rotina. Medicação, suplementos e
-              injetáveis não são lidos daqui: têm de ser inseridos e confirmados nos blocos
-              próprios de prescrição, mais abaixo.
+              injetáveis não são lidos daqui: têm de ser inseridos e confirmados nos blocos próprios
+              de prescrição, mais abaixo.
             </p>
           </div>
           <Button variant="outline" onClick={() => void preparar()} disabled={preparing || saving}>
@@ -483,14 +494,15 @@ export function StepProtocolo({
           <CardDescription>
             Lista geral de alimentos liberados para este paciente, com as categorias Proteínas,
             Carboidratos, Gorduras boas e Frutas. É diferente das substituições por refeição (que
-            exigem 3 opções distintas com porção) e pode ser corrigida aqui no editor abaixo, sem
-            gerar o protocolo de novo.
+            exigem 3 opções distintas com porção). Edite as opções abaixo e salve o protocolo, sem
+            gerar as refeições de novo. Categorias extras permanecem no editor completo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {!draft.generator ? (
             <p className="text-muted-foreground">
-              Ainda sem protocolo gerado: a tabela aparece depois da geração.
+              Preencha somente os alimentos liberados para este paciente. Nenhuma opção é inserida
+              automaticamente.
             </p>
           ) : tabelaGeralFaltas.length ? (
             tabelaGeralFaltas.map((f) => (
@@ -506,6 +518,25 @@ export function StepProtocolo({
                 : "Documento de versão anterior: as categorias não são reinterpretadas."}
             </p>
           )}
+          <div className="grid gap-4 pt-3 sm:grid-cols-2">
+            {REQUIRED_SUBSTITUTION_CATEGORIES.map(({ key, label }) => (
+              <label key={key} className="space-y-1.5">
+                <span className="font-medium text-foreground">{label}</span>
+                <Textarea
+                  rows={3}
+                  value={generalCategoryValue(draft, key)}
+                  maxLength={600}
+                  placeholder="Alimentos liberados; separe com ponto e vírgula"
+                  onChange={(e) =>
+                    onDraftChange({
+                      ...draft,
+                      sections: updateGeneralCategory(draft, key, e.target.value),
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -518,7 +549,8 @@ export function StepProtocolo({
             <CardDescription>
               Escritas exclusivamente por si. Cada entrada precisa de grupo, substância, dose, via e
               frequência, e de confirmação individual. O horário é opcional. Sem confirmação não
-              entra no documento nem se aprova.
+              entra no documento nem se aprova. Ao alterar uma entrada já salva, salve a alteração e
+              depois confirme-a novamente.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -666,7 +698,7 @@ export function StepProtocolo({
       )}
 
       <ProtocolEditor
-        structuredPrescriptions={Boolean(draft.generator)}
+        structuredPrescriptions={Boolean(draft.generator) || draft.prescriptions !== undefined}
         sections={draft.sections}
         onChange={(sections) =>
           onDraftChange({ ...draft, templateVersion: CURRENT_PROTOCOL_TEMPLATE_VERSION, sections })

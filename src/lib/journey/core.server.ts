@@ -8,6 +8,7 @@ import { DOCUMENT_TEMPLATE_VERSION, LOGO_SHA256 } from "./brand";
 import { computeEvolution } from "./evolution";
 import { protocoloTemConteudoRenderizavel, renderProtocolHtml } from "./html";
 import { needsNumberReview, sameIdentity, todayBr } from "./format";
+import { prescriptionIssues } from "./prescription-sections";
 import {
   applyProtocolIntegrity,
   isGeneratedProtocol,
@@ -399,6 +400,8 @@ export function reviewIssues(journey: Journey): JourneyIssues {
     warnings.push(
       ...protocolOpenWarnings(journey.protocolo).map((p) => `Pendência do protocolo: ${p}`),
     );
+  } else if (journey.protocolo?.prescriptions !== undefined) {
+    blocking.push(...prescriptionIssues(journey.protocolo.prescriptions));
   }
 
   if (

@@ -7,10 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { aprovarJornada } from "@/lib/journey.functions";
-import {
-  prescriptionIsComplete,
-  prescriptionStarted,
-} from "@/lib/journey/prescription-sections";
+import { prescriptionIsComplete, prescriptionStarted } from "@/lib/journey/prescription-sections";
 import {
   generalSubstitutionRows,
   requiresGeneralSubstitutionCategories,
@@ -45,9 +42,11 @@ function BlocosResumo({ journey }: { journey: Journey }) {
       <CardContent className="space-y-2 text-sm text-muted-foreground">
         <p>
           <strong className="text-foreground">Tabela geral de substituições:</strong>{" "}
-          {faltas.length
-            ? `faltam as categorias ${faltas.map((f) => f.label).join(", ")}.`
-            : "categorias completas."}
+          {!requiresGeneralSubstitutionCategories(protocolo)
+            ? "documento de versão anterior; confira as categorias na etapa Protocolo."
+            : faltas.length
+              ? `faltam as categorias ${faltas.map((f) => f.label).join(", ")}.`
+              : "categorias completas."}
         </p>
         <p>
           <strong className="text-foreground">Prescrição e suplementação oral:</strong>{" "}
