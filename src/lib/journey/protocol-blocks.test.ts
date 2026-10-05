@@ -14,13 +14,22 @@ import {
   LEGACY_PRESCRIPTION_SECTION_ID,
   ORAL_SECTION_ID,
 } from "./prescription-sections";
-import { missingSubstitutionCategories } from "./substitution-categories";
+import {
+  generalCategoryValue,
+  missingSubstitutionCategories,
+  updateGeneralCategory,
+} from "./substitution-categories";
 import {
   applyPrescriptionRules,
   protocolEssentialIssues,
   rebuildPrescriptionSection,
   requiresGeneralSubstitutionCategories,
+  applyProtocolIntegrity,
+  generalSubstitutionRows,
+  prescriptionSignature,
 } from "./protocol-quality";
+import { reviewIssues } from "./core.server";
+import { fixtureJourney } from "./__fixtures__/jornada-sintetica";
 import { protocolSchema, type PrescriptionEntry, type Protocolo } from "./types";
 import { renderProtocolSections } from "./html";
 
@@ -63,6 +72,116 @@ const categoriasCompletas = [
   { label: "Frutas", options: ["Banana 1 unidade"] },
 ];
 
+describe("edição direta e integridade dos blocos", () => {
+  it("edita somente a categoria escolhida, sem perder refeições, extras ou tabelas personalizadas", () => {
+    const original = base({
+      sections: [
+        {
+          id: "refeicoes",
+          kind: "meals",
+          title: "Plano alimentar",
+          blocks: [{ type: "paragraph", text: "Refeição original" }],
+        },
+        {
+          id: "substituicoes",
+          kind: "substitutions",
+          title: "Tabela geral",
+          blocks: [
+            {
+              type: "table",
+              columns: ["Categoria", "Opções"],
+              rows: [
+                ["Proteínas", "Opção A"],
+                ["Vegetais", "Vegetal fictício"],
+              ],
+            },
+            { type: "paragraph", text: "Observação a preservar" },
+            {
+              type: "table",
+              columns: ["Categoria", "Opções", "Nota"],
+              rows: [["Frutas", "Fruta anterior", "Nota extra"]],
+            },
+          ],
+        },
+      ],
+    });
+    const before = JSON.stringify(original);
+    const next = {
+      ...original,
+      sections: updateGeneralCategory(original, "proteinas", "Opção B; Opção C"),
+    };
+    expect(generalCategoryValue(next, "proteinas")).toBe("Opção B; Opção C");
+    expect(next.sections[0]).toEqual(original.sections[0]);
+    expect(next.sections[1].blocks.slice(1)).toEqual(original.sections[1].blocks.slice(1));
+    expect(JSON.stringify(next)).toContain("Vegetal fictício");
+    expect(JSON.stringify(original)).toBe(before);
+    expect(applyProtocolIntegrity(original, next)?.regenerationRequired).not.toBe(true);
+  });
+
+  it.each(["pt-BR", "es", "en"] as const)(
+    "cria e reconhece as quatro categorias em %s",
+    (locale) => {
+      let p = base({ locale });
+      for (const key of ["proteinas", "carboidratos", "gorduras", "frutas"] as const) {
+        p = { ...p, sections: updateGeneralCategory(p, key, `Opção fictícia ${key}`) };
+      }
+      expect(missingSubstitutionCategories(generalSubstitutionRows(p))).toEqual([]);
+      expect(protocolSchema.safeParse(p).success).toBe(true);
+      p = { ...p, sections: updateGeneralCategory(p, "frutas", "") };
+      expect(missingSubstitutionCategories(generalSubstitutionRows(p)).map((f) => f.key)).toEqual([
+        "frutas",
+      ]);
+    },
+  );
+
+  it("não permite trocar v2 por v1 para dispensar categorias", () => {
+    const current = base();
+    const result = applyProtocolIntegrity(current, {
+      ...current,
+      generator: "protocolo-openai-2026-09-16-v1",
+    })!;
+    expect(result.generator).toBe(current.generator);
+    expect(protocolEssentialIssues(result).join(" ")).toContain("Tabela geral");
+  });
+
+  it("distingue delimitadores e maiúsculas nos campos confirmados", () => {
+    const previous = { ...oral, horario: "A|B", observacoes: "C" };
+    const next = { ...oral, horario: "A", observacoes: "B|C" };
+    expect(prescriptionSignature(previous)).not.toBe(prescriptionSignature(next));
+    expect(applyPrescriptionRules([previous], [next])?.[0].confirmada).toBe(false);
+    expect(applyPrescriptionRules([oral], [{ ...oral, dose: "10 MG" }])?.[0].confirmada).toBe(
+      false,
+    );
+  });
+
+  it("protocolo manual emite somente entradas completas e confirmadas e bloqueia parciais", () => {
+    const p = base({
+      generator: undefined,
+      prescriptions: [oral, { ...injetavel, dose: "", confirmada: false }],
+    });
+    const rendered = rebuildPrescriptionSection(p);
+    expect(rendered.sections.map((s) => s.id)).toEqual([ORAL_SECTION_ID]);
+    expect(reviewIssues({ ...fixtureJourney, protocolo: p }).blocking.join(" ")).toContain(
+      "falta dose",
+    );
+  });
+
+  it("não modifica protocolo legado sem estrutura de prescrições", () => {
+    const legacy = base({
+      generator: undefined,
+      prescriptions: undefined,
+      sections: [
+        {
+          id: "antigo",
+          title: "Nota anterior",
+          blocks: [{ type: "paragraph", text: "Conteúdo preservado" }],
+        },
+      ],
+    });
+    expect(rebuildPrescriptionSection(legacy)).toBe(legacy);
+  });
+});
+
 describe("tabela geral de substituições", () => {
   it("só vegetais e temperos é pendência no gerador novo", () => {
     const faltas = missingSubstitutionCategories([
@@ -89,9 +208,7 @@ describe("tabela geral de substituições", () => {
   it("a exigência vale só para o gerador novo, não para documentos legados", () => {
     expect(requiresGeneralSubstitutionCategories(base())).toBe(true);
     expect(
-      requiresGeneralSubstitutionCategories(
-        base({ generator: "protocolo-openai-2026-09-16-v1" }),
-      ),
+      requiresGeneralSubstitutionCategories(base({ generator: "protocolo-openai-2026-09-16-v1" })),
     ).toBe(false);
   });
 

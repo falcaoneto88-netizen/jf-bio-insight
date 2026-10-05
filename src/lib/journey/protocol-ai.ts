@@ -261,7 +261,7 @@ export function buildProtocolSections(
       blocks: [
         {
           type: "table",
-          columns: [t.food, t.value],
+          columns: [t.category, t.options],
           rows: gerais.map((g) => [g.categoria.trim(), g.opcoes.filter(Boolean).join("; ")]),
         },
       ],

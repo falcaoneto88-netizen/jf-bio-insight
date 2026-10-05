@@ -7,7 +7,7 @@
  *   não podem ser dispensadas no painel;
  * - avisos (protocolOpenWarnings): podem ser marcados como revistos.
  */
-import { hideMealTimes } from "./meal-presentation";
+import { hideMealTimes, sectionKind } from "./meal-presentation";
 import type { PrescriptionEntry, ProtocolBlock, Protocolo } from "./types";
 import {
   buildPrescriptionSections,
@@ -72,7 +72,12 @@ export function preserveGeneratorMarker(
   current: Protocolo | null | undefined,
   next: Protocolo,
 ): Protocolo {
-  if (!current?.generator || next.generator) return next;
+  if (!current?.generator) return next;
+  if (
+    next.generator &&
+    (!requiresGeneralSubstitutionCategories(current) || requiresGeneralSubstitutionCategories(next))
+  )
+    return next;
   return { ...next, generator: current.generator };
 }
 
@@ -89,9 +94,7 @@ export const prescriptionIsComplete = entryIsComplete;
  * horário e observações. Mudar qualquer um anula a confirmação.
  */
 export function prescriptionSignature(p: PrescriptionEntry): string {
-  return prescriptionFields(p)
-    .map((v) => v.trim().toLowerCase().replace(/\s+/g, " "))
-    .join("|");
+  return JSON.stringify(prescriptionFields(p));
 }
 
 /**
@@ -119,13 +122,12 @@ export function requiresGeneralSubstitutionCategories(protocolo: Protocolo): boo
 }
 
 /** Linhas da tabela geral de substituições (categoria + opções). */
-export function generalSubstitutionRows(protocolo: Protocolo): { label: string; options: string[] }[] {
-  const section = protocolo.sections.find(
-    (s) => s.kind === "substitutions" || s.id === "substituicoes",
-  );
-  if (!section) return [];
+export function generalSubstitutionRows(
+  protocolo: Protocolo,
+): { label: string; options: string[] }[] {
+  const sections = protocolo.sections.filter((s) => sectionKind(s) === "substitutions");
   const rows: { label: string; options: string[] }[] = [];
-  for (const block of section.blocks) {
+  for (const block of sections.flatMap((s) => s.blocks)) {
     if (block.type === "table") {
       for (const row of block.rows)
         rows.push({
@@ -177,7 +179,6 @@ export function protocolEssentialIssues(protocolo: Protocolo): string[] {
           `Tabela geral de substituições: falta a categoria ${missing.label}. Preencha com as opções liberadas, respeitando as restrições alimentares.`,
         );
   }
-
 
   const meals = protocolo.sections
     .flatMap((s) => s.blocks)
@@ -252,14 +253,12 @@ export function protocolOpenWarnings(protocolo: Protocolo): string[] {
  * partir das entradas confirmadas e completas, pela montagem central. Apagar
  * ou editar uma entrada apaga o texto antigo, porque as secções são sempre
  * reconstruídas — nunca editadas à parte, e sem deixar a tabela única antiga.
- * Documentos legados (sem "generator") não são tocados.
+ * Documentos legados sem prescrições estruturadas não são tocados.
  */
 export function rebuildPrescriptionSection(protocolo: Protocolo): Protocolo {
-  if (!isGeneratedProtocol(protocolo)) return protocolo;
+  if (!isGeneratedProtocol(protocolo) && protocolo.prescriptions === undefined) return protocolo;
   const sections = withoutPrescriptionSections(protocolo.sections);
-  sections.push(
-    ...buildPrescriptionSections(protocolo.prescriptions, protocolo.locale ?? "pt-BR"),
-  );
+  sections.push(...buildPrescriptionSections(protocolo.prescriptions, protocolo.locale ?? "pt-BR"));
   return { ...protocolo, sections };
 }
 
