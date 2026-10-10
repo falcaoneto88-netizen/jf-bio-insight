@@ -1,5 +1,4 @@
-import { Check } from "lucide-react";
-
+import { Check, LockKeyhole } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { JOURNEY_STEPS, type JourneyStep } from "@/lib/journey/types";
 
@@ -16,34 +15,42 @@ export function JourneyStepper({
 }) {
   return (
     <nav aria-label="Etapas do atendimento" className="w-full">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-2">
+      <ol className="clinical-steps">
         {JOURNEY_STEPS.map(({ step, label }) => {
           const isActive = step === current;
           const isDone = completedSteps.has(step);
           const reachable = step <= maxReached;
+          const state = isDone
+            ? step === 4
+              ? "Rascunho salvo"
+              : step === 5
+                ? "Aprovada"
+                : "Concluída"
+            : reachable
+              ? "A revisar"
+              : "Não disponível";
           return (
-            <li key={step} className="flex min-w-0 items-center gap-2">
+            <li key={step} className="min-w-0">
               <button
                 type="button"
                 disabled={!reachable}
                 onClick={() => reachable && onSelect(step)}
                 aria-current={isActive ? "step" : undefined}
-                className={cn(
-                  "flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  isActive && "border-primary bg-primary text-primary-foreground",
-                  !isActive && isDone && "border-success/40 bg-success-soft/60 text-foreground",
-                  !isActive && !isDone && "border-border text-muted-foreground",
-                  !reachable && "cursor-not-allowed opacity-50",
-                )}
+                className={cn("clinical-step", isActive && "is-active", isDone && "is-done")}
               >
-                <span
-                  className="grid h-5 w-5 shrink-0 place-content-center rounded-full border border-current text-[10px]"
-                  aria-hidden="true"
-                >
-                  {isDone ? <Check className="h-3 w-3" /> : step}
+                <span className="clinical-step-number" aria-hidden="true">
+                  {isDone ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : !reachable ? (
+                    <LockKeyhole className="h-3.5 w-3.5" />
+                  ) : (
+                    String(step).padStart(2, "0")
+                  )}
                 </span>
-                <span className="whitespace-nowrap">{label}</span>
-                {isDone && <span className="sr-only"> — Concluída</span>}
+                <span className="min-w-0">
+                  <span className="block font-medium">{step === 6 ? "Documento" : label}</span>
+                  <span className="clinical-step-state">{state}</span>
+                </span>
               </button>
             </li>
           );
