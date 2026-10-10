@@ -3,8 +3,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, CalendarCheck, CalendarDays, ChevronDown } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarCheck, ChevronDown, Plus } from "lucide-react";
 import { abrirAnaliseDaConsulta, obterAnaliseDaConsulta } from "@/lib/journey.functions";
+import { ClinicalIdentity } from "@/components/clinical/ClinicalIdentity";
+import { ConsultationDirectory } from "@/components/clinical/ConsultationDirectory";
 import { BrandHeader } from "@/components/BrandHeader";
 import { GhlIntakeSettings } from "@/components/GhlIntakeSettings";
 import { Button } from "@/components/ui/button";
@@ -51,14 +53,14 @@ function ConsultationPage() {
   return (
     <div className="clinical-workspace min-h-screen bg-background text-foreground">
       <BrandHeader />
-      <main className="mx-auto max-w-6xl space-y-7 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="clinical-main mx-auto max-w-6xl space-y-7 px-4 py-7 sm:px-6 sm:py-10">
         <Link
           to="/"
           className="inline-flex min-h-10 items-center gap-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Início
         </Link>
-        <div className="max-w-2xl border-b border-border pb-6">
+        <div className="clinical-page-heading clinical-enter">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Área clínica
           </p>
@@ -66,7 +68,7 @@ function ConsultationPage() {
           <p className="mt-2 text-muted-foreground">
             Anamnese, bioimpedância, análise e relatório no mesmo atendimento.
           </p>
-          <nav aria-label="Acompanhamento" className="mt-4">
+          <nav aria-label="Acompanhamento" className="mt-5">
             <Link
               to="/agendamentos"
               className="inline-flex min-h-10 items-center gap-2 rounded-md border border-gold px-4 text-sm font-medium text-foreground underline-offset-4 hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -120,6 +122,7 @@ function ConsultationList() {
   const [email, setEmail] = useState("");
   const [date, setDate] = useState("");
   const ids = useRef<{ id: string; patientId: string } | null>(null);
+  const newConsultation = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     let live = true;
     setError("");
@@ -179,47 +182,35 @@ function ConsultationList() {
               Retomar consulta
             </h2>
           </div>
-          <span className="text-sm text-muted-foreground">Até 100 consultas recentes</span>
+          <Button
+            onClick={() => {
+              if (!newConsultation.current) return;
+              newConsultation.current.open = true;
+              newConsultation.current.querySelector("select")?.focus();
+            }}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nova consulta
+          </Button>
         </div>
         {!items && !error && (
-          <p role="status" className="rounded-md border bg-card p-5 text-sm text-muted-foreground">
+          <p
+            role="status"
+            className="clinical-loading rounded-md border bg-card p-5 text-sm text-muted-foreground"
+          >
             Carregando consultas…
           </p>
         )}
-        {items?.consultations.length ? (
-          <ul className="grid gap-3 lg:grid-cols-2">
-            {items.consultations.map((c) => (
-              <li key={c.id}>
-                <Card className="h-full rounded-md shadow-sm transition-shadow hover:shadow-md">
-                  <CardContent className="flex h-full flex-col justify-between gap-5 p-5 sm:flex-row sm:items-center">
-                    <div className="min-w-0">
-                      <strong className="block truncate text-base">{c.patient_name}</strong>
-                      <span className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                        <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                        {c.consultation_date.split("-").reverse().join("/")}
-                      </span>
-                      <small className="mt-2 block truncate text-muted-foreground">
-                        {c.invite_email || "Preenchimento na clínica"}
-                      </small>
-                    </div>
-                    <Button asChild className="shrink-0">
-                      <Link to="/consulta" search={{ id: c.id }}>
-                        Retomar <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        ) : items ? (
-          <div className="rounded-md border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
-            Nenhuma consulta cadastrada.
-          </div>
-        ) : null}
+        {items && <ConsultationDirectory items={items.consultations} />}
+        <p className="mt-3 text-xs text-muted-foreground">
+          Exibindo até 100 consultas recentes. Abra um atendimento para conferir suas etapas.
+        </p>
       </section>
 
-      <details className="group rounded-md border bg-card shadow-sm">
+      <details
+        ref={newConsultation}
+        className="clinical-disclosure group rounded-md border bg-card shadow-sm"
+      >
         <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between px-5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <span>Nova consulta</span>
           <ChevronDown
@@ -458,7 +449,9 @@ function ConsultationDetail({ id }: { id: string }) {
             {error} <Button onClick={() => setAttempt((a) => a + 1)}>Tentar novamente</Button>
           </p>
         ) : (
-          <p>Carregando consulta…</p>
+          <p role="status" className="clinical-loading">
+            Carregando consulta…
+          </p>
         )}
       </>
     );
@@ -550,34 +543,25 @@ function ConsultationDetail({ id }: { id: string }) {
   }
   return (
     <div className="space-y-6">
-      <section
-        className="flex flex-col justify-between gap-5 border-b border-border pb-6 sm:flex-row sm:items-end"
-        aria-labelledby="patient-title"
+      <ClinicalIdentity
+        name={data.consultation.patient_name}
+        date={data.consultation.consultation_date.split("-").reverse().join("/")}
+        titleId="patient-title"
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => setAttempt((a) => a + 1)}>
+              Atualizar dados
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/consulta" search={{ id: undefined }}>
+                Todas as consultas
+              </Link>
+            </Button>
+          </>
+        }
       >
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Atendimento
-          </p>
-          <h2 id="patient-title" className="mt-1 font-serif text-3xl">
-            {data.consultation.patient_name}
-          </h2>
-          <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarDays className="h-4 w-4" aria-hidden="true" />
-            {data.consultation.consultation_date.split("-").reverse().join("/")} · Paciente{" "}
-            {data.consultation.patient_id.slice(0, 8)}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" onClick={() => setAttempt((a) => a + 1)}>
-            Atualizar dados
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/consulta" search={{ id: undefined }}>
-              Todas as consultas
-            </Link>
-          </Button>
-        </div>
-      </section>
+        <span className="clinical-meta">Paciente {data.consultation.patient_id.slice(0, 8)}</span>
+      </ClinicalIdentity>
       {error && (
         <p role="alert" className="rounded-md border border-destructive/50 bg-card p-4">
           {error}
@@ -591,7 +575,7 @@ function ConsultationDetail({ id }: { id: string }) {
 
       <section
         aria-labelledby="next-action"
-        className="rounded-md border border-gold/50 bg-card p-5 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-6"
+        className="clinical-next-action clinical-enter rounded-md border bg-card p-5 sm:flex sm:items-center sm:justify-between sm:gap-6"
       >
         <div className="mb-4 sm:mb-0">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -634,7 +618,7 @@ function ConsultationDetail({ id }: { id: string }) {
             Atendimento
           </h3>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="clinical-flow-grid grid gap-4 md:grid-cols-2">
           <Card className="rounded-md shadow-sm">
             <CardHeader className="pb-4">
               <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">

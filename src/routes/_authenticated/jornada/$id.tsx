@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
+import { ClinicalIdentity } from "@/components/clinical/ClinicalIdentity";
 import { BrandHeader } from "@/components/BrandHeader";
 import { JourneyStepper } from "@/components/jornada/JourneyStepper";
 import { StepAnamnese } from "@/components/jornada/StepAnamnese";
@@ -200,7 +201,9 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
   if (isPending) {
     return (
       <Shell>
-        <p className="text-sm text-muted-foreground">A carregar atendimento…</p>
+        <p role="status" className="clinical-loading text-sm text-muted-foreground">
+          A carregar atendimento…
+        </p>
       </Shell>
     );
   }
@@ -208,7 +211,9 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
   if (isError || !journey || !anamnese || !bio) {
     return (
       <Shell>
-        <p className="text-sm text-destructive">Não foi possível abrir este atendimento.</p>
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível abrir este atendimento.
+        </p>
         <div className="mt-4 flex gap-2">
           <Button variant="outline" onClick={() => void refetch()}>
             Tentar novamente
@@ -221,7 +226,8 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
     );
   }
 
-  const currentLabel = JOURNEY_STEPS.find((s) => s.step === step)?.label ?? "";
+  const currentLabel =
+    step === 6 ? "Documento" : (JOURNEY_STEPS.find((s) => s.step === step)?.label ?? "");
   const completedSteps = journeyCompletedSteps(journey);
 
   return (
@@ -232,18 +238,20 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
             <ArrowLeft className="mr-1 h-4 w-4" /> Voltar à Consulta do paciente
           </Link>
         </Button>
-        <div className="border-b border-border pb-6">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Paciente</p>
-          <h1 className="font-serif text-3xl text-foreground sm:text-4xl">
-            {journey.patientName || "Sem nome"}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {currentLabel} · versão {journey.version}
-            {journey.approvedVersion === journey.version && journey.sourceCurrent !== false
-              ? " · Aprovada"
-              : " · Em andamento"}
-          </p>
-        </div>
+        <ClinicalIdentity
+          name={journey.patientName}
+          date={journey.anamnese.header.dataConsulta}
+          heading="h1"
+        >
+          <span className="clinical-meta">Versão salva {journey.version}</span>
+          <span className="clinical-state">
+            {journey.sourceCurrent === false
+              ? "Revisão dos dados necessária"
+              : journey.approvedVersion === journey.version
+                ? "Versão atual aprovada"
+                : "Rascunho em revisão"}
+          </span>
+        </ClinicalIdentity>
         {draftVersion !== journey.version && (
           <div role="alert" className="space-y-2 rounded border border-amber-500 p-4">
             <p>Esta análise foi alterada em outra janela. Seu rascunho local foi preservado.</p>
@@ -268,15 +276,21 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
             </Button>
           </div>
         )}
-        <JourneyStepper
-          current={step}
-          maxReached={maxReached}
-          completedSteps={completedSteps}
-          onSelect={setStep}
-        />
+        <div className="clinical-steps-panel">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="clinical-eyebrow">Etapas do atendimento</p>
+            <span className="text-xs text-muted-foreground">Etapa aberta: {currentLabel}</span>
+          </div>
+          <JourneyStepper
+            current={step}
+            maxReached={maxReached}
+            completedSteps={completedSteps}
+            onSelect={setStep}
+          />
+        </div>
         {journey.consultationId && (
           <aside
-            className={`space-y-3 rounded-md border p-5 text-sm ${journey.sourceCurrent === false ? "border-amber-500 bg-amber-50 text-amber-950" : "border-border bg-card text-foreground"}`}
+            className={`clinical-source space-y-3 rounded-md border p-5 text-sm ${journey.sourceCurrent === false ? "border-amber-500 bg-amber-50 text-amber-950" : "border-border bg-card text-foreground"}`}
           >
             <p role="status">
               {journey.sourceCurrent === false
@@ -298,9 +312,13 @@ function JornadaDetail({ id, etapaInicial }: { id: string; etapaInicial: Journey
         )}
       </div>
 
+      <p role="status" aria-live="polite" className="mt-5 text-sm text-muted-foreground">
+        {saving ? "Salvando alterações… aguarde a confirmação." : ""}
+      </p>
       <fieldset
         disabled={saving || journey.sourceCurrent === false || draftVersion !== journey.version}
-        className="mt-8 min-w-0"
+        key={step}
+        className="clinical-step-content mt-8 min-w-0"
       >
         {step === 1 && (
           <StepAnamnese
@@ -405,7 +423,9 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="clinical-workspace min-h-screen bg-background text-foreground">
       <BrandHeader />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+      <main className="clinical-main mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
+        {children}
+      </main>
     </div>
   );
 }
