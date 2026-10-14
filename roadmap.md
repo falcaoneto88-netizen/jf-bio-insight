@@ -88,3 +88,14 @@
 - [x] 22 testes sintéticos novos, suíte completa (300 Vitest + Node), tipos, lint e build
 - [x] docs/jornada-outbox-2026-09-22.md com ativação, reversão e limites reais
 - [ ] Publicação e teste autorizado ponta a ponta (aguarda confirmação do proprietário)
+
+## Política de Privacidade e aceite do paciente (14/10/2026, prévia, não publicada)
+
+- [x] Página pública `/privacidade` com as suas seções, metadata e endereço canónico próprios
+- [x] Aceite obrigatório e separado da declaração de veracidade, com versão e data registadas
+- [x] Migração aditiva (duas colunas) e nova variante do envio por convite; função antiga preservada
+- [x] Links no formulário do paciente, no rodapé e na tela de entrar
+- [x] 24 testes novos (5 de política + 19 do formulário), 347 Vitest, tipos e build
+- [ ] Confirmar quem responde pelos dados, canal de contato, CNPJ e tempo de guarda — sem isso, não publicar
+- [ ] Publicação (aguarda revisão do proprietário)
+- [ ] `supabase/tests/intake-invitations-access.mjs` quebra ao reproduzir as migrações de 22/09 (`pg_net` indisponível no banco de teste) — anterior a esta mudança
