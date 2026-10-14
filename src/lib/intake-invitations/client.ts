@@ -37,6 +37,7 @@ export async function submitInvitation(data: {
   answers: unknown;
   name: string;
   accepted: true;
+  privacyVersion: string;
 }) {
   const r = z
     .object({ confirmed_at: z.iso.datetime({ offset: true }) })

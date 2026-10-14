@@ -115,7 +115,9 @@ export function AccessGate({ children }: { children: ReactNode }) {
   const { status, refresh, signOut } = useAccess();
   // New application pages are private by default; consent has its own OAuth flow.
   if (
-    ["/", "/login", "/auth", "/anamnese", "/.lovable/oauth/consent"].includes(path) ||
+    ["/", "/login", "/auth", "/anamnese", "/privacidade", "/.lovable/oauth/consent"].includes(
+      path,
+    ) ||
     status === "admin"
   )
     return children;

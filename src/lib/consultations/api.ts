@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { requireAdminAccess, AccessError } from "@/lib/access";
 import { consultationDb as db, type Consultation, type ConsultationDraft } from "./types";
 import { mergeReceivedAnamnesis, parseSavedAnswers } from "./mapping";
-import { confirmationSchema } from "@/lib/anamnesis/form";
+import { confirmationSchema, privacyAcceptanceSchema } from "@/lib/anamnesis/form";
 import type { Json } from "@/integrations/supabase/types";
 import type { BodyCompositionData, ClinicalData } from "@/store/report-store";
 const uuid = z.uuid();
@@ -198,11 +198,14 @@ export async function submitAnamnesis(input: {
   answers: unknown;
   name: string;
   accepted: boolean;
+  privacyVersion: string;
 }) {
   uuid.parse(input.id);
   uuid.parse(input.consultationId);
   const answers = parseSavedAnswers(input.answers);
   const confirmation = confirmationSchema.parse({ name: input.name, accepted: input.accepted });
+  // O aceite da política é obrigatório e separado da declaração de veracidade.
+  privacyAcceptanceSchema.parse({ privacyAccepted: true, privacyVersion: input.privacyVersion });
   await loadPatientInvitation(input.consultationId);
   const { error } = await db.from("anamnesis_submissions").insert({
     id: input.id,
@@ -210,6 +213,8 @@ export async function submitAnamnesis(input: {
     answers,
     confirmed_name: confirmation.name,
     accepted: true,
+    privacy_policy_version: input.privacyVersion,
+    privacy_accepted_at: new Date().toISOString(),
   });
   // A retry of the same confirmed submission must not create a new version.
   if (error && error.code !== "23505") throw databaseError(error);

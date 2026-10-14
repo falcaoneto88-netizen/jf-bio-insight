@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { lovable } from "@/integrations/lovable";
 import { useAccess } from "@/components/AccessBoundary";
@@ -90,6 +90,13 @@ function LoginPage() {
                 : "Entrar com Google"}
           </Button>
         )}
+        <p className="text-xs text-muted-foreground">
+          Seus dados de saúde são tratados conforme a{" "}
+          <Link to="/privacidade" className="underline underline-offset-4">
+            Política de Privacidade
+          </Link>
+          .
+        </p>
       </main>
     </div>
   );

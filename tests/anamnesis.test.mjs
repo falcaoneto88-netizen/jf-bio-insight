@@ -123,3 +123,45 @@ test("confirmation requires a full name and explicit acceptance", () => {
 test("missing optional information stays not informed, not no", () => {
   assert.equal(form.formatAnswer({ id: "previousSurgeries" }, ""), "Não informado");
 });
+test("privacy acceptance is a separate requirement from the truth declaration", () => {
+  // A declaração de veracidade continua válida sozinha...
+  assert.equal(
+    form.confirmationSchema.safeParse({ name: "Paciente Teste", accepted: true }).success,
+    true,
+  );
+  // ...mas não pode ser confundida com o aceite da política.
+  assert.equal(
+    form.privacyAcceptanceSchema.safeParse({
+      privacyAccepted: false,
+      privacyVersion: form.PRIVACY_POLICY_VERSION,
+    }).success,
+    false,
+  );
+  assert.equal(
+    form.privacyAcceptanceSchema.safeParse({
+      privacyAccepted: "true",
+      privacyVersion: form.PRIVACY_POLICY_VERSION,
+    }).success,
+    false,
+  );
+  assert.equal(
+    form.privacyAcceptanceSchema.safeParse({
+      privacyAccepted: true,
+      privacyVersion: "privacidade-2020-01-01",
+    }).success,
+    false,
+  );
+  assert.equal(
+    form.privacyAcceptanceSchema.safeParse({
+      privacyAccepted: true,
+      privacyVersion: form.PRIVACY_POLICY_VERSION,
+    }).success,
+    true,
+  );
+});
+test("the accepted policy version and the public page are recorded for the file", () => {
+  assert.match(form.PRIVACY_POLICY_VERSION, /^privacidade-\d{4}-\d{2}-\d{2}$/);
+  assert.equal(form.PRIVACY_POLICY_PATH, "/privacidade");
+  assert.match(form.privacyDeclarationLabel, /Política de Privacidade/);
+});
+
