@@ -26,6 +26,9 @@ import {
   isFieldVisible,
   patientDeclaration,
   updateAnswer,
+  PRIVACY_POLICY_VERSION,
+  privacyAcceptanceSchema,
+  privacyDeclarationLabel,
   type AnamnesisAnswers,
   type IntakeField,
 } from "@/lib/anamnesis/form";
@@ -278,6 +281,7 @@ function AnamnesisForm({
   const [step, setStep] = useState<Step>("fill");
   const [name, setName] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [confirmationError, setConfirmationError] = useState("");
   const [confirmedAt, setConfirmedAt] = useState("");
   const [validated, setValidated] = useState<AnamnesisAnswers | null>(null);
@@ -312,6 +316,7 @@ function AnamnesisForm({
       ),
     );
     setAccepted(false);
+    setPrivacyAccepted(false);
   }
   function review(event: FormEvent) {
     event.preventDefault();
@@ -336,6 +341,7 @@ function AnamnesisForm({
     submissionId.current = null;
     setStep("fill");
     setAccepted(false);
+    setPrivacyAccepted(false);
     setConfirmationError("");
     setConfirmedAt("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -345,9 +351,18 @@ function AnamnesisForm({
     event.preventDefault();
     if (saving) return;
     const result = confirmationSchema.safeParse({ name, accepted });
-    if (!result.success) {
+    const privacy = privacyAcceptanceSchema.safeParse({
+      privacyAccepted,
+      privacyVersion: PRIVACY_POLICY_VERSION,
+    });
+    if (!result.success || !privacy.success) {
       setConfirmationError(
-        [...new Set(result.error.issues.map((issue) => issue.message))].join(" "),
+        [
+          ...new Set([
+            ...(result.success ? [] : result.error.issues.map((issue) => issue.message)),
+            ...(privacy.success ? [] : privacy.error.issues.map((issue) => issue.message)),
+          ]),
+        ].join(" "),
       );
       return;
     }
@@ -372,6 +387,7 @@ function AnamnesisForm({
               answers: validated,
               name: result.data.name,
               accepted: true,
+              privacyVersion: PRIVACY_POLICY_VERSION,
             })
           : await submitAnamnesis({
               id: submissionId.current,
@@ -379,6 +395,7 @@ function AnamnesisForm({
               answers: validated,
               name: result.data.name,
               accepted: true,
+              privacyVersion: PRIVACY_POLICY_VERSION,
             });
         setConfirmedAt(saved.confirmed_at);
         setRemoteSaved(true);
@@ -569,7 +586,17 @@ function AnamnesisForm({
               <div className="ana-section-body">
                 <p>{patientDeclaration}</p>
                 <p className="ana-hint">
-                  Você confirmará esta declaração depois de revisar suas respostas.
+                  Você confirmará esta declaração depois de revisar suas respostas. Seus dados são
+                  tratados conforme a{" "}
+                  <Link
+                    to="/privacidade"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ana-link"
+                  >
+                    Política de Privacidade
+                  </Link>
+                  .
                 </p>
               </div>
             </section>
@@ -666,6 +693,30 @@ function AnamnesisForm({
                       />
                       <span>Li minhas respostas e confirmo a declaração acima. *</span>
                     </label>
+                    <label className="ana-declaration">
+                      <input
+                        type="checkbox"
+                        disabled={saving}
+                        checked={privacyAccepted}
+                        required
+                        onChange={(event) => {
+                          setPrivacyAccepted(event.target.checked);
+                          setConfirmationError("");
+                        }}
+                      />
+                      <span>
+                        {privacyDeclarationLabel}{" "}
+                        <Link
+                          to="/privacidade"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="ana-link"
+                        >
+                          Abrir a política
+                        </Link>{" "}
+                        *
+                      </span>
+                    </label>
                     <p
                       id="confirmation-error"
                       role={confirmationError ? "alert" : undefined}
@@ -742,6 +793,11 @@ function AnamnesisForm({
         )}
         <footer className="ana-footer">
           Dr. João Falcão<span>Harmonização Corporal • Emagrecimento • Alta Performance</span>
+          <span>
+            <Link to="/privacidade" target="_blank" rel="noreferrer" className="ana-link">
+              Política de Privacidade
+            </Link>
+          </span>
         </footer>
       </main>
     </div>

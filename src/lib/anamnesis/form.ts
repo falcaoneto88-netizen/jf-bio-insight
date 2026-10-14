@@ -366,6 +366,19 @@ export const anamnesisSchema = z
 
 export const patientDeclaration =
   "Declaro que as informações fornecidas nesta anamnese são verdadeiras e completas. Comprometo-me a informar qualquer alteração clínica, uso de medicamentos, alergias ou condição de saúde que possa interferir na segurança do procedimento.";
+/** Caminho da política pública, aberta sem sessão. */
+export const PRIVACY_POLICY_PATH = "/privacidade";
+/** Versão registrada a cada texto aceito; serve de prova em caso de questionamento. */
+export const PRIVACY_POLICY_VERSION = "privacidade-2026-10-14";
+export const privacyDeclarationLabel = "Li e aceito a Política de Privacidade.";
+export const privacyAcceptanceSchema = z.object({
+  privacyAccepted: z
+    .boolean()
+    .refine((value) => value === true, "Aceite a Política de Privacidade para concluir."),
+  privacyVersion: z.literal(PRIVACY_POLICY_VERSION, {
+    error: "A Política de Privacidade foi atualizada. Reveja e aceite a versão vigente.",
+  }),
+});
 export const confirmationSchema = z.object({
   name: z
     .string()

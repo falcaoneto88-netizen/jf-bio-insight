@@ -9,76 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UploadRouteImport } from './routes/upload'
-import { Route as SuccessRouteImport } from './routes/success'
-import { Route as ReviewRouteImport } from './routes/review'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as HistoryRouteImport } from './routes/history'
-import { Route as ConsultaRouteImport } from './routes/consulta'
-import { Route as ClinicalFormRouteImport } from './routes/clinical-form'
-import { Route as BodyCompositionRouteImport } from './routes/body-composition'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AnamneseRouteImport } from './routes/anamnese'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedAgendamentosRouteImport } from './routes/_authenticated/agendamentos'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AnamneseRouteImport } from './routes/anamnese'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BodyCompositionRouteImport } from './routes/body-composition'
+import { Route as ClinicalFormRouteImport } from './routes/clinical-form'
+import { Route as ConsultaRouteImport } from './routes/consulta'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as ReviewRouteImport } from './routes/review'
+import { Route as SuccessRouteImport } from './routes/success'
+import { Route as UploadRouteImport } from './routes/upload'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
-import { Route as AuthenticatedJornadaIndexRouteImport } from './routes/_authenticated/jornada/index'
-import { Route as ApiPublicGhlAnamneseRouteImport } from './routes/api/public/ghl-anamnese'
-import { Route as ApiPublicAnamneseConviteRouteImport } from './routes/api/public/anamnese-convite'
-import { Route as AuthenticatedJornadaIdRouteImport } from './routes/_authenticated/jornada/$id'
+import { Route as AuthenticatedAgendamentosRouteImport } from './routes/_authenticated/agendamentos'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as AuthenticatedJornadaIndexRouteImport } from './routes/_authenticated/jornada/index'
+import { Route as AuthenticatedJornadaIdRouteImport } from './routes/_authenticated/jornada/$id'
+import { Route as ApiPublicAnamneseConviteRouteImport } from './routes/api/public/anamnese-convite'
+import { Route as ApiPublicGhlAnamneseRouteImport } from './routes/api/public/ghl-anamnese'
 import { Route as ApiPublicHooksJornadaOutboxRouteImport } from './routes/api/public/hooks/jornada-outbox'
 
-const UploadRoute = UploadRouteImport.update({
-  id: '/upload',
-  path: '/upload',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SuccessRoute = SuccessRouteImport.update({
-  id: '/success',
-  path: '/success',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReviewRoute = ReviewRouteImport.update({
-  id: '/review',
-  path: '/review',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoryRoute = HistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConsultaRoute = ConsultaRouteImport.update({
-  id: '/consulta',
-  path: '/consulta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClinicalFormRoute = ClinicalFormRouteImport.update({
-  id: '/clinical-form',
-  path: '/clinical-form',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BodyCompositionRoute = BodyCompositionRouteImport.update({
-  id: '/body-composition',
-  path: '/body-composition',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnamneseRoute = AnamneseRouteImport.update({
@@ -86,37 +46,88 @@ const AnamneseRoute = AnamneseRouteImport.update({
   path: '/anamnese',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BodyCompositionRoute = BodyCompositionRouteImport.update({
+  id: '/body-composition',
+  path: '/body-composition',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAgendamentosRoute =
-  AuthenticatedAgendamentosRouteImport.update({
-    id: '/agendamentos',
-    path: '/agendamentos',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
+const ClinicalFormRoute = ClinicalFormRouteImport.update({
+  id: '/clinical-form',
+  path: '/clinical-form',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsultaRoute = ConsultaRouteImport.update({
+  id: '/consulta',
+  path: '/consulta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewRoute = ReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuccessRoute = SuccessRouteImport.update({
+  id: '/success',
+  path: '/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UploadRoute = UploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAgendamentosRoute =
+  AuthenticatedAgendamentosRouteImport.update({
+    id: '/agendamentos',
+    path: '/agendamentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedJornadaIndexRoute =
   AuthenticatedJornadaIndexRouteImport.update({
     id: '/jornada/',
     path: '/jornada/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const ApiPublicGhlAnamneseRoute = ApiPublicGhlAnamneseRouteImport.update({
-  id: '/api/public/ghl-anamnese',
-  path: '/api/public/ghl-anamnese',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedJornadaIdRoute = AuthenticatedJornadaIdRouteImport.update({
+  id: '/jornada/$id',
+  path: '/jornada/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiPublicAnamneseConviteRoute =
   ApiPublicAnamneseConviteRouteImport.update({
@@ -124,14 +135,9 @@ const ApiPublicAnamneseConviteRoute =
     path: '/api/public/anamnese-convite',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedJornadaIdRoute = AuthenticatedJornadaIdRouteImport.update({
-  id: '/jornada/$id',
-  path: '/jornada/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
+const ApiPublicGhlAnamneseRoute = ApiPublicGhlAnamneseRouteImport.update({
+  id: '/api/public/ghl-anamnese',
+  path: '/api/public/ghl-anamnese',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicHooksJornadaOutboxRoute =
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/review': typeof ReviewRoute
   '/success': typeof SuccessRoute
   '/upload': typeof UploadRoute
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/mcp'
+    | '/privacidade'
     | '/review'
     | '/success'
     | '/upload'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/mcp'
+    | '/privacidade'
     | '/review'
     | '/success'
     | '/upload'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/mcp'
+    | '/privacidade'
     | '/review'
     | '/success'
     | '/upload'
@@ -290,6 +302,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ReviewRoute: typeof ReviewRoute
   SuccessRoute: typeof SuccessRoute
   UploadRoute: typeof UploadRoute
@@ -302,81 +315,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/upload': {
-      id: '/upload'
-      path: '/upload'
-      fullPath: '/upload'
-      preLoaderRoute: typeof UploadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/success': {
-      id: '/success'
-      path: '/success'
-      fullPath: '/success'
-      preLoaderRoute: typeof SuccessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/review': {
-      id: '/review'
-      path: '/review'
-      fullPath: '/review'
-      preLoaderRoute: typeof ReviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/history': {
-      id: '/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/consulta': {
-      id: '/consulta'
-      path: '/consulta'
-      fullPath: '/consulta'
-      preLoaderRoute: typeof ConsultaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clinical-form': {
-      id: '/clinical-form'
-      path: '/clinical-form'
-      fullPath: '/clinical-form'
-      preLoaderRoute: typeof ClinicalFormRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/body-composition': {
-      id: '/body-composition'
-      path: '/body-composition'
-      fullPath: '/body-composition'
-      preLoaderRoute: typeof BodyCompositionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/anamnese': {
-      id: '/anamnese'
-      path: '/anamnese'
-      fullPath: '/anamnese'
-      preLoaderRoute: typeof AnamneseRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -386,11 +329,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/anamnese': {
+      id: '/anamnese'
+      path: '/anamnese'
+      fullPath: '/anamnese'
+      preLoaderRoute: typeof AnamneseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/body-composition': {
+      id: '/body-composition'
+      path: '/body-composition'
+      fullPath: '/body-composition'
+      preLoaderRoute: typeof BodyCompositionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clinical-form': {
+      id: '/clinical-form'
+      path: '/clinical-form'
+      fullPath: '/clinical-form'
+      preLoaderRoute: typeof ClinicalFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consulta': {
+      id: '/consulta'
+      path: '/consulta'
+      fullPath: '/consulta'
+      preLoaderRoute: typeof ConsultaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review': {
+      id: '/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/success': {
+      id: '/success'
+      path: '/success'
+      fullPath: '/success'
+      preLoaderRoute: typeof SuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/upload': {
+      id: '/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof UploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/agendamentos': {
@@ -400,11 +427,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgendamentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/jornada/': {
@@ -414,12 +441,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJornadaIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/ghl-anamnese': {
-      id: '/api/public/ghl-anamnese'
-      path: '/api/public/ghl-anamnese'
-      fullPath: '/api/public/ghl-anamnese'
-      preLoaderRoute: typeof ApiPublicGhlAnamneseRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/jornada/$id': {
+      id: '/_authenticated/jornada/$id'
+      path: '/jornada/$id'
+      fullPath: '/jornada/$id'
+      preLoaderRoute: typeof AuthenticatedJornadaIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/anamnese-convite': {
       id: '/api/public/anamnese-convite'
@@ -428,18 +455,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAnamneseConviteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/jornada/$id': {
-      id: '/_authenticated/jornada/$id'
-      path: '/jornada/$id'
-      fullPath: '/jornada/$id'
-      preLoaderRoute: typeof AuthenticatedJornadaIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+    '/api/public/ghl-anamnese': {
+      id: '/api/public/ghl-anamnese'
+      path: '/api/public/ghl-anamnese'
+      fullPath: '/api/public/ghl-anamnese'
+      preLoaderRoute: typeof ApiPublicGhlAnamneseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/jornada-outbox': {
@@ -478,6 +498,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ReviewRoute: ReviewRoute,
   SuccessRoute: SuccessRoute,
   UploadRoute: UploadRoute,

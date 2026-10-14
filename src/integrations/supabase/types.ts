@@ -24,6 +24,8 @@ export type Database = {
           declaration_version: string
           id: string
           invitation_id: string | null
+          privacy_accepted_at: string | null
+          privacy_policy_version: string | null
           submitted_by: string | null
         }
         Insert: {
@@ -35,6 +37,8 @@ export type Database = {
           declaration_version?: string
           id?: string
           invitation_id?: string | null
+          privacy_accepted_at?: string | null
+          privacy_policy_version?: string | null
           submitted_by?: string | null
         }
         Update: {
@@ -46,6 +50,8 @@ export type Database = {
           declaration_version?: string
           id?: string
           invitation_id?: string | null
+          privacy_accepted_at?: string | null
+          privacy_policy_version?: string | null
           submitted_by?: string | null
         }
         Relationships: [
@@ -692,17 +698,30 @@ export type Database = {
         Args: { _consultation_id: string }
         Returns: undefined
       }
-      submit_intake_invitation: {
-        Args: {
-          _accepted: boolean
-          _answers: Json
-          _id: string
-          _name: string
-          _secret: string
-          _token: string
-        }
-        Returns: Json
-      }
+      submit_intake_invitation:
+        | {
+            Args: {
+              _accepted: boolean
+              _answers: Json
+              _id: string
+              _name: string
+              _secret: string
+              _token: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _accepted: boolean
+              _answers: Json
+              _id: string
+              _name: string
+              _privacy_version: string
+              _secret: string
+              _token: string
+            }
+            Returns: Json
+          }
     }
     Enums: {
       app_role: "admin" | "user"

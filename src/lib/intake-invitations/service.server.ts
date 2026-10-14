@@ -1,7 +1,12 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { anamnesisSchema, confirmationSchema, emptyAnamnesis } from "@/lib/anamnesis/form";
+import {
+  anamnesisSchema,
+  confirmationSchema,
+  emptyAnamnesis,
+  PRIVACY_POLICY_VERSION,
+} from "@/lib/anamnesis/form";
 import {
   IntakeError,
   intakeDatabaseError,
@@ -356,6 +361,9 @@ export async function patientInvitation(raw: unknown, db: SupabaseClient, secret
         ),
         name: confirmationSchema.shape.name,
         accepted: z.literal(true),
+        // Aceite da política: separado da declaração de veracidade e obrigatório.
+        privacyAccepted: z.literal(true),
+        privacyVersion: z.literal(PRIVACY_POLICY_VERSION),
       }),
     ])
     .safeParse(raw);
@@ -376,6 +384,7 @@ export async function patientInvitation(raw: unknown, db: SupabaseClient, secret
           _answers: a.answers,
           _name: a.name,
           _accepted: true,
+          _privacy_version: a.privacyVersion,
         },
   );
   if (r.error) throw intakeDatabaseError(r.error);

@@ -10,7 +10,7 @@ import {
   intakeHttp,
 } from "./service.server";
 import { INTAKE_LOCATION_ID, INTAKE_WORKFLOW_ID } from "./schema";
-import { anamnesisSchema, emptyAnamnesis } from "@/lib/anamnesis/form";
+import { anamnesisSchema, emptyAnamnesis, PRIVACY_POLICY_VERSION } from "@/lib/anamnesis/form";
 const token = "a".repeat(64),
   calendarId = "calendar_test_01",
   cid = "00000000-0000-4000-8000-000000000001";
@@ -377,6 +377,31 @@ describe("public patient API", () => {
       });
     expect(d.rpc).not.toHaveBeenCalled();
   });
+  it("refuses to store an anamnesis without the privacy acceptance", async () => {
+    const d = db();
+    for (const privacy of [
+      {},
+      { privacyAccepted: false, privacyVersion: PRIVACY_POLICY_VERSION },
+      { privacyAccepted: true },
+      { privacyAccepted: true, privacyVersion: "privacidade-2020-01-01" },
+    ])
+      await expect(
+        patientInvitation(
+          {
+            action: "submit",
+            token,
+            id: cid,
+            answers: answers(),
+            name: "Paciente Teste",
+            accepted: true,
+            ...privacy,
+          },
+          d.client,
+          token,
+        ),
+      ).rejects.toMatchObject({ code: "invalid_request" });
+    expect(d.rpc).not.toHaveBeenCalled();
+  });
   it("clears hidden conditional values and returns only the receipt", async () => {
     const rpc = vi.fn(async () => ({
       error: null,
@@ -390,13 +415,16 @@ describe("public patient API", () => {
         answers: { ...answers(), medications: "Hidden answer" },
         name: "Paciente Teste",
         accepted: true,
+        privacyAccepted: true,
+        privacyVersion: PRIVACY_POLICY_VERSION,
       },
       { rpc } as unknown as SupabaseClient,
       token,
     );
     expect(result).toEqual({ confirmed_at: "2026-09-14T13:00:00Z" });
-    const args = rpc.mock.calls[0] as unknown as [string, { _answers: Record<string, string> }];
+    const args = rpc.mock.calls[0] as unknown as [string, Record<string, unknown>];
     expect(args[1]._answers).not.toHaveProperty("medications");
+    expect(args[1]._privacy_version).toBe(PRIVACY_POLICY_VERSION);
     await patientInvitation(
       {
         action: "submit",
@@ -405,6 +433,8 @@ describe("public patient API", () => {
         answers: anamnesisSchema.parse(answers()),
         name: "Paciente Teste",
         accepted: true,
+        privacyAccepted: true,
+        privacyVersion: PRIVACY_POLICY_VERSION,
       },
       { rpc } as unknown as SupabaseClient,
       token,
